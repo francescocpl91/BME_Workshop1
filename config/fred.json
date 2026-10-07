@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "provider": "fred",
+  "enabled": true,
+  "requests": [
+    {
+      "id": "US10Y",
+      "enabled": true,
+      "product": "yield",
+      "operation": "observations",
+      "ticker": "US10Y",
+      "description": "US 10-year constant-maturity Treasury yield; not a bond price",
+      "asset_class": "interest_rate",
+      "currency": "USD",
+      "unit": "Percent",
+      "exchange": null,
+      "timeframe": {
+        "lookback": "1mo",
+        "end": null
+      },
+      "frequency": "native",
+      "input": {
+        "series_id": "DGS10"
+      },
+      "parameters": {
+        "units": "lin"
+      }
+    }
+  ],
+  "instructions": {
+    "editing": "Edit requests. Only enabled requests in enabled provider files run. product_guides contains copyable examples, not downloads. JSON requires double quotes and has no comments.",
+    "identity": "id identifies the request; ticker is your label; input contains the provider identifier. Matching requests across providers need the same id, contract/instrument details and timeframe. Use a new id for a different instrument or period.",
+    "timeframe": "Use lookback (for example 1mo or 1y) OR start (YYYY-MM-DD), plus end. end=null means today when run; otherwise end is YYYY-MM-DD. The requested range is inclusive. Returned raw responses are not clipped to this range.",
+    "metadata": "Set product, operation, currency, unit, asset_class, description, exchange and frequency for the instrument. These fields describe the request; they do not convert the returned data.",
+    "raw_output": "run.py saves original provider responses under tests/data_dumps. No local cleaning, resampling or price adjustment is applied; any provider-side adjustments are described below.",
+    "products": "Use yield, fx or macro with operation=observations. This adapter retrieves economic series, not individual stock or option contracts.",
+    "input": "input.series_id is the FRED economic-series identifier, for example DGS10. Check the series title, units, frequency and revision policy.",
+    "parameters": "Use frequency=native and parameters.units=lin. Values retain the series frequency and units; yields remain observations, not bond prices.",
+    "credentials": "run.py reads FRED_API_KEY from the environment. Keep the actual key outside this JSON."
+  },
+  "product_guides": {
+    "observations": {
+      "implemented": true,
+      "products": [
+        "yield",
+        "fx",
+        "macro"
+      ],
+      "instructions": "Use an economic-series identifier or dataset key, not a stock ticker. Set unit and frequency accurately; the provider response is authoritative.",
+      "template": {
+        "id": "US10Y",
+        "enabled": false,
+        "product": "yield",
+        "operation": "observations",
+        "ticker": "US10Y",
+        "description": "US 10-year constant-maturity Treasury yield; not a bond price",
+        "asset_class": "interest_rate",
+        "currency": "USD",
+        "unit": "Percent",
+        "exchange": null,
+        "timeframe": {
+          "lookback": "1mo",
+          "end": null
+        },
+        "frequency": "native",
+        "input": {
+          "series_id": "DGS10"
+        },
+        "parameters": {
+          "units": "lin"
+        }
+      }
+    }
+  },
+  "sources": {
+    "checked": "2026-10-07",
+    "official_documentation": [
+      "https://fred.stlouisfed.org/docs/api/fred/series_observations.html"
+    ]
+  }
+}
