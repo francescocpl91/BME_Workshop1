@@ -1,23 +1,21 @@
 """Offline contract tests: synthetic fixtures are never production market data."""
 import json
-import sys
 import tempfile
 import unittest
 from datetime import date
 from pathlib import Path
 from unittest.mock import patch, Mock
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 import pandas as pd
-from market_data.models import DateWindow, Instrument, PriceSeries, normalize, RetrievalError
-from market_data.config import load_instruments, split_inputs
-from market_data.providers.alpha_vantage import AlphaVantageProvider
-from market_data.providers.marketdata import MarketDataAppProvider
-from market_data.providers.massive import MassiveProvider
-from market_data.providers.fred import FredProvider
-from market_data.providers.ecb import ECBProvider
-from market_data.providers.yahoo import YahooProvider
-from market_data.runner import retrieve
-from market_data.storage import SeriesCache
+from src.models import DateWindow, Instrument, PriceSeries, normalize, RetrievalError
+from src.config import load_instruments, split_inputs
+from src.providers.alpha_vantage import AlphaVantageProvider
+from src.providers.marketdata import MarketDataAppProvider
+from src.providers.massive import MassiveProvider
+from src.providers.fred import FredProvider
+from src.providers.ecb import ECBProvider
+from src.providers.yahoo import YahooProvider
+from src.runner import retrieve
+from src.storage import SeriesCache
 
 WINDOW = DateWindow(date(2024, 1, 2), date(2024, 1, 3))
 ASSET = Instrument('AAPL', currency='USD')

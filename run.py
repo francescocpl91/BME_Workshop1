@@ -5,11 +5,9 @@ python -i run.py    : execute and keep result available in a Python prompt
 """
 import os
 from pathlib import Path
-import sys
+from src import MarketDataDownloader
 
 ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(ROOT / "src"))
-from market_data import MarketDataDownloader
 
 # Input data details live ONLY in these JSON files. Disable a provider/request
 # with enabled=false in JSON, or change which files are loaded here.

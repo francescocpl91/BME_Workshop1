@@ -8,16 +8,16 @@ import unittest
 from unittest.mock import Mock, patch
 from urllib.error import HTTPError
 
-from market_data import MarketDataDownloader
-from market_data.http import HttpClient
-from market_data.raw import ResponseRecorder
-from market_data.providers.ecb import ECBProvider
-from market_data.providers.yahoo import YahooProvider
-from market_data.providers.massive import MassiveProvider
-from market_data.providers.fred import FredProvider
-from market_data.providers.alpha_vantage import AlphaVantageProvider
-from market_data.providers.marketdata import MarketDataAppProvider
-from market_data.models import Instrument, DateWindow, RetrievalError
+from src import MarketDataDownloader
+from src.http import HttpClient
+from src.raw import ResponseRecorder
+from src.providers.ecb import ECBProvider
+from src.providers.yahoo import YahooProvider
+from src.providers.massive import MassiveProvider
+from src.providers.fred import FredProvider
+from src.providers.alpha_vantage import AlphaVantageProvider
+from src.providers.marketdata import MarketDataAppProvider
+from src.models import Instrument, DateWindow, RetrievalError
 
 
 def config(symbols, kind="price"):
@@ -44,8 +44,8 @@ class RawDumpTests(unittest.TestCase):
         downloader.providers[0].client.opener = Mock()
         downloader.providers[0].client.opener.open.return_value = response(body, "text/csv")
         with tempfile.TemporaryDirectory() as tmp, \
-             patch("market_data.providers.ecb.pd.read_csv", side_effect=AssertionError("parsed table")), \
-             patch("market_data.runner.normalize", side_effect=AssertionError("normalized")):
+             patch("src.providers.ecb.pd.read_csv", side_effect=AssertionError("parsed table")), \
+             patch("src.runner.normalize", side_effect=AssertionError("normalized")):
             result = downloader.download_raw(tmp)
             self.assertEqual(result.summary.status.tolist(), ["response_saved"])
             saved = next(result.folder.rglob("response_*.csv"))

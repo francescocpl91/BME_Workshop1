@@ -8,10 +8,10 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from market_data import MarketDataDownloader, PriceSeries
-from market_data.json_config import load_provider_configs
-from market_data.providers.yahoo import YahooProvider
-from market_data.providers.alpha_vantage import AlphaVantageProvider
+from src import MarketDataDownloader, PriceSeries
+from src.json_config import load_provider_configs
+from src.providers.yahoo import YahooProvider
+from src.providers.alpha_vantage import AlphaVantageProvider
 
 PROJECT = Path(__file__).resolve().parents[1]
 

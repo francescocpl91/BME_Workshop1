@@ -7,12 +7,12 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from market_data import MarketDataDownloader
-from market_data.json_config import load_provider_configs
-from market_data.models import DateWindow, Instrument, RetrievalError
-from market_data.providers.yahoo import YahooProvider
-from market_data.providers.marketdata import MarketDataAppProvider
-from market_data.providers.massive import MassiveProvider
+from src import MarketDataDownloader
+from src.json_config import load_provider_configs
+from src.models import DateWindow, Instrument, RetrievalError
+from src.providers.yahoo import YahooProvider
+from src.providers.marketdata import MarketDataAppProvider
+from src.providers.massive import MassiveProvider
 
 PROJECT = Path(__file__).resolve().parents[1]
 WINDOW = DateWindow(date(2026, 9, 7), date(2026, 10, 6))

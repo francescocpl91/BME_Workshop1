@@ -9,10 +9,10 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from market_data import MarketDataDownloader, PriceSeries, ObservationSeries
-from market_data.providers.yahoo import YahooProvider
-from market_data.providers.alpha_vantage import AlphaVantageProvider
-from market_data.providers.ecb import ECBProvider
+from src import MarketDataDownloader, PriceSeries, ObservationSeries
+from src.providers.yahoo import YahooProvider
+from src.providers.alpha_vantage import AlphaVantageProvider
+from src.providers.ecb import ECBProvider
 
 
 def price(provider, value):

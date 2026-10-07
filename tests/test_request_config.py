@@ -10,10 +10,10 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from market_data import MarketDataDownloader, PriceSeries, ObservationSeries
-from market_data.providers.yahoo import YahooProvider
-from market_data.providers.ecb import ECBProvider
-from market_data.providers.alpha_vantage import AlphaVantageProvider
+from src import MarketDataDownloader, PriceSeries, ObservationSeries
+from src.providers.yahoo import YahooProvider
+from src.providers.ecb import ECBProvider
+from src.providers.alpha_vantage import AlphaVantageProvider
 
 
 def request(name="SPY", start="2024-01-02", end="2024-01-03"):
@@ -119,7 +119,7 @@ class RequestConfigTests(unittest.TestCase):
         entry = request(); entry["symbols"] = {"alpha_vantage": "SPY"}
         entry["timeframe"] = {"lookback": "1mo", "end": None}
         config = {"settings": {"ALPHA_VANTAGE_API_KEY": ""}, "requests": [entry]}
-        with patch("market_data.config.date", ClockDate):
+        with patch("src.config.date", ClockDate):
             downloader = MarketDataDownloader.from_config(config)
             config["requests"].clear()
             ClockDate.current = (2024, 2, 29)

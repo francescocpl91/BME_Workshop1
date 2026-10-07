@@ -1,4 +1,4 @@
-# PythonToolBox_Taller1Master - market_data
+# PythonToolBox_Taller1Master - Market data
 
 **Market-data requests live in JSON. Python setup stays in run.py.**
 
@@ -110,7 +110,7 @@ result.folder  # Open this folder to inspect the native response files
 Direct library use:
 
 ```python
-from market_data import MarketDataDownloader
+from src import MarketDataDownloader
 
 downloader = MarketDataDownloader.from_json("config")  # directory, file, or list of files
 result = downloader.download_raw("tests/data_dumps")
@@ -153,7 +153,12 @@ raw, split-adjusted and dividend-adjusted prices without checking metadata.
 `run.py` -> `MarketDataDownloader.from_json()` -> `json_config.py` validation ->
 MarketDataDownloader.download_raw() -> provider adapters -> native response files.
 The optional download() method follows the separate normalization pipeline.
-All implementation is in `src/market_data`; tests are in `tests`.
+The library modules live directly in `src/`, with adapters in `src/providers/`.
+The package is named `src`: use `from src import MarketDataDownloader` or
+imports such as `from src.models import DateWindow`. Tests are in `tests/`.
+There is no additional package-name mapping.
+Do not add `src` itself to PYTHONPATH: `src/http.py` would shadow Python's standard
+library `http` package. Use the installed package and the project `.venv` instead.
 With Python 3.11+, install using `python -m pip install -e .` from this folder.
 Run tests with `python -m unittest discover -s tests -v`.
 The original PDFs are project references. Analytics and simulation are later work.
