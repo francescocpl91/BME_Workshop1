@@ -1,16 +1,14 @@
 """Explicit SPX/SPXW contract identity, independent of history-provider syntax.
 
 Only European, cash-settled S&P 500 index options are supported in this phase.
-History is raw-only: quotes and trade bars are never treated as identical prices.
+Option retrieval is raw-only: model values, quotes and trade bars stay distinct.
 """
 from datetime import date
 from decimal import Decimal, InvalidOperation
 import re
 
-RAW_OPTION_PROVIDERS = {"yahoo", "marketdata", "massive"}
-OPTION_RESPONSE_TYPES = {"yahoo": "daily_option_chart_bars",
-                         "marketdata": "historical_end_of_day_option_quotes",
-                         "massive": "daily_option_trade_aggregates"}
+RAW_OPTION_PROVIDERS = {"ibkr"}
+OPTION_RESPONSE_TYPES = {"ibkr": "serialized_sdk_option_snapshot"}
 
 
 def validate_contract(contract, symbols, currency):
@@ -46,7 +44,7 @@ def validate_contract(contract, symbols, currency):
             continue
         if provider not in RAW_OPTION_PROVIDERS:
             raise ValueError("index_option history is not implemented for " + provider)
-        expected = "O:" + occ if provider == "massive" else occ
+        expected = occ
         if symbol != expected:
             raise ValueError("Option identifier does not match contract root, expiry, side and strike for " + provider)
     return dict(contract)

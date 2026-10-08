@@ -4,52 +4,29 @@
   "enabled": true,
   "requests": [
     {
-      "id": "SPY",
+      "id": "SPX",
       "enabled": true,
-      "product": "etf",
+      "product": "index",
       "operation": "price_history",
-      "ticker": "SPY",
-      "description": "SPDR S&P 500 ETF Trust, US listing",
-      "asset_class": "equity",
+      "ticker": "SPX",
+      "description": "S&P 500 price index; underlying of the configured SPX options",
+      "asset_class": "equity_index",
       "currency": "USD",
-      "unit": "USD per share",
-      "exchange": "NYSE Arca",
+      "unit": "Index points",
+      "exchange": "CBOE",
       "timeframe": {
-        "lookback": "1mo",
-        "end": null
+        "lookback": "max",
+        "end": "COB"
       },
       "frequency": "1d",
       "input": {
-        "symbol": "SPY"
+        "symbol": "SPX"
       },
       "parameters": {
-        "function": "TIME_SERIES_DAILY",
-        "outputsize": "compact"
-      }
-    },
-    {
-      "id": "QQQ",
-      "enabled": true,
-      "product": "etf",
-      "operation": "price_history",
-      "ticker": "QQQ",
-      "description": "Invesco QQQ Trust, US listing",
-      "asset_class": "equity",
-      "currency": "USD",
-      "unit": "USD per share",
-      "exchange": "NASDAQ",
-      "timeframe": {
-        "lookback": "1mo",
-        "end": null
+        "function": "INDEX_DATA",
+        "interval": "daily"
       },
-      "frequency": "1d",
-      "input": {
-        "symbol": "QQQ"
-      },
-      "parameters": {
-        "function": "TIME_SERIES_DAILY",
-        "outputsize": "compact"
-      }
+      "notes": "Enabled for complete request accounting. The current adapter does not implement index history; the run saves unsupported_operation in status.json and continues with the other products/providers."
     },
     {
       "id": "IEF",
@@ -63,8 +40,8 @@
       "unit": "USD per share",
       "exchange": "NASDAQ",
       "timeframe": {
-        "lookback": "1mo",
-        "end": null
+        "lookback": "max",
+        "end": "COB"
       },
       "frequency": "1d",
       "input": {
@@ -72,126 +49,75 @@
       },
       "parameters": {
         "function": "TIME_SERIES_DAILY",
-        "outputsize": "compact"
+        "outputsize": "full"
       }
-    },
-    {
-      "id": "SPX_20261218_7000_CALL",
-      "enabled": false,
-      "product": "index_option",
-      "operation": "option_history",
-      "ticker": "SPX261218C07000000",
-      "description": "S&P 500 index European call; standard SPX AM settlement",
-      "asset_class": "equity_index_option",
-      "currency": "USD",
-      "unit": "index points (100 USD per point per contract)",
-      "exchange": "XCBO",
-      "contract": {
-        "underlying": "SPX",
-        "root": "SPX",
-        "expiration": "2026-12-18",
-        "strike": 7000,
-        "option_type": "call",
-        "exercise_style": "european",
-        "settlement": "cash",
-        "settlement_time": "AM",
-        "multiplier": 100
-      },
-      "input": {
-        "symbol": "SPX",
-        "contract": "SPX261218C07000000"
-      },
-      "timeframe": {
-        "lookback": "1mo",
-        "end": null
-      },
-      "frequency": "1d",
-      "parameters": {
-        "function": "HISTORICAL_OPTIONS"
-      },
-      "notes": "Disabled: live probe returned premium endpoint. SPX coverage/contract ID not verified on Alpha Vantage; date-by-date history adapter not implemented."
-    },
-    {
-      "id": "SPX_20261218_7000_PUT",
-      "enabled": false,
-      "product": "index_option",
-      "operation": "option_history",
-      "ticker": "SPX261218P07000000",
-      "description": "S&P 500 index European put; standard SPX AM settlement",
-      "asset_class": "equity_index_option",
-      "currency": "USD",
-      "unit": "index points (100 USD per point per contract)",
-      "exchange": "XCBO",
-      "contract": {
-        "underlying": "SPX",
-        "root": "SPX",
-        "expiration": "2026-12-18",
-        "strike": 7000,
-        "option_type": "put",
-        "exercise_style": "european",
-        "settlement": "cash",
-        "settlement_time": "AM",
-        "multiplier": 100
-      },
-      "input": {
-        "symbol": "SPX",
-        "contract": "SPX261218P07000000"
-      },
-      "timeframe": {
-        "lookback": "1mo",
-        "end": null
-      },
-      "frequency": "1d",
-      "parameters": {
-        "function": "HISTORICAL_OPTIONS"
-      },
-      "notes": "Disabled: live probe returned premium endpoint. SPX coverage/contract ID not verified on Alpha Vantage; date-by-date history adapter not implemented."
     }
   ],
   "instructions": {
-    "editing": "Edit requests. Only enabled requests in enabled provider files run. product_guides contains copyable examples, not downloads. JSON requires double quotes and has no comments.",
-    "identity": "id identifies the request; ticker is your label; input contains the provider identifier. Matching requests across providers need the same id, contract/instrument details and timeframe. Use a new id for a different instrument or period.",
-    "timeframe": "Use lookback (for example 1mo or 1y) OR start (YYYY-MM-DD), plus end. end=null means today when run; otherwise end is YYYY-MM-DD. The requested range is inclusive. Returned raw responses are not clipped to this range.",
-    "metadata": "Set product, operation, currency, unit, asset_class, description, exchange and frequency for the instrument. These fields describe the request; they do not convert the returned data.",
-    "raw_output": "run.py saves original provider responses under tests/data_dumps. No local cleaning, resampling or price adjustment is applied; any provider-side adjustments are described below.",
-    "products": "The implemented adapter supports stock and etf with operation=price_history and frequency=1d. The disabled SPX option requests are reference examples only; enabling them is rejected.",
-    "input": "input.symbol is the Alpha Vantage symbol. Verify its listing and currency using the provider symbol search; do not assume Yahoo suffixes apply.",
-    "parameters": "function is TIME_SERIES_DAILY or TIME_SERIES_DAILY_ADJUSTED; outputsize is compact or full. DAILY supplies unadjusted OHLCV; ADJUSTED additionally supplies adjusted close and corporate actions. Full/adjusted access depends on account entitlement.",
-    "history_range": "compact returns the latest 100 daily observations, regardless of the requested start/end. This endpoint has no date-range parameters, and raw mode preserves its complete response.",
-    "credentials": "run.py reads ALPHA_VANTAGE_API_KEY from the environment. Keep the actual key outside this JSON."
+    "run_date": "run.py asks for COB in DD/MM/YYYY. COB must be yesterday or earlier in Europe/London.",
+    "history": "lookback=max requests the longest accessible history through COB. Provider and account limits are recorded; missing data is never filled.",
+    "archive": "A completed tests/data_dumps/YYYY-MM-DD archive is reused without API calls. Interrupted runs resume unfinished requests.",
+    "products": "SPX index and IEF ETF where supported; existing FRED/ECB reference series retained.",
+    "options": "Only IBKR requests options: yesterday COB selects current live snapshots; older COB selects historical bars only. Live capture dates remain separate from COB.",
+    "unsupported_requests": "Enabled products without an implemented endpoint produce a saved unsupported_operation status. No stock endpoint is used as an index substitute."
   },
   "product_guides": {
-    "stock_and_etf": {
-      "implemented": true,
-      "instructions": "Copy the template into requests, verify the identifier/listing, edit dates, then set enabled=true. ETF input has the same identifier shape but use product=etf.",
+    "index": {
+      "implemented": false,
+      "instructions": "Index requests may remain enabled for audit output. This adapter has no index-history implementation; status.json records unsupported_operation without issuing a stock request.",
       "template": {
-        "id": "AAPL",
-        "enabled": false,
-        "product": "stock",
+        "id": "SPX",
+        "enabled": true,
+        "product": "index",
         "operation": "price_history",
-        "ticker": "AAPL",
-        "description": "Apple common stock, US listing",
-        "asset_class": "equity",
+        "ticker": "SPX",
+        "description": "S&P 500 price index; underlying of the configured SPX options",
+        "asset_class": "equity_index",
+        "currency": "USD",
+        "unit": "Index points",
+        "exchange": "CBOE",
+        "timeframe": {
+          "lookback": "max",
+          "end": "COB"
+        },
+        "frequency": "1d",
+        "input": {
+          "symbol": "SPX"
+        },
+        "parameters": {
+          "function": "INDEX_DATA",
+          "interval": "daily"
+        },
+        "notes": "Enabled for complete request accounting. The current adapter does not implement index history; the run saves unsupported_operation in status.json and continues with the other products/providers."
+      }
+    },
+    "etf": {
+      "implemented": true,
+      "instructions": "IEF is the US-dollar iShares 7-10 Year Treasury Bond ETF. Adjust the history timeframe in requests.",
+      "template": {
+        "id": "IEF",
+        "enabled": false,
+        "product": "etf",
+        "operation": "price_history",
+        "ticker": "IEF",
+        "description": "iShares 7-10 Year Treasury Bond ETF, US listing",
+        "asset_class": "sovereign_bond_etf",
         "currency": "USD",
         "unit": "USD per share",
         "exchange": "NASDAQ",
         "timeframe": {
-          "lookback": "1mo",
-          "end": null
+          "lookback": "max",
+          "end": "COB"
         },
         "frequency": "1d",
         "input": {
-          "symbol": "AAPL"
+          "symbol": "IEF"
         },
         "parameters": {
           "function": "TIME_SERIES_DAILY",
           "outputsize": "compact"
         }
       }
-    },
-    "index_option": {
-      "implemented": false,
-      "instructions": "The two disabled SPX requests document the intended contracts. HISTORICAL_OPTIONS requires a per-date adapter that is not implemented here. The last account probe returned a premium-access error; SPX coverage and provider identifiers remain unverified. A subscription alone does not enable these requests in this library."
     }
   },
   "sources": {

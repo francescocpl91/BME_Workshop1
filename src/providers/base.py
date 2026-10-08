@@ -33,8 +33,6 @@ class MarketDataProvider(ABC):
         """Only non-secret configuration may enter cached metadata."""
         return {}
 
-    def fetch_option_raw(self, instrument, symbol, window, contract):
-        raise RetrievalError("unsupported_product", "This provider has no SPX option-history adapter.")
 
     def fetch_raw(self, instrument, symbol, window):
         """Retrieve native responses through client.response_sink, without tables."""
@@ -43,3 +41,12 @@ class MarketDataProvider(ABC):
     @abstractmethod
     def fetch(self, instrument: Instrument, symbol: str, window: DateWindow) -> RetrievedSeries:
         raise NotImplementedError
+
+
+def check_request_support(provider_name, data_type):
+    """Retain unsupported configured products as failures without misrouting them."""
+    if data_type == 'index_price' and provider_name in {'alpha_vantage', 'marketdata'}:
+        raise RetrievalError('unsupported_operation',
+            f'{provider_name}: index-price history is not implemented by this adapter. '
+            'The request remains enabled and this status is saved. No index API call '
+            'was sent and no stock/ETF data was substituted.')

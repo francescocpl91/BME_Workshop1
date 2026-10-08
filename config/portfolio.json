@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "reporting_currency": "EUR",
+  "weight_basis": "reporting_currency_market_value",
+  "nav": null,
+  "target_allocation": {
+    "equity": 0.5,
+    "sovereign_fixed_income": 0.5
+  },
+  "holdings": [
+    {
+      "request_id": "SPX",
+      "bucket": "equity",
+      "weight": 0.5
+    },
+    {
+      "request_id": "IEF",
+      "bucket": "sovereign_fixed_income",
+      "weight": 0.5
+    }
+  ],
+  "reference_data": [
+    "US10Y",
+    "EUR10Y",
+    "SOFR",
+    "ESTR",
+    "EURUSD"
+  ],
+  "instructions": {
+    "allocation": "User-selected allocation: 50% S&P 500 price index (SPX), 50% IEF 7-10 Year US Treasury ETF. Weights are fractions of portfolio value in EUR.",
+    "weights": "Use decimal fractions (0.20 means 20%) of market value in reporting currency. Complete holding weights must match target_allocation and sum to 1. No automatic normalization. This first schema is long-only.",
+    "nav": "Optional portfolio market value in EUR. Required later, together with prices, FX and multipliers, to turn weights into quantities. No quantities are calculated now.",
+    "options": "Options are contract reference data only, not portfolio holdings. Contract-code discovery does not download prices or calibrate a volatility surface.",
+    "fx": "EURUSD is quoted in USD per EUR: EUR value = USD value / EURUSD. Reporting currency does not change native quote currencies.",
+    "scope": "SPX is a model index exposure, not a directly purchasable security. This configuration does not place orders or calculate quantities. The only other holding is IEF."
+  }
+}

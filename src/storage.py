@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import re
 import uuid
+import time
 
 import pandas as pd
 
@@ -16,7 +17,16 @@ def write_json(path: Path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + "." + uuid.uuid4().hex + ".tmp")
     temporary.write_text(json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False), encoding="utf-8")
-    temporary.replace(path)
+    # Sync clients and virus scanners can briefly hold the destination on Windows.
+    # Keep atomic replacement; persistent permission errors still reach the caller.
+    for attempt in range(7):
+        try:
+            temporary.replace(path)
+            break
+        except PermissionError:
+            if attempt == 6:
+                raise
+            time.sleep(min(.05 * 2 ** attempt, 1.0))
 
 
 def safe_name(text: str) -> str:
@@ -33,7 +43,7 @@ class SeriesCache:
         identity = {"schema": 1, "provider": provider.name, "ticker": instrument.ticker,
                     "kind": instrument.kind, "symbol": symbol, "start": str(window.start), "end": str(window.end),
                     "currency": instrument.currency, "unit": instrument.unit, "description": instrument.description,
-                    "options": provider.cache_settings()}
+                    "options": provider.cache_settings(), "provider_input": instrument.provider_inputs.get(provider.name)}
         digest = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
         return self.path / provider.name / (digest + ".json")
 

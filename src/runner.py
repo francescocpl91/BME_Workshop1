@@ -6,6 +6,7 @@ import uuid
 import pandas as pd
 
 from .models import RetrievalError, normalize
+from .providers.base import check_request_support
 from .storage import SeriesCache, safe_name, write_json
 
 SUMMARY_COLUMNS = ["request_id", "requested_start", "requested_end", "data_type", "requested_frequency", "ticker", "provider", "provider_symbol", "kind", "status", "rows", "numeric_observations",
@@ -34,6 +35,7 @@ def retrieve(instruments, providers, window, output: Path | None, cache: SeriesC
                 continue
             progress(f"Fetching {instrument.ticker} / {provider.name} ({symbol}) ...")
             try:
+                check_request_support(provider.name, (request_metadata or {}).get("data_type"))
                 result = None if refresh or cache is None else cache.get(provider, instrument, symbol, window)
                 cache_hit = result is not None
                 if result is None:

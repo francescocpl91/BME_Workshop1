@@ -59,6 +59,7 @@ class Instrument:
     unit: str | None = None
     description: str = ""
     mapped: bool = False
+    provider_inputs: dict[str, dict] = field(default_factory=dict)
 
     def symbol_for(self, provider: str, provider_kind: str) -> str | None:
         if self.kind != provider_kind:

@@ -33,13 +33,6 @@ class YahooProvider(MarketDataProvider):
             raise RetrievalError("no_data", "Yahoo chart returned no results; inspect the saved response.")
         return chart
 
-    def fetch_option_raw(self, instrument, symbol, window, contract):
-        chart = self.fetch_raw(instrument, symbol, window)
-        results = chart["result"]
-        if len(results) != 1 or results[0].get("meta", {}).get("symbol") != symbol or results[0].get("meta", {}).get("instrumentType") != "OPTION":
-            raise RetrievalError("contract_mismatch", "Yahoo returned a different instrument; inspect the saved response.")
-        if not results[0].get("timestamp"):
-            raise RetrievalError("no_data", "Yahoo returned no option history timestamps.")
 
     def fetch(self, instrument, symbol, window):
         try:

@@ -1,0 +1,287 @@
+"""Persistent COB archives with explicit historical and live-option provenance."""
+from copy import deepcopy
+from dataclasses import asdict, dataclass, replace
+from datetime import date, datetime, timedelta
+import hashlib
+import json
+from pathlib import Path
+import re
+from zoneinfo import ZoneInfo
+
+import pandas as pd
+from .config import parse_requests, PROVIDERS, HISTORY_FALLBACK_START
+from .models import DateWindow, RetrievalError
+from .raw import ResponseRecorder
+from .providers.base import check_request_support
+from .storage import safe_name, write_json
+
+
+def london_today():
+    return datetime.now(ZoneInfo('Europe/London')).date()
+
+
+def parse_cob(value, *, today=None):
+    today = today or london_today()
+    if type(value) is date: cob = value
+    else:
+        if not isinstance(value,str) or not re.fullmatch(r'\d{2}/\d{2}/\d{4}',value.strip()):
+            raise ValueError('Enter the COB date as DD/MM/YYYY.')
+        try:cob=datetime.strptime(value.strip(),'%d/%m/%Y').date()
+        except ValueError:raise ValueError('Enter a valid calendar date as DD/MM/YYYY.') from None
+    if cob >= today:raise ValueError('COB must be yesterday or earlier; today and future dates are not allowed.')
+    if cob < date(1900,1,1):raise ValueError('COB must be 01/01/1900 or later for these configured products.')
+    return cob
+
+
+@dataclass
+class CobResult:
+    folder: Path
+    summary: pd.DataFrame
+    reused: bool = False
+
+
+def option_route(job, cob, today=None):
+    """Date alone selects the API; an older COB never requests live options."""
+    today = today or london_today()
+    parse_cob(cob, today=today)
+    return 'live' if cob == today - timedelta(days=1) else 'historical'
+
+
+def _http_history(provider, job):
+    """Request the full date range; preserve provider-native payloads and limits."""
+    check_request_support(provider.name, job.data_type)
+    try:
+        provider.fetch_raw(job.instrument,job.instrument.symbols[provider.name],job.window)
+        return 'response_saved','Requested all available history from the configured lower bound through COB; provider/account limits still apply.'
+    except RetrievalError as exc:
+        if provider.name=='alpha_vantage' and exc.code=='entitlement_error':
+            provider.settings['ALPHA_VANTAGE_OUTPUTSIZE']='compact'
+            provider.fetch_raw(job.instrument,job.instrument.symbols[provider.name],job.window)
+            return 'limited_history','Full history denied; captured the accessible compact response. It may not reach the selected COB.'
+        if provider.name not in {'massive','marketdata'} or exc.code not in {'entitlement_error','authentication_error','provider_error'}:raise
+        # Some plans reject any range extending before their entitlement. Search
+        # backwards in yearly windows, stopping at the first inaccessible boundary.
+        end=job.window.end; got=False
+        while end>=job.window.start:
+            start=max(job.window.start,end-timedelta(days=364))
+            try:provider.fetch_raw(job.instrument,job.instrument.symbols[provider.name],DateWindow(start,end))
+            except RetrievalError as boundary:
+                if got and boundary.code in {'no_data','entitlement_error','authentication_error'}:
+                    return 'limited_history','Stopped at a provider/account history boundary; inspect preserved responses for exact coverage.'
+                raise
+            got=True;end=start-timedelta(days=1)
+        return 'response_saved','Historical range retrieved in yearly windows.'
+
+
+def _compatible_archive(saved, requested):
+    """Allow broader saved history, while preserving instrument/settings checks.
+
+    Schema 2 did not record effective runtime settings. Reuse it as originally
+    captured, without claiming those missing settings have been verified.
+    """
+    prior, current = deepcopy(saved), deepcopy(requested)
+    schema = prior.pop('schema', None)
+    current.pop('schema', None)
+    if schema not in {2, 3}:
+        return False
+    if schema == 2:
+        current.pop('data_settings', None)
+    old_rows = prior.get('requests', [])
+    new_rows = current.get('requests', [])
+    if len(old_rows) != len(new_rows):
+        return False
+    for old, new in zip(old_rows, new_rows):
+        if old.get('kind') != 'option' and new.get('kind') != 'option':
+            old_window, new_window = old.get('timeframe', {}), new.get('timeframe', {})
+            if (old_window.get('end') == new_window.get('end')
+                    and old_window.get('start', '9999') <= new_window.get('start', '0000')):
+                new['timeframe'] = deepcopy(old_window)
+    return prior == current
+
+
+def download_cob(downloader,cob,output,*,portfolio_file=None,retry_failed=False):
+    execution_date=london_today()
+    cob=parse_cob(cob,today=execution_date)
+    config=deepcopy(downloader._retrieval_config)
+    if config is None:raise ValueError('COB download requires explicit JSON/configured requests.')
+    # One run date controls every provider; all non-option histories request max.
+    for row in config['requests']:
+        if row['kind']=='option':
+            if set(row['symbols'])!={'ibkr'}:raise ValueError('COB options must use IBKR only.')
+            if row.get('operation')!='option_history':raise ValueError('COB option inputs require option_history inputs; the COB date selects the actual API.')
+            row['timeframe']={'start':str(cob),'end':str(cob)}
+        else:row['timeframe']={'start':min(HISTORY_FALLBACK_START,cob).isoformat(),'end':str(cob)}
+    jobs=parse_requests(config)
+    # Only data-affecting choices enter the fingerprint, never credentials or
+    # transport settings. Include both option routes so reuse is date-stable.
+    option_keys = {
+        'alpha_vantage': ('ALPHA_VANTAGE_OUTPUTSIZE', 'ALPHA_VANTAGE_ADJUSTED'),
+        'marketdata': ('MARKETDATA_ADJUSTMENT',),
+    }
+    data_settings = {}
+    for job in jobs:
+        for name in job.providers:
+            keys = option_keys.get(name, ())
+            if name == 'ibkr' and job.instrument.kind == 'option':
+                keys = ('IBKR_HISTORY_DATA_TYPES', 'IBKR_HISTORY_CUTOFF',
+                        'IBKR_HISTORY_TIMEZONE', 'IBKR_OPTION_CAPTURE_SECONDS')
+            effective = {**downloader._settings, **job.provider_options}
+            data_settings.setdefault(name, {})[job.request_id] = {key: effective[key] for key in keys}
+    identity={'schema':3,'option_routing_policy':'yesterday_live_older_historical','cob':str(cob),'requests':config['requests'],
+              'data_settings':data_settings}
+    if portfolio_file:
+        from .portfolio import load_portfolio
+        load_portfolio(portfolio_file,config)
+        identity['portfolio']=json.loads(Path(portfolio_file).read_text(encoding='utf-8-sig'))
+    digest=hashlib.sha256(json.dumps(identity,sort_keys=True).encode()).hexdigest()
+    folder=Path(output).resolve()/str(cob)
+    manifest_file=folder/'manifest.json';summary_file=folder/'summary.json'
+    existing=json.loads(manifest_file.read_text()) if manifest_file.exists() else {}
+    if existing and existing.get('config_hash') != digest:
+        inputs_file = folder / 'resolved_inputs.json'
+        if not inputs_file.exists():
+            raise ValueError('COB archive inputs are missing; cannot verify saved instruments. No API calls made.')
+        saved_identity = json.loads(inputs_file.read_text(encoding='utf-8-sig'))
+        saved_digest = hashlib.sha256(json.dumps(saved_identity,sort_keys=True).encode()).hexdigest()
+        if saved_digest != existing.get('config_hash') or not _compatible_archive(saved_identity, identity):
+            raise ValueError('A COB archive exists with different inputs. Preserve/rename that archive before running changed inputs; no API calls made.')
+        if existing.get('schema_version') == 2:
+            downloader.progress('Reusing legacy archive inputs as captured; schema 2 did not record effective runtime settings.')
+        # Keep the original identity/provenance on resume or explicit retry.
+        # A change to the fallback date must not rewrite older captured history.
+        identity, digest = saved_identity, saved_digest
+    if existing.get('complete') and not retry_failed:
+        if not summary_file.exists():raise ValueError('COB archive summary is missing; archive requires inspection, no APIs called.')
+        downloader.progress('Reusing completed COB archive: '+str(folder)+'; no API requests.')
+        return CobResult(folder,pd.DataFrame(json.loads(summary_file.read_text())),True)
+    folder.mkdir(parents=True,exist_ok=True)
+    lock=folder/'.running'
+    try:handle=lock.open('x',encoding='utf-8')
+    except FileExistsError:raise ValueError('A run lock exists for this COB. Check the active run before removing a stale .running file.') from None
+    records=[];pending=[];settings=downloader._settings;progress=downloader.progress
+    base={'schema_version':identity['schema'],'execution_date':str(execution_date),'option_route':option_route(None,cob,execution_date),'cob':str(cob),'config_hash':digest,'complete':False,
+          'meaning_of_complete':'Every configured request was attempted; see all_requests_succeeded and individual statuses.',
+          'history_fallback_start':HISTORY_FALLBACK_START.isoformat(),
+          'history_start_policy':'IBKR earliest available when discoverable; otherwise 2000-01-03 (or COB if earlier). Existing longer histories are retained.',
+          'notes':['Prices/rates requested through COB; raw payloads may contain provider padding or later metadata. Alpha Vantage has no historical end-date parameter; filter its dated rows to COB before analysis.',
+                   'Macro series are current vintages with observation dates bounded by COB, not point-in-time revision archives.',
+                   'Yesterday COB selects current live option snapshots; older COB selects historical option bars only. Historical bars have no contract IV/Greeks.',
+                   'Live option capture is separate from COB historical prices. Callback receipt time is not a guaranteed exchange quote timestamp.',
+                   'No cleansing, filling, implied-volatility calculation or surface calibration is performed.']}
+    try:
+        handle.write('COB download in progress');handle.close()
+        write_json(manifest_file,base)
+        write_json(folder/'resolved_inputs.json',identity)
+        if portfolio_file:write_json(folder/'portfolio.json',identity['portfolio'])
+        for job in jobs:
+            for name in job.providers:
+                dest=folder/name/safe_name(job.request_id)
+                checkpoint=dest/'status.json'
+                old=json.loads(checkpoint.read_text()) if checkpoint.exists() else None
+                if old and old.get('finished') and (not retry_failed or old['status']=='response_saved'):
+                    records.append(old)
+                else:pending.append((job,name,dest))
+        secrets=[p.key for p in downloader.providers if p.key]
+        def prepare(job,name,dest,method,executed_job=None):
+            executed_job=executed_job or job
+            dest.mkdir(parents=True,exist_ok=True)
+            attempt=dest/('attempt_'+str(len(list(dest.glob('attempt_*')))+1).zfill(3))
+            recorder=ResponseRecorder(attempt,secrets)
+            window = executed_job.window
+            requested_range = {'requested_start':str(window.start) if window else None,
+                               'requested_end':str(window.end) if window else None}
+            metadata = {**executed_job.metadata(),**requested_range,
+                'configured_operation':job.operation,'cob':str(cob),'provider':name,'retrieval_method':method,
+                'provider_input':executed_job.instrument.provider_inputs.get(name),'provider_options':executed_job.provider_options}
+            # Each attempt keeps its own execution inputs. resolved_inputs.json
+            # remains the original archive identity, even after a compatible retry.
+            write_json(attempt/'request.json',metadata)
+            write_json(dest/'request.json',metadata)
+            return recorder,{'request_id':job.request_id,'ticker':job.instrument.ticker,'provider':name,'operation':executed_job.operation,'configured_operation':job.operation,
+                **requested_range,'cob':str(cob),'retrieval_method':method,'folder':str(dest.relative_to(folder)),'attempt':str(attempt.relative_to(folder))}
+        def finish(dest,row,recorder):
+            row.update(finished=True,responses_saved=len(recorder.responses))
+            write_json(dest/'status.json',row)
+            records[:]=[r for r in records if (r['provider'],r['request_id'])!=(row['provider'],row['request_id'])]
+            records.append(row)
+            label='LIVE SNAPSHOT' if row['retrieval_method']=='reqMktData_snapshot_live' else 'HISTORICAL'
+            progress(row['provider']+' ['+label+'] '+row['ticker']+': '+row['status'])
+        # Independent HTTP providers first; each failure is recorded without
+        # turning an unavailable provider into a successful cached dataset.
+        blocked={}
+        clients={p.name:p.client for p in downloader.providers}
+        for job,name,dest in pending:
+            if name=='ibkr':continue
+            recorder,row=prepare(job,name,dest,'historical_http')
+            provider=PROVIDERS[name]({**settings,**job.provider_options},client=clients[name])
+            previous_sink=provider.client.response_sink
+            provider.client.response_sink=recorder
+            try:
+                if name in blocked:raise RetrievalError('provider_paused',blocked[name])
+                status,message=_http_history(provider,job)
+                row.update(status=status,message=message)
+            except RetrievalError as exc:
+                row.update(status=exc.code,message=recorder.scrub(str(exc)))
+                if exc.code=='unsupported_operation':row['api_request_sent']=False
+                if exc.code in {'network_error','rate_limited','missing_key','authentication_error'}:blocked[name]=str(exc)
+            except Exception as exc:row.update(status='provider_error',message=type(exc).__name__+'; inspect saved responses.')
+            finally:
+                provider.client.response_sink=previous_sink
+            finish(dest,row,recorder)
+        ib_jobs={job.request_id:(job,dest) for job,name,dest in pending if name=='ibkr'}
+        historical=[];live=[]
+        for job,dest in ib_jobs.values():
+            route=option_route(job,cob,execution_date) if job.instrument.kind=='option' else 'historical'
+            if route=='live':live.append(job)
+            else:historical.append(job)
+        if historical:
+            from .providers.ibkr_history import iter_history
+            for result in iter_history(historical,settings,progress,True):
+                job=result['request'];dest=ib_jobs[job.request_id][1]
+                recorder,row=prepare(job,'ibkr',dest,'reqHistoricalData')
+                for payload in result['payloads']:
+                    recorder(json.dumps(payload,allow_nan=False).encode(),None,'application/json','ibkr://historical/'+payload.get('method','response'))
+                row.update(result['info'],status=result['status'],message=result['message'])
+                if job.instrument.kind=='option':
+                    row['historical_model_iv_available']=False
+                    row['historical_greeks_available']=False
+                    row['option_route']='historical'
+                finish(dest,row,recorder)
+        if live:
+            from .providers.ibkr import IBKRProvider
+            capture_date=execution_date
+            live_settings={**settings,'IBKR_LIVE_EXPECTED_DATE':str(capture_date)}
+            provider=IBKRProvider(live_settings)
+            converted=[replace(j,operation='option_model_snapshot',window=None,frequency='snapshot',provider_options={
+                'IBKR_OPTION_MARKET_DATA_TYPE':'1','IBKR_OPTION_CAPTURE_SECONDS':settings.get('IBKR_OPTION_CAPTURE_SECONDS','60')}) for j in live]
+            progress('COB is yesterday: capturing current live options dated '+str(capture_date)+'.')
+            for result in provider.iter_option_models(converted,progress):
+                original,dest=ib_jobs[result['request'].request_id]
+                recorder,row=prepare(original,'ibkr',dest,'reqMktData_snapshot_live',executed_job=result['request'])
+                if result['body'] is not None:recorder(result['body'],None,'application/json',result['url'])
+                error=result['error']
+                row.update(result['info'],status=error.code if error else 'response_saved',
+                    message=str(error) if error else 'Live option model captured; separate from historical COB prices.',
+                    live_capture_date=str(capture_date),option_route='live',
+                    historical_option_query_skipped='COB is yesterday; date policy prioritizes current live options.')
+                if result['body'] is not None:
+                    import math
+                    payload=json.loads(result['body']);ticker=payload.get('ticker',{});greeks=ticker.get('modelGreeks') or {}
+                    required=('impliedVol','optPrice','undPrice','delta','gamma','vega','theta','pvDividend')
+                    missing=[k for k in required if isinstance(greeks.get(k),bool) or not isinstance(greeks.get(k),(int,float)) or not math.isfinite(greeks[k]) or abs(greeks[k])>=1e100]
+                    for k in ('impliedVol','optPrice','undPrice','gamma','vega','pvDividend'):
+                        if k not in missing and greeks[k]<0:missing.append(k)
+                    if 'delta' not in missing and not -1<=greeks['delta']<=1:missing.append('delta')
+                    row['missing_model_fields']=missing
+                    row['required_model_fields_complete']=not missing
+                    if missing and row['status']=='response_saved':row['status']='partial_model_data'
+                if capture_date!=london_today():row.update(status='live_date_mismatch',message='Capture crossed the requested live-date boundary; inspect individual timestamps.')
+                finish(dest,row,recorder)
+        write_json(summary_file,records)
+        counts=pd.Series([r['status'] for r in records]).value_counts().to_dict()
+        write_json(manifest_file,{**base,'complete':True,'all_requests_succeeded':all(r['status']=='response_saved' for r in records),
+            'completed_at':datetime.now(ZoneInfo('Europe/London')).isoformat(),'request_count':len(records),'status_counts':{k:int(v) for k,v in counts.items()}})
+        return CobResult(folder,pd.DataFrame(records))
+    finally:
+        handle.close()
+        lock.unlink(missing_ok=True)

@@ -4,46 +4,23 @@
   "enabled": true,
   "requests": [
     {
-      "id": "SPY",
+      "id": "SPX",
       "enabled": true,
-      "product": "etf",
+      "product": "index",
       "operation": "price_history",
-      "ticker": "SPY",
-      "description": "SPDR S&P 500 ETF Trust, US listing",
-      "asset_class": "equity",
+      "ticker": "SPX",
+      "description": "S&P 500 price index; underlying of the configured SPX options",
+      "asset_class": "equity_index",
       "currency": "USD",
-      "unit": "USD per share",
-      "exchange": "NYSE Arca",
+      "unit": "Index points",
+      "exchange": "CBOE",
       "timeframe": {
-        "lookback": "1mo",
-        "end": null
+        "lookback": "max",
+        "end": "COB"
       },
       "frequency": "1d",
       "input": {
-        "symbol": "SPY"
-      },
-      "parameters": {
-        "auto_adjust": false
-      }
-    },
-    {
-      "id": "QQQ",
-      "enabled": true,
-      "product": "etf",
-      "operation": "price_history",
-      "ticker": "QQQ",
-      "description": "Invesco QQQ Trust, US listing",
-      "asset_class": "equity",
-      "currency": "USD",
-      "unit": "USD per share",
-      "exchange": "NASDAQ",
-      "timeframe": {
-        "lookback": "1mo",
-        "end": null
-      },
-      "frequency": "1d",
-      "input": {
-        "symbol": "QQQ"
+        "symbol": "^GSPC"
       },
       "parameters": {
         "auto_adjust": false
@@ -61,8 +38,8 @@
       "unit": "USD per share",
       "exchange": "NASDAQ",
       "timeframe": {
-        "lookback": "1mo",
-        "end": null
+        "lookback": "max",
+        "end": "COB"
       },
       "frequency": "1d",
       "input": {
@@ -71,129 +48,33 @@
       "parameters": {
         "auto_adjust": false
       }
-    },
-    {
-      "id": "SPX_20261218_7000_CALL",
-      "enabled": true,
-      "product": "index_option",
-      "operation": "option_history",
-      "ticker": "SPX261218C07000000",
-      "description": "S&P 500 index European call; standard SPX AM settlement",
-      "asset_class": "equity_index_option",
-      "currency": "USD",
-      "unit": "index points (100 USD per point per contract)",
-      "exchange": "XCBO",
-      "contract": {
-        "underlying": "SPX",
-        "root": "SPX",
-        "expiration": "2026-12-18",
-        "strike": 7000,
-        "option_type": "call",
-        "exercise_style": "european",
-        "settlement": "cash",
-        "settlement_time": "AM",
-        "multiplier": 100
-      },
-      "input": {
-        "symbol": "SPX261218C07000000"
-      },
-      "timeframe": {
-        "lookback": "1mo",
-        "end": null
-      },
-      "frequency": "1d",
-      "parameters": {}
-    },
-    {
-      "id": "SPX_20261218_7000_PUT",
-      "enabled": true,
-      "product": "index_option",
-      "operation": "option_history",
-      "ticker": "SPX261218P07000000",
-      "description": "S&P 500 index European put; standard SPX AM settlement",
-      "asset_class": "equity_index_option",
-      "currency": "USD",
-      "unit": "index points (100 USD per point per contract)",
-      "exchange": "XCBO",
-      "contract": {
-        "underlying": "SPX",
-        "root": "SPX",
-        "expiration": "2026-12-18",
-        "strike": 7000,
-        "option_type": "put",
-        "exercise_style": "european",
-        "settlement": "cash",
-        "settlement_time": "AM",
-        "multiplier": 100
-      },
-      "input": {
-        "symbol": "SPX261218P07000000"
-      },
-      "timeframe": {
-        "lookback": "1mo",
-        "end": null
-      },
-      "frequency": "1d",
-      "parameters": {}
     }
   ],
   "instructions": {
-    "editing": "Edit requests. Only enabled requests in enabled provider files run. product_guides contains copyable examples, not downloads. JSON requires double quotes and has no comments.",
-    "identity": "id identifies the request; ticker is your label; input contains the provider identifier. Matching requests across providers need the same id, contract/instrument details and timeframe. Use a new id for a different instrument or period.",
-    "timeframe": "Use lookback (for example 1mo or 1y) OR start (YYYY-MM-DD), plus end. end=null means today when run; otherwise end is YYYY-MM-DD. The requested range is inclusive. Returned raw responses are not clipped to this range.",
-    "metadata": "Set product, operation, currency, unit, asset_class, description, exchange and frequency for the instrument. These fields describe the request; they do not convert the returned data.",
-    "raw_output": "run.py saves original provider responses under tests/data_dumps. No local cleaning, resampling or price adjustment is applied; any provider-side adjustments are described below.",
-    "products": "Use stock, etf or index with operation=price_history; use index_option with operation=option_history for SPX/SPXW. frequency=1d.",
-    "input": "input.symbol is the exact Yahoo symbol, including exchange suffix/index prefix when needed. For index_option, use the full OCC identifier matching contract, for example SPX261218C07000000.",
-    "parameters": "For stock/ETF/index requests use auto_adjust=false. The raw chart retains the provider close and adjusted-close fields; it is not locally adjusted. For index_option use parameters={}.",
-    "credentials": "No API key is required. Yahoo is an unofficial source and availability may vary.",
-    "date_boundaries": "Raw chart requests use UTC-midnight boundaries and preserve native timestamps and timezone metadata."
+    "run_date": "run.py asks for COB in DD/MM/YYYY. COB must be yesterday or earlier in Europe/London.",
+    "history": "lookback=max requests the longest accessible history through COB. Provider and account limits are recorded; missing data is never filled.",
+    "archive": "A completed tests/data_dumps/YYYY-MM-DD archive is reused without API calls. Interrupted runs resume unfinished requests.",
+    "products": "SPX index and IEF ETF where supported; existing FRED/ECB reference series retained.",
+    "options": "Only IBKR requests options: yesterday COB selects current live snapshots; older COB selects historical bars only. Live capture dates remain separate from COB."
   },
   "product_guides": {
-    "stock_and_etf": {
-      "implemented": true,
-      "instructions": "Copy the template into requests, verify the identifier/listing, edit dates, then set enabled=true. ETF input has the same identifier shape but use product=etf.",
-      "template": {
-        "id": "AAPL",
-        "enabled": false,
-        "product": "stock",
-        "operation": "price_history",
-        "ticker": "AAPL",
-        "description": "Apple common stock, US listing",
-        "asset_class": "equity",
-        "currency": "USD",
-        "unit": "USD per share",
-        "exchange": "NASDAQ",
-        "timeframe": {
-          "lookback": "1mo",
-          "end": null
-        },
-        "frequency": "1d",
-        "input": {
-          "symbol": "AAPL"
-        },
-        "parameters": {
-          "auto_adjust": false
-        }
-      }
-    },
     "index": {
       "implemented": true,
-      "instructions": "Use product=index and the exact Yahoo index symbol; confirm denomination. This is an index level, not a tradable ETF.",
+      "instructions": "SPX is the S&P 500 price index. Use the provider-native identifier and check enabled/notes in requests for current access. No SPY substitution.",
       "template": {
-        "id": "SP500_INDEX",
+        "id": "SPX",
         "enabled": false,
         "product": "index",
         "operation": "price_history",
-        "ticker": "SP500_INDEX",
-        "description": "S&P 500 price index",
-        "asset_class": "equity",
+        "ticker": "SPX",
+        "description": "S&P 500 price index; underlying of the configured SPX options",
+        "asset_class": "equity_index",
         "currency": "USD",
         "unit": "Index points",
-        "exchange": null,
+        "exchange": "CBOE",
         "timeframe": {
-          "lookback": "1mo",
-          "end": null
+          "lookback": "max",
+          "end": "COB"
         },
         "frequency": "1d",
         "input": {
@@ -204,43 +85,31 @@
         }
       }
     },
-    "index_option": {
+    "etf": {
       "implemented": true,
-      "instructions": "Raw daily option chart bars from Yahoo. No option-chain download or standardized option table is implemented.",
-      "contract": "Set underlying=SPX, root=SPX (AM settlement) or SPXW (PM settlement), expiration=YYYY-MM-DD, positive strike, option_type=call or put, exercise_style=european, settlement=cash and multiplier=100. Use currency=USD. The native identifier must agree with these fields.",
-      "timeframe": "The observation timeframe is independent of contract expiration. Fixed contracts do not roll automatically after expiry.",
-      "usage": "Duplicate a matching request or copy the template into requests, assign an appropriate id, edit both contract and input, then set enabled=true. Option requests support download_raw() only.",
+      "instructions": "IEF is the US-dollar iShares 7-10 Year Treasury Bond ETF. Adjust the history timeframe in requests.",
       "template": {
-        "id": "SPX_20261218_7000_CALL",
+        "id": "IEF",
         "enabled": false,
-        "product": "index_option",
-        "operation": "option_history",
-        "ticker": "SPX261218C07000000",
-        "description": "S&P 500 index European call; standard SPX AM settlement",
-        "asset_class": "equity_index_option",
+        "product": "etf",
+        "operation": "price_history",
+        "ticker": "IEF",
+        "description": "iShares 7-10 Year Treasury Bond ETF, US listing",
+        "asset_class": "sovereign_bond_etf",
         "currency": "USD",
-        "unit": "index points (100 USD per point per contract)",
-        "exchange": "XCBO",
-        "contract": {
-          "underlying": "SPX",
-          "root": "SPX",
-          "expiration": "2026-12-18",
-          "strike": 7000,
-          "option_type": "call",
-          "exercise_style": "european",
-          "settlement": "cash",
-          "settlement_time": "AM",
-          "multiplier": 100
-        },
-        "input": {
-          "symbol": "SPX261218C07000000"
-        },
+        "unit": "USD per share",
+        "exchange": "NASDAQ",
         "timeframe": {
-          "lookback": "1mo",
-          "end": null
+          "lookback": "max",
+          "end": "COB"
         },
         "frequency": "1d",
-        "parameters": {}
+        "input": {
+          "symbol": "IEF"
+        },
+        "parameters": {
+          "auto_adjust": false
+        }
       }
     }
   },

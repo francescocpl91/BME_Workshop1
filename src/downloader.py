@@ -74,10 +74,10 @@ class MarketDataDownloader:
 
     @classmethod
     def from_json(cls, paths, *, settings=None, cache_dir=None, cache_hours=24,
-                  output_dir=None, progress=None):
+                  output_dir=None, progress=None, cob_date=None):
         """Load provider-specific JSON request files; keep runtime settings in Python."""
         from .json_config import load_provider_configs
-        config = load_provider_configs(paths)
+        config = load_provider_configs(paths, cob_date=cob_date)
         config.update(settings=dict(settings or {}), cache_dir=cache_dir,
                       cache_hours=cache_hours, output_dir=output_dir)
         return cls.from_config(config, progress=progress)
@@ -97,6 +97,11 @@ class MarketDataDownloader:
                        cache_hours=snapshot.get("cache_hours", 24), progress=progress)
         instance._retrieval_config = snapshot
         return instance
+
+    def download_cob(self, cob, output, *, portfolio_file=None, retry_failed=False):
+        """Persistent COB archive with date-routed options; completed archives need no APIs."""
+        from .cob import download_cob
+        return download_cob(self, cob, output, portfolio_file=portfolio_file, retry_failed=retry_failed)
 
     def _download_configured(self, *, output=None, refresh=False):
         requests = parse_requests(self._retrieval_config)
@@ -160,13 +165,14 @@ class MarketDataDownloader:
         No network requests occur. "configured" means a key was supplied, not
         that the provider accepted it or granted a particular subscription.
         "not_required" means the adapter has no API-key requirement.
+        IBKR "session_unverified" means the SDK exists; TWS login/access is unchecked.
         "missing_key" includes empty/sample credentials.
         """
         rows = []
         for provider in self.providers:
             try:
                 provider.check_access()
-                status = "configured" if provider.key_env else "not_required"
+                status = "session_unverified" if provider.name == "ibkr" else "configured" if provider.key_env else "not_required"
             except RetrievalError as error:
                 status = error.code
             rows.append({"provider": provider.name, "data_type": provider.kind,

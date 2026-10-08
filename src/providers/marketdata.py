@@ -14,23 +14,7 @@ class MarketDataAppProvider(MarketDataProvider):
     def cache_settings(self):
         return {"adjustment": self.settings.get("MARKETDATA_ADJUSTMENT", "split_only")}
 
-    def fetch_option_raw(self, instrument, symbol, window, contract):
-        """Historical EOD quotes, not stock candles. Provider `to` is exclusive."""
-        from datetime import timedelta
-        self.check_access()
-        payload = self.client.get_json(
-            f"{self.api_url}/options/quotes/{quote(symbol, safe='')}/",
-            params={"from": str(window.start), "to": str(window.end + timedelta(days=1))},
-            headers={"Authorization": f"Bearer {self.key}"},
-        )
-        if payload.get("s") != "ok":
-            code = "no_data" if payload.get("s") == "no_data" else "provider_error"
-            raise RetrievalError(code, "MarketData option history failed; inspect saved response and account access.")
-        returned = payload.get("optionSymbol", [])
-        if not returned or not payload.get("updated"):
-            raise RetrievalError("no_data", "MarketData returned no option quote observations.")
-        if not isinstance(returned, list) or any(value != symbol for value in returned):
-            raise RetrievalError("contract_mismatch", "MarketData returned a different option contract.")
+
 
     def fetch(self, instrument, symbol, window):
         return self._fetch(instrument, symbol, window, raw=False)

@@ -1,5 +1,6 @@
 """Provider-native JSON inputs must map correctly or fail before network I/O."""
 from copy import deepcopy
+from datetime import date
 import json
 from pathlib import Path
 import tempfile
@@ -31,10 +32,26 @@ def write_file(folder, provider, rows, **extra):
 
 
 class JsonConfigTests(unittest.TestCase):
-    def test_supplied_configs_normalize_to_eight_requests_and_twenty_one_pairs(self):
+    def test_max_lookback_uses_request_end_not_cob_argument(self):
+        cases = [
+            ('1999-12-31',date(2026,10,7),'1999-12-31','1999-12-31'),
+            ('2000-01-01',date(2026,10,7),'2000-01-01','2000-01-01'),
+            ('2024-06-30',date(1999,12,31),'2000-01-03','2024-06-30'),
+            ('COB',date(1999,12,31),'1999-12-31','1999-12-31'),
+            ('COB',date(2026,10,7),'2000-01-03','2026-10-07'),
+        ]
+        for end, cob, expected_start, expected_end in cases:
+            with self.subTest(end=end,cob=cob), tempfile.TemporaryDirectory() as tmp:
+                row = entry()
+                row['timeframe'] = {'lookback':'max','end':end}
+                path = write_file(Path(tmp),'yahoo',[row])
+                loaded = load_provider_configs(path,cob_date=cob)
+                self.assertEqual(loaded['requests'][0]['timeframe'],{'start':expected_start,'end':expected_end})
+
+    def test_supplied_configs_include_reference_rates_and_ibkr(self):
         config = load_provider_configs(PROJECT / "config")
-        self.assertEqual(len(config["requests"]), 8)
-        self.assertEqual(sum(len(row["symbols"]) for row in config["requests"]), 21)
+        self.assertEqual(len(config["requests"]), 4188)
+        self.assertEqual(sum(len(row["symbols"]) for row in config["requests"]), 4196)
         rows = {row["id"]: row for row in config["requests"]}
         self.assertEqual(rows["US10Y"]["symbols"], {"fred": "DGS10"})
         self.assertEqual(rows["EURUSD"]["symbols"], {"ecb": "EXR/D.USD.EUR.SP00.A"})
@@ -116,6 +133,7 @@ class JsonConfigTests(unittest.TestCase):
     def test_supported_product_templates_validate_when_copied_into_requests(self):
         for path in (PROJECT / "config").glob("*.json"):
             document = json.loads(path.read_text())
+            if path.name in {"portfolio.json"}: continue
             for guide in document["product_guides"].values():
                 if not guide.get("implemented") or "template" not in guide: continue
                 row = deepcopy(guide["template"]); row["enabled"] = True
