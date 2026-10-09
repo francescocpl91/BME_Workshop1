@@ -1,6 +1,6 @@
 """Persistent COB archives with explicit historical and live-option provenance."""
 from copy import deepcopy
-from dataclasses import asdict, dataclass, replace
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 import hashlib
 import json
@@ -9,10 +9,9 @@ import re
 from zoneinfo import ZoneInfo
 
 import pandas as pd
-from .config import parse_requests, PROVIDERS, HISTORY_FALLBACK_START
-from .models import DateWindow, RetrievalError
+from .config import parse_requests, PROVIDERS
+from .models import RetrievalError
 from .raw import ResponseRecorder
-from .providers.base import check_request_support
 from .storage import safe_name, write_json
 
 
@@ -33,6 +32,24 @@ def parse_cob(value, *, today=None):
     return cob
 
 
+def parse_history_start(value, cob):
+    """A caller-selected start, never silently replaced with a default."""
+    if type(value) is date:
+        start = value
+    else:
+        if not isinstance(value, str) or not re.fullmatch(r'\d{2}/\d{2}/\d{4}', value.strip()):
+            raise ValueError('Enter the history start as DD/MM/YYYY.')
+        try:
+            start = datetime.strptime(value.strip(), '%d/%m/%Y').date()
+        except ValueError:
+            raise ValueError('Enter a valid history start date as DD/MM/YYYY.') from None
+    if start > cob:
+        raise ValueError('History start must be on or before COB.')
+    if start < date(1900, 1, 1):
+        raise ValueError('History start must be 01/01/1900 or later.')
+    return start
+
+
 @dataclass
 class CobResult:
     folder: Path
@@ -40,37 +57,16 @@ class CobResult:
     reused: bool = False
 
 
-def option_route(job, cob, today=None):
+def option_route(cob, today=None):
     """Date alone selects the API; an older COB never requests live options."""
     today = today or london_today()
-    parse_cob(cob, today=today)
+    cob = parse_cob(cob, today=today)
     return 'live' if cob == today - timedelta(days=1) else 'historical'
 
 
 def _http_history(provider, job):
-    """Request the full date range; preserve provider-native payloads and limits."""
-    check_request_support(provider.name, job.data_type)
-    try:
-        provider.fetch_raw(job.instrument,job.instrument.symbols[provider.name],job.window)
-        return 'response_saved','Requested all available history from the configured lower bound through COB; provider/account limits still apply.'
-    except RetrievalError as exc:
-        if provider.name=='alpha_vantage' and exc.code=='entitlement_error':
-            provider.settings['ALPHA_VANTAGE_OUTPUTSIZE']='compact'
-            provider.fetch_raw(job.instrument,job.instrument.symbols[provider.name],job.window)
-            return 'limited_history','Full history denied; captured the accessible compact response. It may not reach the selected COB.'
-        if provider.name not in {'massive','marketdata'} or exc.code not in {'entitlement_error','authentication_error','provider_error'}:raise
-        # Some plans reject any range extending before their entitlement. Search
-        # backwards in yearly windows, stopping at the first inaccessible boundary.
-        end=job.window.end; got=False
-        while end>=job.window.start:
-            start=max(job.window.start,end-timedelta(days=364))
-            try:provider.fetch_raw(job.instrument,job.instrument.symbols[provider.name],DateWindow(start,end))
-            except RetrievalError as boundary:
-                if got and boundary.code in {'no_data','entitlement_error','authentication_error'}:
-                    return 'limited_history','Stopped at a provider/account history boundary; inspect preserved responses for exact coverage.'
-                raise
-            got=True;end=start-timedelta(days=1)
-        return 'response_saved','Historical range retrieved in yearly windows.'
+    from .history import fetch_history
+    return fetch_history(provider, job)
 
 
 def _compatible_archive(saved, requested):
@@ -99,18 +95,56 @@ def _compatible_archive(saved, requested):
     return prior == current
 
 
-def download_cob(downloader,cob,output,*,portfolio_file=None,retry_failed=False):
+def _saved_range_covers(row, job, folder, original_requests):
+    """Check executed attempt bounds, not just the immutable archive identity.
+
+    This verifies the range attempted, not completeness of provider observations.
+    Old first attempts can inherit original identity bounds; later attempts must
+    have their own recorded bounds. Live option captures remain date-stable.
+    """
+    if not row or not row.get('finished'):
+        return False
+    if job.instrument.kind == 'option':
+        return True
+    start, end = row.get('requested_start'), row.get('requested_end')
+    if start is None and end is None:
+        attempt = str(row.get('attempt', '')).replace('\\', '/').rsplit('/', 1)[-1]
+        if not re.fullmatch(r'attempt_[0-9]+', attempt):
+            return False
+        request_file = folder / row['provider'] / safe_name(job.request_id) / attempt / 'request.json'
+        if request_file.exists():
+            metadata = json.loads(request_file.read_text(encoding='utf-8-sig'))
+            start, end = metadata.get('requested_start'), metadata.get('requested_end')
+        if start is None and end is None and attempt == 'attempt_001':
+            original = original_requests.get(job.request_id, {})
+            if row['provider'] not in original.get('symbols', {}):
+                return False
+            window = original.get('timeframe', {})
+            start, end = window.get('start'), window.get('end')
+    try:
+        return date.fromisoformat(start) <= job.window.start and date.fromisoformat(end) >= job.window.end
+    except (ValueError, TypeError):
+        return False
+
+
+def download_cob(downloader,cob,output,*,portfolio_file=None,retry_failed=False,history_start=None,ois_file=None):
     execution_date=london_today()
     cob=parse_cob(cob,today=execution_date)
     config=deepcopy(downloader._retrieval_config)
     if config is None:raise ValueError('COB download requires explicit JSON/configured requests.')
-    # One run date controls every provider; all non-option histories request max.
+    if history_start is not None: history_start = parse_history_start(history_start, cob)
+    original_windows = {job.request_id: job.window for job in parse_requests(config)}
+    config['requests'] = [row for row in config['requests'] if row.get('enabled', True)]
+    # Explicit caller/JSON start dates take precedence; options remain COB-only.
     for row in config['requests']:
         if row['kind']=='option':
             if set(row['symbols'])!={'ibkr'}:raise ValueError('COB options must use IBKR only.')
             if row.get('operation')!='option_history':raise ValueError('COB option inputs require option_history inputs; the COB date selects the actual API.')
             row['timeframe']={'start':str(cob),'end':str(cob)}
-        else:row['timeframe']={'start':min(HISTORY_FALLBACK_START,cob).isoformat(),'end':str(cob)}
+        else:
+            start = history_start or original_windows[row['id']].start
+            if start > cob: raise ValueError('History start must be on or before COB.')
+            row['timeframe']={'start':start.isoformat(),'end':str(cob)}
     jobs=parse_requests(config)
     # Only data-affecting choices enter the fingerprint, never credentials or
     # transport settings. Include both option routes so reuse is date-stable.
@@ -133,10 +167,15 @@ def download_cob(downloader,cob,output,*,portfolio_file=None,retry_failed=False)
         from .portfolio import load_portfolio
         load_portfolio(portfolio_file,config)
         identity['portfolio']=json.loads(Path(portfolio_file).read_text(encoding='utf-8-sig'))
+    ois_document = None
+    if ois_file is not None:
+        from .ois import load_ois_config, ois_fingerprint, write_ois_dump, verify_ois_dump
+        ois_document = load_ois_config(ois_file)
+        if ois_document is not None: identity['manual_ois_fingerprint'] = ois_fingerprint(ois_document)
     digest=hashlib.sha256(json.dumps(identity,sort_keys=True).encode()).hexdigest()
     folder=Path(output).resolve()/str(cob)
     manifest_file=folder/'manifest.json';summary_file=folder/'summary.json'
-    existing=json.loads(manifest_file.read_text()) if manifest_file.exists() else {}
+    existing=json.loads(manifest_file.read_text(encoding='utf-8-sig')) if manifest_file.exists() else {}
     if existing and existing.get('config_hash') != digest:
         inputs_file = folder / 'resolved_inputs.json'
         if not inputs_file.exists():
@@ -150,19 +189,26 @@ def download_cob(downloader,cob,output,*,portfolio_file=None,retry_failed=False)
         # Keep the original identity/provenance on resume or explicit retry.
         # A change to the fallback date must not rewrite older captured history.
         identity, digest = saved_identity, saved_digest
+    original_requests = {row['id']: row for row in identity['requests'] if row.get('enabled', True)}
     if existing.get('complete') and not retry_failed:
         if not summary_file.exists():raise ValueError('COB archive summary is missing; archive requires inspection, no APIs called.')
+        saved_rows = json.loads(summary_file.read_text(encoding='utf-8-sig'))
+        by_key = {(row['request_id'], row['provider']): row for row in saved_rows}
+        for job in jobs:
+            for name in job.providers:
+                if not _saved_range_covers(by_key.get((job.request_id, name)), job, folder, original_requests):
+                    raise ValueError('The saved attempt does not cover the requested range for '+job.request_id+'/'+name+'. Use retry_failed=True to retrieve the required range in a new attempt; no API calls or archive writes made.')
+        if ois_document is not None: verify_ois_dump(ois_document, cob, folder, saved_rows)
         downloader.progress('Reusing completed COB archive: '+str(folder)+'; no API requests.')
-        return CobResult(folder,pd.DataFrame(json.loads(summary_file.read_text())),True)
+        return CobResult(folder,pd.DataFrame(saved_rows),True)
     folder.mkdir(parents=True,exist_ok=True)
     lock=folder/'.running'
     try:handle=lock.open('x',encoding='utf-8')
     except FileExistsError:raise ValueError('A run lock exists for this COB. Check the active run before removing a stale .running file.') from None
     records=[];pending=[];settings=downloader._settings;progress=downloader.progress
-    base={'schema_version':identity['schema'],'execution_date':str(execution_date),'option_route':option_route(None,cob,execution_date),'cob':str(cob),'config_hash':digest,'complete':False,
+    base={'schema_version':identity['schema'],'execution_date':str(execution_date),'option_route':option_route(cob,execution_date),'cob':str(cob),'config_hash':digest,'complete':False,
           'meaning_of_complete':'Every configured request was attempted; see all_requests_succeeded and individual statuses.',
-          'history_fallback_start':HISTORY_FALLBACK_START.isoformat(),
-          'history_start_policy':'IBKR earliest available when discoverable; otherwise 2000-01-03 (or COB if earlier). Existing longer histories are retained.',
+          'history_start_policy':'User/JSON start through COB; range failure triggers provider-specific maximum accessible history. See per-request fallback metadata.',
           'notes':['Prices/rates requested through COB; raw payloads may contain provider padding or later metadata. Alpha Vantage has no historical end-date parameter; filter its dated rows to COB before analysis.',
                    'Macro series are current vintages with observation dates bounded by COB, not point-in-time revision archives.',
                    'Yesterday COB selects current live option snapshots; older COB selects historical option bars only. Historical bars have no contract IV/Greeks.',
@@ -173,12 +219,13 @@ def download_cob(downloader,cob,output,*,portfolio_file=None,retry_failed=False)
         write_json(manifest_file,base)
         write_json(folder/'resolved_inputs.json',identity)
         if portfolio_file:write_json(folder/'portfolio.json',identity['portfolio'])
+        if ois_document is not None: records.extend(write_ois_dump(ois_document, cob, folder, progress))
         for job in jobs:
             for name in job.providers:
                 dest=folder/name/safe_name(job.request_id)
                 checkpoint=dest/'status.json'
-                old=json.loads(checkpoint.read_text()) if checkpoint.exists() else None
-                if old and old.get('finished') and (not retry_failed or old['status']=='response_saved'):
+                old=json.loads(checkpoint.read_text(encoding='utf-8-sig')) if checkpoint.exists() else None
+                if old and old.get('finished') and _saved_range_covers(old, job, folder, original_requests) and (not retry_failed or old['status']=='response_saved'):
                     records.append(old)
                 else:pending.append((job,name,dest))
         secrets=[p.key for p in downloader.providers if p.key]
@@ -226,17 +273,18 @@ def download_cob(downloader,cob,output,*,portfolio_file=None,retry_failed=False)
                 if exc.code in {'network_error','rate_limited','missing_key','authentication_error'}:blocked[name]=str(exc)
             except Exception as exc:row.update(status='provider_error',message=type(exc).__name__+'; inspect saved responses.')
             finally:
+                row.update(getattr(provider, 'history_info', {}))
                 provider.client.response_sink=previous_sink
             finish(dest,row,recorder)
         ib_jobs={job.request_id:(job,dest) for job,name,dest in pending if name=='ibkr'}
         historical=[];live=[]
         for job,dest in ib_jobs.values():
-            route=option_route(job,cob,execution_date) if job.instrument.kind=='option' else 'historical'
+            route=option_route(cob,execution_date) if job.instrument.kind=='option' else 'historical'
             if route=='live':live.append(job)
             else:historical.append(job)
         if historical:
             from .providers.ibkr_history import iter_history
-            for result in iter_history(historical,settings,progress,True):
+            for result in iter_history(historical,settings,progress, fallback_max=True):
                 job=result['request'];dest=ib_jobs[job.request_id][1]
                 recorder,row=prepare(job,'ibkr',dest,'reqHistoricalData')
                 for payload in result['payloads']:

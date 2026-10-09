@@ -27,7 +27,7 @@ class FredProvider(MarketDataProvider):
         rows, offset = [], 0
         for _ in range(100):
             payload = self.client.get_json(f"{self.api_url}/series/observations", params={
-                **common, "observation_start": str(window.start), "observation_end": str(window.end),
+                **common, **({"observation_start": str(window.start)} if window.start is not None else {}), "observation_end": str(window.end),
                 "sort_order": "asc", "limit": 100000, "offset": offset,
             })
             if "observations" not in payload:

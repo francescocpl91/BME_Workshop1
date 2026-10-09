@@ -36,6 +36,8 @@ class MarketDataAppProvider(MarketDataProvider):
         if payload.get("s") != "ok":
             code = "no_data" if payload.get("s") == "no_data" else "provider_error"
             raise RetrievalError(code, "MarketData returned no successful candle response; check symbol, dates and entitlement.")
+        if not payload.get("t"):
+            raise RetrievalError("no_data", "MarketData returned no candles for this window.")
         if raw:
             return  # Bodies already saved by HttpClient before parsing.
         required = ("t", "o", "h", "l", "c", "v")

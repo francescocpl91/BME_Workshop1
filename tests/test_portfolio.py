@@ -1,4 +1,5 @@
 """Portfolio weights are independent from multi-provider retrieval requests."""
+from datetime import date
 from copy import deepcopy
 import json
 from pathlib import Path
@@ -14,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class PortfolioTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.config = load_provider_configs(ROOT / "config")
+        cls.config = load_provider_configs(ROOT / "config", history_start=date(2000,1,3))
 
     def setUp(self):
         self.data = json.loads((ROOT / 'config/portfolio.json').read_text(encoding='utf-8'))
@@ -31,7 +32,7 @@ class PortfolioTests(unittest.TestCase):
         self.assertEqual(result.reporting_currency, 'EUR')
         self.assertEqual(result.target_allocation, {'equity': .5, 'sovereign_fixed_income': .5})
         self.assertEqual([(h['request_id'], h['weight']) for h in result.holdings], [('SPX', .5), ('IEF', .5)])
-        self.assertEqual(len(self.config['requests']), 4188)
+        self.assertEqual(len(self.config['requests']), 4189)
 
     def test_complete_weights_are_validated_without_normalizing(self):
         # Synthetic fixture allocations, not proposed portfolio weights.

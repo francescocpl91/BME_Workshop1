@@ -7,7 +7,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 from src import MarketDataDownloader
-from src.cob import parse_cob, london_today
+from src.cob import parse_cob, parse_history_start, london_today
 
 ROOT = Path(__file__).resolve().parent
 
@@ -17,6 +17,7 @@ CONFIG_DIR = ROOT / "config"
 CONFIG_FILES = [CONFIG_DIR / (name + ".json") for name in
                 ("yahoo", "alpha_vantage", "marketdata", "massive", "fred", "ecb", "ibkr")]
 PORTFOLIO_FILE = CONFIG_DIR / "portfolio.json"
+OIS_FILE = CONFIG_DIR / "ois.json"  # Fixed OIS par quotes reused for every COB; no API.
 
 # Credentials/operational setup remain in Python; never commit actual keys.
 SETTINGS = {
@@ -48,7 +49,7 @@ SETTINGS = {
 # Inspect native provider responses first. No cleaning/normalization in this mode.
 RAW_DUMP_DIR = ROOT / "tests" / "data_dumps"
 
-def main(cob_text=None, *, retry_failed=False):
+def main(cob_text=None, history_start_text=None, *, retry_failed=False):
     today = london_today()
     yesterday = today - timedelta(days=1)
     print("\nPORTFOLIO SIMULATOR")
@@ -57,7 +58,7 @@ def main(cob_text=None, *, retry_failed=False):
     print(f"Today (Europe/London): {today:%d/%m/%Y}")
     print(f"Recommended COB (close of business): {yesterday:%d/%m/%Y} (yesterday)")
     print("\nChoose yesterday for the fullest available set of simulation inputs:")
-    print("  - Configured products: available history through COB; earliest IBKR date, otherwise from 03/01/2000.")
+    print("  - Configured products: your selected history start through COB.")
     print("  - Related options configured in JSON: current live quotes, implied volatilities")
     print("    and Greeks, where available. Captured today, not at yesterday's close.")
     print("\nFor an older COB without a completed local archive:")
@@ -68,6 +69,8 @@ def main(cob_text=None, *, retry_failed=False):
     print("Previously saved option volatilities remain available if captured successfully;")
     print("their actual observation dates must be checked before using them.")
     print("\nCurrent stage: retrieve and save inputs. Simulation/calibration comes later.")
+    print("Manual OIS par curves are loaded from config/ois.json and saved beside API data.")
+    print("The same fixed OIS curves are used for every COB, retaining their original observation dates.")
     print("Live data and usable volatility coverage depend on IBKR availability and access.\n")
     # The prompt is at the entry point; the Python library never calls input().
     if cob_text is None:
@@ -79,10 +82,25 @@ def main(cob_text=None, *, retry_failed=False):
                 print(exc)
     else:
         cob = parse_cob(cob_text)
+    print("\nChoose the historical start date for all configured products/reference series.")
+    print("If trading/data began later, only available observations are returned.")
+    print("If the range is rejected, we try the provider's maximum accessible history")
+    print("through COB and record the fallback and any limits. Access/connectivity errors")
+    print("cannot be fixed by changing dates. Options keep their separate COB/live policy.")
+    if history_start_text is None:
+        while True:
+            try:
+                history_start = parse_history_start(input("History start (DD/MM/YYYY; on or before COB): "), cob)
+                break
+            except ValueError as exc:
+                print(exc)
+    else:
+        history_start = parse_history_start(history_start_text, cob)
+    print(f"Requested history: {history_start:%d/%m/%Y} through {cob:%d/%m/%Y}")
     downloader = MarketDataDownloader.from_json(CONFIG_FILES, settings=SETTINGS,
-        cob_date=cob, progress=print)
+        cob_date=cob, history_start=history_start, progress=print)
     result = downloader.download_cob(cob, RAW_DUMP_DIR,
-        portfolio_file=PORTFOLIO_FILE, retry_failed=retry_failed)
+        portfolio_file=PORTFOLIO_FILE, retry_failed=retry_failed, ois_file=OIS_FILE)
     print(result.summary[["ticker", "provider", "status", "retrieval_method"]].to_string(index=False))
     print(f"{'Reused' if result.reused else 'Saved'} COB archive: {result.folder}")
     print("Inspect manifest.json and summary.json for unavailable fields or provider limits.")

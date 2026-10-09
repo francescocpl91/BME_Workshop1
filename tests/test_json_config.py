@@ -32,26 +32,29 @@ def write_file(folder, provider, rows, **extra):
 
 
 class JsonConfigTests(unittest.TestCase):
-    def test_max_lookback_uses_request_end_not_cob_argument(self):
-        cases = [
-            ('1999-12-31',date(2026,10,7),'1999-12-31','1999-12-31'),
-            ('2000-01-01',date(2026,10,7),'2000-01-01','2000-01-01'),
-            ('2024-06-30',date(1999,12,31),'2000-01-03','2024-06-30'),
-            ('COB',date(1999,12,31),'1999-12-31','1999-12-31'),
-            ('COB',date(2026,10,7),'2000-01-03','2026-10-07'),
-        ]
-        for end, cob, expected_start, expected_end in cases:
-            with self.subTest(end=end,cob=cob), tempfile.TemporaryDirectory() as tmp:
+    def test_legacy_max_cannot_silently_substitute_a_fixed_start(self):
+        for end in ('1999-12-31', 'COB'):
+            with self.subTest(end=end), tempfile.TemporaryDirectory() as tmp:
                 row = entry()
                 row['timeframe'] = {'lookback':'max','end':end}
                 path = write_file(Path(tmp),'yahoo',[row])
-                loaded = load_provider_configs(path,cob_date=cob)
-                self.assertEqual(loaded['requests'][0]['timeframe'],{'start':expected_start,'end':expected_end})
+                with self.assertRaisesRegex(ValueError, 'lookback=max is no longer'):
+                    load_provider_configs(path,cob_date=date(2026,10,8))
+                loaded = load_provider_configs(path,cob_date=date(2026,10,8),history_start=date(2010,1,4))
+                self.assertEqual(loaded['requests'][0]['timeframe'],{'start':'2010-01-04','end':'2026-10-08'})
+
+    def test_explicit_start_before_2000_is_kept(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            row = entry()
+            row['timeframe'] = {'start':'1990-01-02', 'end':'1999-12-31'}
+            path = write_file(Path(tmp),'yahoo',[row])
+            loaded = load_provider_configs(path,cob_date=date(2026,10,8))
+            self.assertEqual(loaded['requests'][0]['timeframe'],row['timeframe'])
 
     def test_supplied_configs_include_reference_rates_and_ibkr(self):
-        config = load_provider_configs(PROJECT / "config")
-        self.assertEqual(len(config["requests"]), 4188)
-        self.assertEqual(sum(len(row["symbols"]) for row in config["requests"]), 4196)
+        config = load_provider_configs(PROJECT / "config", history_start=date(2000,1,3))
+        self.assertEqual(len(config["requests"]), 4189)
+        self.assertEqual(sum(len(row["symbols"]) for row in config["requests"]), 4201)
         rows = {row["id"]: row for row in config["requests"]}
         self.assertEqual(rows["US10Y"]["symbols"], {"fred": "DGS10"})
         self.assertEqual(rows["EURUSD"]["symbols"], {"ecb": "EXR/D.USD.EUR.SP00.A"})
@@ -133,13 +136,13 @@ class JsonConfigTests(unittest.TestCase):
     def test_supported_product_templates_validate_when_copied_into_requests(self):
         for path in (PROJECT / "config").glob("*.json"):
             document = json.loads(path.read_text())
-            if path.name in {"portfolio.json"}: continue
+            if path.name in {"portfolio.json", "ois.json"}: continue
             for guide in document["product_guides"].values():
                 if not guide.get("implemented") or "template" not in guide: continue
                 row = deepcopy(guide["template"]); row["enabled"] = True
                 with self.subTest(provider=document["provider"], product=row["product"]), tempfile.TemporaryDirectory() as tmp:
                     example = write_file(Path(tmp), document["provider"], [row])
-                    self.assertEqual(len(load_provider_configs(example)["requests"]), 1)
+                    self.assertEqual(len(load_provider_configs(example, history_start=date(2000,1,3))["requests"]), 1)
 
     def test_parameter_conversion_and_disabled_file(self):
         with tempfile.TemporaryDirectory() as tmp:

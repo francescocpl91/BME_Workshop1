@@ -15,7 +15,7 @@
       "unit": "Index points",
       "exchange": "CBOE",
       "timeframe": {
-        "lookback": "max",
+        "start": "HISTORY_START",
         "end": "COB"
       },
       "frequency": "1d",
@@ -40,7 +40,7 @@
       "unit": "USD per share",
       "exchange": "NASDAQ",
       "timeframe": {
-        "lookback": "max",
+        "start": "HISTORY_START",
         "end": "COB"
       },
       "frequency": "1d",
@@ -51,13 +51,37 @@
         "function": "TIME_SERIES_DAILY",
         "outputsize": "full"
       }
+    },
+    {
+      "id": "SPY",
+      "enabled": true,
+      "product": "etf",
+      "operation": "price_history",
+      "ticker": "SPY",
+      "description": "SPDR S&P 500 ETF Trust, US listing",
+      "asset_class": "equity_etf",
+      "currency": "USD",
+      "unit": "USD per share",
+      "exchange": "ARCA",
+      "timeframe": {
+        "start": "HISTORY_START",
+        "end": "COB"
+      },
+      "frequency": "1d",
+      "input": {
+        "symbol": "SPY"
+      },
+      "parameters": {
+        "function": "TIME_SERIES_DAILY",
+        "outputsize": "full"
+      }
     }
   ],
   "instructions": {
     "run_date": "run.py asks for COB in DD/MM/YYYY. COB must be yesterday or earlier in Europe/London.",
-    "history": "lookback=max requests the longest accessible history through COB. Provider and account limits are recorded; missing data is never filled.",
+    "history": "run.py asks for the history start (DD/MM/YYYY). HISTORY_START and COB are resolved into actual dates for every non-option request. Range errors trigger provider-specific maximum accessible history; fallback and limitations are recorded. Authentication/network errors do not trigger date fallbacks.",
     "archive": "A completed tests/data_dumps/YYYY-MM-DD archive is reused without API calls. Interrupted runs resume unfinished requests.",
-    "products": "SPX index and IEF ETF where supported; existing FRED/ECB reference series retained.",
+    "products": "SPX index, SPY equity ETF and IEF Treasury ETF where supported; existing FRED/ECB reference series retained.",
     "options": "Only IBKR requests options: yesterday COB selects current live snapshots; older COB selects historical bars only. Live capture dates remain separate from COB.",
     "unsupported_requests": "Enabled products without an implemented endpoint produce a saved unsupported_operation status. No stock endpoint is used as an index substitute."
   },
@@ -77,7 +101,7 @@
         "unit": "Index points",
         "exchange": "CBOE",
         "timeframe": {
-          "lookback": "max",
+          "start": "HISTORY_START",
           "end": "COB"
         },
         "frequency": "1d",
@@ -93,7 +117,7 @@
     },
     "etf": {
       "implemented": true,
-      "instructions": "IEF is the US-dollar iShares 7-10 Year Treasury Bond ETF. Adjust the history timeframe in requests.",
+      "instructions": "SPY is the US-listed S&P 500 equity ETF; IEF is the US-listed 7-10 Year Treasury Bond ETF. Use each listing's provider-native symbol and exchange. Adjust the history timeframe in requests.",
       "template": {
         "id": "IEF",
         "enabled": false,
@@ -106,7 +130,7 @@
         "unit": "USD per share",
         "exchange": "NASDAQ",
         "timeframe": {
-          "lookback": "max",
+          "start": "HISTORY_START",
           "end": "COB"
         },
         "frequency": "1d",

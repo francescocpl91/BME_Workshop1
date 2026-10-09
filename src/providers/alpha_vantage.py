@@ -38,6 +38,8 @@ class AlphaVantageProvider(MarketDataProvider):
             else:
                 code, detail = "provider_error", "Alpha Vantage returned no daily series; check API key, symbol and access."
             raise RetrievalError(code, detail)
+        if not payload["Time Series (Daily)"]:
+            raise RetrievalError("no_data", "Alpha Vantage returned an empty daily series.")
         if raw:
             return  # Bodies already saved by HttpClient before parsing.
         frame = pd.DataFrame.from_dict(payload["Time Series (Daily)"], orient="index")

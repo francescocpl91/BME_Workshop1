@@ -74,10 +74,10 @@ class MarketDataDownloader:
 
     @classmethod
     def from_json(cls, paths, *, settings=None, cache_dir=None, cache_hours=24,
-                  output_dir=None, progress=None, cob_date=None):
+                  output_dir=None, progress=None, cob_date=None, history_start=None):
         """Load provider-specific JSON request files; keep runtime settings in Python."""
         from .json_config import load_provider_configs
-        config = load_provider_configs(paths, cob_date=cob_date)
+        config = load_provider_configs(paths, cob_date=cob_date, history_start=history_start)
         config.update(settings=dict(settings or {}), cache_dir=cache_dir,
                       cache_hours=cache_hours, output_dir=output_dir)
         return cls.from_config(config, progress=progress)
@@ -98,15 +98,15 @@ class MarketDataDownloader:
         instance._retrieval_config = snapshot
         return instance
 
-    def download_cob(self, cob, output, *, portfolio_file=None, retry_failed=False):
+    def download_cob(self, cob, output, *, portfolio_file=None, retry_failed=False, history_start=None, ois_file=None):
         """Persistent COB archive with date-routed options; completed archives need no APIs."""
         from .cob import download_cob
-        return download_cob(self, cob, output, portfolio_file=portfolio_file, retry_failed=retry_failed)
+        return download_cob(self, cob, output, portfolio_file=portfolio_file, retry_failed=retry_failed, history_start=history_start, ois_file=ois_file)
 
     def _download_configured(self, *, output=None, refresh=False):
         requests = parse_requests(self._retrieval_config)
         if any(request.instrument.kind == "option" for request in requests):
-            raise ValueError("Option requests currently support download_raw() only; standardized option tables are not implemented.")
+            raise ValueError("Configured option_history requests require download_cob(); explicit option_model_snapshot requests use download_raw(). Standardized option tables are not implemented.")
         output = output if output is not None else self._retrieval_config.get("output_dir")
         folder = None
         if output is not None:

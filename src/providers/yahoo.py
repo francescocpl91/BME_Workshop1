@@ -29,7 +29,7 @@ class YahooProvider(MarketDataProvider):
         chart = payload.get("chart", {})
         if chart.get("error"):
             raise RetrievalError("provider_error", "Yahoo chart returned an error; inspect the saved response.")
-        if not chart.get("result"):
+        if not chart.get("result") or not any(row.get("timestamp") for row in chart["result"]):
             raise RetrievalError("no_data", "Yahoo chart returned no results; inspect the saved response.")
         return chart
 

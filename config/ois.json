@@ -1,0 +1,616 @@
+{
+  "schema_version": 1,
+  "input_type": "manual_ois",
+  "enabled": true,
+  "date_policy": "fixed_for_all_cobs",
+  "source": {
+    "document": "OIS.docx",
+    "document_sha256": "a839aec1fb2b793f8fd235df13f6581acf2464a50d6f0ed8a0ff02b6a294b382",
+    "provider": "BlueGamma",
+    "document_date": "2026-10-09",
+    "urls": {
+      "us": "https://app.bluegamma.io/usd/sofr",
+      "euro": "https://app.bluegamma.io/eur/estr"
+    },
+    "extraction": "Native Word table tenor and Live column values only, copied without fitting or interpolation. No API requests."
+  },
+  "curves": {
+    "us": [
+      {
+        "curve_id": "USD_SOFR_OIS",
+        "currency": "USD",
+        "overnight_index": "SOFR",
+        "as_of_date": "2026-10-09",
+        "quote_type": "spot_starting_ois_par_swap_rate",
+        "rate_unit": "percent_per_annum",
+        "source_column": "Live",
+        "quote_time": null,
+        "quote_timezone": null,
+        "spot_date": null,
+        "conventions": {
+          "status": "not_provided_in_source",
+          "day_count": null,
+          "fixed_payment_frequency": null,
+          "spot_lag_business_days": null,
+          "payment_lag_business_days": null,
+          "business_day_convention": null,
+          "calendar": null
+        },
+        "points": [
+          {
+            "tenor": "1W",
+            "rate_percent": 3.89
+          },
+          {
+            "tenor": "2W",
+            "rate_percent": 3.892
+          },
+          {
+            "tenor": "3W",
+            "rate_percent": 3.909
+          },
+          {
+            "tenor": "1M",
+            "rate_percent": 3.925
+          },
+          {
+            "tenor": "2M",
+            "rate_percent": 3.957
+          },
+          {
+            "tenor": "3M",
+            "rate_percent": 4.04
+          },
+          {
+            "tenor": "4M",
+            "rate_percent": 4.099
+          },
+          {
+            "tenor": "5M",
+            "rate_percent": 4.137
+          },
+          {
+            "tenor": "6M",
+            "rate_percent": 4.194
+          },
+          {
+            "tenor": "7M",
+            "rate_percent": 4.247
+          },
+          {
+            "tenor": "8M",
+            "rate_percent": 4.297
+          },
+          {
+            "tenor": "9M",
+            "rate_percent": 4.347
+          },
+          {
+            "tenor": "10M",
+            "rate_percent": 4.396
+          },
+          {
+            "tenor": "11M",
+            "rate_percent": 4.433
+          },
+          {
+            "tenor": "12M",
+            "rate_percent": 4.471
+          },
+          {
+            "tenor": "13M",
+            "rate_percent": 4.49
+          },
+          {
+            "tenor": "14M",
+            "rate_percent": 4.507
+          },
+          {
+            "tenor": "15M",
+            "rate_percent": 4.524
+          },
+          {
+            "tenor": "16M",
+            "rate_percent": 4.538
+          },
+          {
+            "tenor": "17M",
+            "rate_percent": 4.552
+          },
+          {
+            "tenor": "18M",
+            "rate_percent": 4.567
+          },
+          {
+            "tenor": "19M",
+            "rate_percent": 4.58
+          },
+          {
+            "tenor": "20M",
+            "rate_percent": 4.592
+          },
+          {
+            "tenor": "21M",
+            "rate_percent": 4.604
+          },
+          {
+            "tenor": "22M",
+            "rate_percent": 4.616
+          },
+          {
+            "tenor": "23M",
+            "rate_percent": 4.628
+          },
+          {
+            "tenor": "24M",
+            "rate_percent": 4.639
+          },
+          {
+            "tenor": "25M",
+            "rate_percent": 4.645
+          },
+          {
+            "tenor": "26M",
+            "rate_percent": 4.651
+          },
+          {
+            "tenor": "27M",
+            "rate_percent": 4.656
+          },
+          {
+            "tenor": "28M",
+            "rate_percent": 4.661
+          },
+          {
+            "tenor": "29M",
+            "rate_percent": 4.666
+          },
+          {
+            "tenor": "30M",
+            "rate_percent": 4.671
+          },
+          {
+            "tenor": "31M",
+            "rate_percent": 4.675
+          },
+          {
+            "tenor": "32M",
+            "rate_percent": 4.679
+          },
+          {
+            "tenor": "33M",
+            "rate_percent": 4.682
+          },
+          {
+            "tenor": "34M",
+            "rate_percent": 4.685
+          },
+          {
+            "tenor": "35M",
+            "rate_percent": 4.688
+          },
+          {
+            "tenor": "3Y",
+            "rate_percent": 4.69
+          },
+          {
+            "tenor": "4Y",
+            "rate_percent": 4.701
+          },
+          {
+            "tenor": "5Y",
+            "rate_percent": 4.713
+          },
+          {
+            "tenor": "6Y",
+            "rate_percent": 4.735
+          },
+          {
+            "tenor": "7Y",
+            "rate_percent": 4.759
+          },
+          {
+            "tenor": "8Y",
+            "rate_percent": 4.783
+          },
+          {
+            "tenor": "9Y",
+            "rate_percent": 4.81
+          },
+          {
+            "tenor": "10Y",
+            "rate_percent": 4.839
+          },
+          {
+            "tenor": "11Y",
+            "rate_percent": 4.867
+          },
+          {
+            "tenor": "12Y",
+            "rate_percent": 4.896
+          },
+          {
+            "tenor": "13Y",
+            "rate_percent": 4.923
+          },
+          {
+            "tenor": "14Y",
+            "rate_percent": 4.946
+          },
+          {
+            "tenor": "15Y",
+            "rate_percent": 4.966
+          },
+          {
+            "tenor": "16Y",
+            "rate_percent": 4.983
+          },
+          {
+            "tenor": "17Y",
+            "rate_percent": 4.995
+          },
+          {
+            "tenor": "18Y",
+            "rate_percent": 5.005
+          },
+          {
+            "tenor": "19Y",
+            "rate_percent": 5.012
+          },
+          {
+            "tenor": "20Y",
+            "rate_percent": 5.016
+          },
+          {
+            "tenor": "21Y",
+            "rate_percent": 5.014
+          },
+          {
+            "tenor": "22Y",
+            "rate_percent": 5.011
+          },
+          {
+            "tenor": "23Y",
+            "rate_percent": 5.006
+          },
+          {
+            "tenor": "24Y",
+            "rate_percent": 5.001
+          },
+          {
+            "tenor": "25Y",
+            "rate_percent": 4.995
+          },
+          {
+            "tenor": "26Y",
+            "rate_percent": 4.988
+          },
+          {
+            "tenor": "27Y",
+            "rate_percent": 4.978
+          },
+          {
+            "tenor": "28Y",
+            "rate_percent": 4.967
+          },
+          {
+            "tenor": "29Y",
+            "rate_percent": 4.955
+          },
+          {
+            "tenor": "30Y",
+            "rate_percent": 4.944
+          },
+          {
+            "tenor": "31Y",
+            "rate_percent": 4.932
+          },
+          {
+            "tenor": "32Y",
+            "rate_percent": 4.919
+          },
+          {
+            "tenor": "33Y",
+            "rate_percent": 4.905
+          },
+          {
+            "tenor": "34Y",
+            "rate_percent": 4.892
+          },
+          {
+            "tenor": "35Y",
+            "rate_percent": 4.878
+          },
+          {
+            "tenor": "36Y",
+            "rate_percent": 4.866
+          },
+          {
+            "tenor": "37Y",
+            "rate_percent": 4.853
+          },
+          {
+            "tenor": "38Y",
+            "rate_percent": 4.84
+          },
+          {
+            "tenor": "39Y",
+            "rate_percent": 4.827
+          },
+          {
+            "tenor": "40Y",
+            "rate_percent": 4.814
+          },
+          {
+            "tenor": "41Y",
+            "rate_percent": 4.801
+          },
+          {
+            "tenor": "42Y",
+            "rate_percent": 4.787
+          },
+          {
+            "tenor": "43Y",
+            "rate_percent": 4.774
+          },
+          {
+            "tenor": "44Y",
+            "rate_percent": 4.76
+          },
+          {
+            "tenor": "45Y",
+            "rate_percent": 4.747
+          },
+          {
+            "tenor": "46Y",
+            "rate_percent": 4.732
+          },
+          {
+            "tenor": "47Y",
+            "rate_percent": 4.718
+          },
+          {
+            "tenor": "48Y",
+            "rate_percent": 4.704
+          },
+          {
+            "tenor": "49Y",
+            "rate_percent": 4.689
+          },
+          {
+            "tenor": "50Y",
+            "rate_percent": 4.674
+          }
+        ]
+      }
+    ],
+    "euro": [
+      {
+        "curve_id": "EUR_ESTR_OIS",
+        "currency": "EUR",
+        "overnight_index": "ESTR",
+        "as_of_date": "2026-10-09",
+        "quote_type": "spot_starting_ois_par_swap_rate",
+        "rate_unit": "percent_per_annum",
+        "source_column": "Live",
+        "quote_time": null,
+        "quote_timezone": null,
+        "spot_date": null,
+        "conventions": {
+          "status": "not_provided_in_source",
+          "day_count": null,
+          "fixed_payment_frequency": null,
+          "spot_lag_business_days": null,
+          "payment_lag_business_days": null,
+          "business_day_convention": null,
+          "calendar": null
+        },
+        "points": [
+          {
+            "tenor": "1W",
+            "rate_percent": 2.441
+          },
+          {
+            "tenor": "2W",
+            "rate_percent": 2.442
+          },
+          {
+            "tenor": "3W",
+            "rate_percent": 2.443
+          },
+          {
+            "tenor": "1M",
+            "rate_percent": 2.451
+          },
+          {
+            "tenor": "2M",
+            "rate_percent": 2.463
+          },
+          {
+            "tenor": "3M",
+            "rate_percent": 2.513
+          },
+          {
+            "tenor": "4M",
+            "rate_percent": 2.562
+          },
+          {
+            "tenor": "5M",
+            "rate_percent": 2.602
+          },
+          {
+            "tenor": "6M",
+            "rate_percent": 2.648
+          },
+          {
+            "tenor": "7M",
+            "rate_percent": 2.692
+          },
+          {
+            "tenor": "8M",
+            "rate_percent": 2.736
+          },
+          {
+            "tenor": "9M",
+            "rate_percent": 2.775
+          },
+          {
+            "tenor": "10M",
+            "rate_percent": 2.811
+          },
+          {
+            "tenor": "11M",
+            "rate_percent": 2.843
+          },
+          {
+            "tenor": "12M",
+            "rate_percent": 2.872
+          },
+          {
+            "tenor": "15M",
+            "rate_percent": 2.927
+          },
+          {
+            "tenor": "18M",
+            "rate_percent": 2.968
+          },
+          {
+            "tenor": "21M",
+            "rate_percent": 2.999
+          },
+          {
+            "tenor": "24M",
+            "rate_percent": 3.026
+          },
+          {
+            "tenor": "30M",
+            "rate_percent": 3.066
+          },
+          {
+            "tenor": "3Y",
+            "rate_percent": 3.089
+          },
+          {
+            "tenor": "4Y",
+            "rate_percent": 3.124
+          },
+          {
+            "tenor": "5Y",
+            "rate_percent": 3.15
+          },
+          {
+            "tenor": "6Y",
+            "rate_percent": 3.178
+          },
+          {
+            "tenor": "7Y",
+            "rate_percent": 3.209
+          },
+          {
+            "tenor": "8Y",
+            "rate_percent": 3.244
+          },
+          {
+            "tenor": "9Y",
+            "rate_percent": 3.279
+          },
+          {
+            "tenor": "10Y",
+            "rate_percent": 3.312
+          },
+          {
+            "tenor": "11Y",
+            "rate_percent": 3.344
+          },
+          {
+            "tenor": "12Y",
+            "rate_percent": 3.376
+          },
+          {
+            "tenor": "13Y",
+            "rate_percent": 3.402
+          },
+          {
+            "tenor": "14Y",
+            "rate_percent": 3.423
+          },
+          {
+            "tenor": "15Y",
+            "rate_percent": 3.441
+          },
+          {
+            "tenor": "16Y",
+            "rate_percent": 3.452
+          },
+          {
+            "tenor": "17Y",
+            "rate_percent": 3.459
+          },
+          {
+            "tenor": "18Y",
+            "rate_percent": 3.462
+          },
+          {
+            "tenor": "19Y",
+            "rate_percent": 3.464
+          },
+          {
+            "tenor": "20Y",
+            "rate_percent": 3.463
+          },
+          {
+            "tenor": "25Y",
+            "rate_percent": 3.421
+          },
+          {
+            "tenor": "30Y",
+            "rate_percent": 3.36
+          },
+          {
+            "tenor": "35Y",
+            "rate_percent": 3.292
+          },
+          {
+            "tenor": "40Y",
+            "rate_percent": 3.222
+          },
+          {
+            "tenor": "50Y",
+            "rate_percent": 3.074
+          },
+          {
+            "tenor": "60Y",
+            "rate_percent": 2.909
+          }
+        ]
+      }
+    ]
+  },
+  "reference_charts": [
+    {
+      "benchmark": "ESTR",
+      "source_image": "word/media/image1.png",
+      "displayed_last_update": "Fri 9 October 09:16",
+      "timezone": null,
+      "user_described_forward_tenor": "6M",
+      "forward_tenor_visible_in_image": false,
+      "numerical_points_extracted": false
+    },
+    {
+      "benchmark": "SOFR",
+      "source_image": "word/media/image2.png",
+      "displayed_last_update": "Fri 9 October 09:53",
+      "timezone": null,
+      "user_described_forward_tenor": "6M",
+      "forward_tenor_visible_in_image": false,
+      "numerical_points_extracted": false
+    }
+  ],
+  "instructions": {
+    "editing": "Keep exactly one fixed curve in each regional list. These inputs are reused unchanged for every COB. Keep the true as_of_date; no credentials or API connection are used. Changing source quotes changes the archive identity.",
+    "dates": "Always include both fixed curves regardless of COB. Preserve the original observation date and label its relation to COB; do not relabel quotes as historical observations for the requested date.",
+    "rates": "Only the Live column is used for each dated curve. Percent per annum: 3.890 means 3.890%, not decimal 3.890. These are par OIS swap quotes, not zero rates. Bootstrapping requires verified instrument conventions; no discount factors or forwards are calculated here.",
+    "charts": "Forward-chart screenshots are reference material in OIS.docx. Exact plotted values and the 6M tenor are not readable/verified from the images; no numerical forward quotes are inferred.",
+    "conventions": "Null fields mean unknown. Verify day counts, payment schedules, spot/payment lags and calendars before bootstrapping."
+  }
+}

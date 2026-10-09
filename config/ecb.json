@@ -15,7 +15,7 @@
       "unit": "Percent per annum",
       "exchange": null,
       "timeframe": {
-        "lookback": "max",
+        "start": "HISTORY_START",
         "end": "COB"
       },
       "frequency": "1d",
@@ -37,7 +37,7 @@
       "unit": "USD per EUR",
       "exchange": null,
       "timeframe": {
-        "lookback": "max",
+        "start": "HISTORY_START",
         "end": "COB"
       },
       "frequency": "1d",
@@ -59,7 +59,7 @@
       "unit": "Percent per annum",
       "exchange": null,
       "timeframe": {
-        "lookback": "max",
+        "start": "HISTORY_START",
         "end": "COB"
       },
       "frequency": "1d",
@@ -72,7 +72,7 @@
   ],
   "instructions": {
     "run_date": "run.py asks for COB in DD/MM/YYYY. COB must be yesterday or earlier in Europe/London.",
-    "history": "lookback=max requests the longest accessible history through COB. Provider and account limits are recorded; missing data is never filled.",
+    "history": "run.py asks for the history start (DD/MM/YYYY). HISTORY_START and COB are resolved into actual dates for every non-option request. Range errors trigger provider-specific maximum accessible history; fallback and limitations are recorded. Authentication/network errors do not trigger date fallbacks.",
     "archive": "A completed tests/data_dumps/YYYY-MM-DD archive is reused without API calls. Interrupted runs resume unfinished requests.",
     "products": "SPX index and IEF ETF where supported; existing FRED/ECB reference series retained.",
     "options": "Only IBKR requests options: yesterday COB selects current live snapshots; older COB selects historical bars only. Live capture dates remain separate from COB."
@@ -98,7 +98,7 @@
         "unit": "Percent per annum",
         "exchange": null,
         "timeframe": {
-          "lookback": "max",
+          "start": "HISTORY_START",
           "end": "COB"
         },
         "frequency": "1d",

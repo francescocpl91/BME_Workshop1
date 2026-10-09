@@ -15,7 +15,7 @@
       "unit": "Index points",
       "exchange": "CBOE",
       "timeframe": {
-        "lookback": "max",
+        "start": "HISTORY_START",
         "end": "COB"
       },
       "frequency": "1d",
@@ -39,7 +39,7 @@
       "unit": "USD per share",
       "exchange": "NASDAQ",
       "timeframe": {
-        "lookback": "max",
+        "start": "HISTORY_START",
         "end": "COB"
       },
       "frequency": "1d",
@@ -48,6 +48,31 @@
         "secType": "STK",
         "exchange": "SMART",
         "primaryExchange": "NASDAQ",
+        "currency": "USD"
+      },
+      "parameters": {}
+    },
+    {
+      "id": "SPY",
+      "enabled": true,
+      "product": "etf",
+      "operation": "price_history",
+      "ticker": "SPY",
+      "description": "SPDR S&P 500 ETF Trust, US listing",
+      "asset_class": "equity_etf",
+      "currency": "USD",
+      "unit": "USD per share",
+      "exchange": "ARCA",
+      "timeframe": {
+        "start": "HISTORY_START",
+        "end": "COB"
+      },
+      "frequency": "1d",
+      "input": {
+        "symbol": "SPY",
+        "secType": "STK",
+        "exchange": "SMART",
+        "primaryExchange": "ARCA",
         "currency": "USD"
       },
       "parameters": {}
@@ -217470,8 +217495,9 @@
     "archive": "Reuse a completed tests/data_dumps/YYYY-MM-DD archive without API calls. Incomplete runs resume checkpoints.",
     "options": "Yesterday COB uses current live snapshots with IV/Greeks where supplied. Older COB uses historical bars for that exact date only. Historical failures never switch to current live data.",
     "contracts": "All 4181 SPX AM calls are explicit inputs. No discovery, weekly calls, puts or options from other providers.",
-    "history": "Non-options request maximum accessible history through COB. Options request one day of 1-minute TRADES/BID/ASK/MIDPOINT bars on older COB dates.",
-    "limitations": "IBKR has no per-contract historical IV/Greeks in this endpoint and no expired-option history. Missing fields, permissions and empty dates are recorded, not filled."
+    "history": "run.py asks for the history start (DD/MM/YYYY). HISTORY_START and COB are resolved into actual dates for every non-option request. Range errors trigger provider-specific maximum accessible history; fallback and limitations are recorded. Authentication/network errors do not trigger date fallbacks.",
+    "limitations": "IBKR has no per-contract historical IV/Greeks in this endpoint and no expired-option history. Missing fields, permissions and empty dates are recorded, not filled.",
+    "products": "SPX index, SPY equity ETF and IEF Treasury ETF where supported; existing FRED/ECB reference series retained."
   },
   "product_guides": {
     "index": {
@@ -217489,7 +217515,7 @@
         "unit": "Index points",
         "exchange": "CBOE",
         "timeframe": {
-          "lookback": "max",
+          "start": "HISTORY_START",
           "end": "COB"
         },
         "frequency": "1d",
@@ -217504,7 +217530,7 @@
     },
     "etf": {
       "implemented": true,
-      "instructions": "IEF is the US-dollar iShares 7-10 Year Treasury Bond ETF. Adjust the history timeframe in requests.",
+      "instructions": "SPY is the US-listed S&P 500 equity ETF; IEF is the US-listed 7-10 Year Treasury Bond ETF. Use each listing's provider-native symbol and exchange. Adjust the history timeframe in requests.",
       "template": {
         "id": "IEF",
         "enabled": false,
@@ -217517,7 +217543,7 @@
         "unit": "USD per share",
         "exchange": "NASDAQ",
         "timeframe": {
-          "lookback": "max",
+          "start": "HISTORY_START",
           "end": "COB"
         },
         "frequency": "1d",

@@ -14,8 +14,6 @@ from .providers.massive import MassiveProvider
 from .providers.yahoo import YahooProvider
 from .providers.ibkr import IBKRProvider, validate_ib_input
 
-HISTORY_FALLBACK_START = date(2000, 1, 3)
-
 PROVIDERS = {
     "yahoo": YahooProvider, "alpha_vantage": AlphaVantageProvider,
     "marketdata": MarketDataAppProvider, "massive": MassiveProvider,

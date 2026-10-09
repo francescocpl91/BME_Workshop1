@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 import re
 
-from .config import parse_requests, HISTORY_FALLBACK_START
+from .config import parse_requests
 from .providers.ibkr import validate_ib_input
 
 CONFIGURABLE_PRODUCTS = {
@@ -93,7 +93,7 @@ def _provider_options(provider, parameters, location):
     return {}
 
 
-def load_provider_configs(paths, *, cob_date=None) -> dict:
+def load_provider_configs(paths, *, cob_date=None, history_start=None) -> dict:
     """Load a JSON file, directory of provider JSONs, or explicit iterable of files.
 
     Each file contains schema_version, provider, instructions/product_guides and
@@ -106,12 +106,12 @@ def load_provider_configs(paths, *, cob_date=None) -> dict:
     """
     if isinstance(paths, (str, Path)):
         path = Path(paths)
-        paths = [p for p in sorted(path.glob("*.json")) if p.name not in {"portfolio.json"}] if path.is_dir() else [path]
+        paths = [p for p in sorted(path.glob("*.json")) if p.name not in {"portfolio.json", "ois.json"}] if path.is_dir() else [path]
     else:
         paths = [Path(path) for path in paths]
     if not paths:
         raise ValueError("No provider JSON files selected.")
-    from datetime import date, datetime, timedelta
+    from datetime import datetime, timedelta
     from zoneinfo import ZoneInfo
     cob_date = cob_date or (datetime.now(ZoneInfo('Europe/London')).date() - timedelta(days=1))
     merged, pairs = {}, set()
@@ -216,19 +216,15 @@ def load_provider_configs(paths, *, cob_date=None) -> dict:
             timeframe = normalized.get('timeframe')
             if timeframe:
                 timeframe = dict(timeframe)
+                if kind != 'option' and history_start is not None:
+                    from .cob import parse_history_start
+                    timeframe = {'start': parse_history_start(history_start, cob_date).isoformat(), 'end': cob_date.isoformat()}
+                if timeframe.get('start') == 'HISTORY_START':
+                    raise ValueError(location + ': supply history_start together with cob_date; run.py prompts for both.')
                 for key in ('start', 'end'):
                     if timeframe.get(key) == 'COB': timeframe[key] = cob_date.isoformat()
                 if timeframe.get('lookback') == 'max':
-                    timeframe.pop('lookback')
-                    # Resolve the request's own end before choosing a fallback;
-                    # an explicit historical end can differ from the COB argument.
-                    end = timeframe.get('end') or datetime.now(ZoneInfo('Europe/London')).date().isoformat()
-                    try:
-                        resolved_end = date.fromisoformat(end)
-                    except (ValueError, TypeError):
-                        raise ValueError(location + ': end must be an ISO date or COB.') from None
-                    timeframe['end'] = resolved_end.isoformat()
-                    timeframe['start'] = min(HISTORY_FALLBACK_START, resolved_end).isoformat()
+                    raise ValueError(location + ': lookback=max is no longer a start-date input. Supply history_start, or use an explicit timeframe.start. Maximum history is an automatic fallback after a range failure.')
                 normalized['timeframe'] = timeframe
             normalized["provider_inputs"] = {"ibkr": deepcopy(entry["input"])} if provider == "ibkr" else {}
             # Run semantic validation on each row before merging or starting I/O.

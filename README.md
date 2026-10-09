@@ -4,10 +4,10 @@ Inputs live in `config/*.json`; operational setup and credential environment-var
 
 ## One run, one COB archive
 
-Run `run.py` using the project `.venv` interpreter in VS Code or Python. It displays today's date in **Europe/London** and prompts for a COB date in **DD/MM/YYYY**. Today and future dates are rejected.
+Run `run.py` using the project `.venv` interpreter in VS Code or Python. It displays today's date in **Europe/London** and prompts for a COB date and a historical start date in **DD/MM/YYYY**. COB must be yesterday or earlier, and history start must be on or before COB.
 
 1. A completed matching `tests/data_dumps/YYYY-MM-DD` archive is reused without API requests, even if the program runs again on a later day.
-2. Otherwise SPX, IEF and the enabled FRED/ECB references request the maximum accessible history through COB.
+2. Otherwise SPX, SPY, IEF and the enabled FRED/ECB references request history from the user-selected start through COB.
 3. Options use the date rule below. All responses and failures are saved in the COB archive, then the run stops. No cleansing or surface calibration is performed.
 
 | Input COB relative to today's date | IBKR option API | Observation date |
@@ -23,17 +23,40 @@ Example: when today is 08/10/2026, COB 07/10/2026 selects live options on 08/10/
 
 The portfolio is 50% S&P 500 index exposure and 50% IEF, reported in EUR, in `config/portfolio.json`. Options are reference inputs, not holdings. SPX is an index exposure for modelling, not a directly purchasable fund.
 
-- `yahoo.json`, `massive.json`, `ibkr.json`: SPX and IEF historical requests.
-- `alpha_vantage.json`, `marketdata.json`: SPX and IEF are enabled. Their current adapters cannot retrieve SPX index history, so these SPX requests save `unsupported_operation` in JSON without sending a stock request. IEF proceeds normally. There is no SPY substitution.
+- `yahoo.json`, `massive.json`, `ibkr.json`: SPX, SPY and IEF historical requests.
+- `alpha_vantage.json`, `marketdata.json`: SPX, SPY and IEF are enabled. Their current adapters cannot retrieve SPX index history, so these SPX requests save `unsupported_operation` in JSON without sending a stock request. SPY and IEF use ETF history requests; SPY is additional data, not a replacement for SPX.
 - `fred.json`, `ecb.json`: existing rate, overnight-rate and FX references.
 - `ibkr.json`: the existing **4,181 explicit SPX AM call contracts**, 14 expiries through **17/12/2027**. No SPXW weekly options, puts or discovery during execution.
 - Other provider JSONs contain no option requests in the normal run.
 
 Provider identifiers differ: Yahoo uses `^GSPC`, Massive uses `I:SPX`, and IBKR uses structured contracts with symbol, security type and exchange. Each JSON contains relevant instructions and input details. Contract lookup validates the already selected option rather than discovering new options.
 
-Non-options use `{"lookback":"max","end":"COB"}`. New HTTP history requests start on 03/01/2000 (or COB if earlier). IBKR uses its earliest available timestamp when discoverable, even if it precedes 2000, and otherwise falls back to 03/01/2000. These choices do not bypass provider retention, plan limits or missing data. IBKR retrieves daily history in yearly chunks. If that timestamp lookup fails, it still requests bars backwards from COB, stopping at the first empty yearly interval. This boundary is recorded explicitly; data before a gap is not assumed unavailable. HTTP adapters request the full range, with accessible-range fallbacks for supported providers. Alpha Vantage may supply only compact history if full history is denied.
+On startup `run.py` asks for **COB** and **history start**, both in `DD/MM/YYYY`. The start must be on or before COB (minimum 01/01/1900). All non-option JSON requests use `{"start":"HISTORY_START","end":"COB"}`. These placeholders are resolved in memory to the user's actual dates and saved in the archive's `resolved_inputs.json`; the source JSON files are not rewritten at every run. Programmatic use: `MarketDataDownloader.from_json(..., cob_date=date(...), history_start=date(...))`. Explicit dates in custom JSONs are respected when no runtime start override is supplied.
+
+Legacy `lookback: "max"` without a supplied start is rejected with a migration message; it cannot silently choose January 2000. The chosen window is requested first. If data begins later, the available part is retained without filling missing dates. A date/data-range or plan-range error triggers a provider-specific maximum accessible-history fallback, still bounded by COB where the API supports date bounds. Missing keys, authentication failures, transport failures and pacing errors do not trigger a wider date query. Unsupported index endpoints remain explicit failures.
+
+- Yahoo: discover the first-trade timestamp, then request through COB.
+- FRED/ECB: omit the lower date bound, retain COB as the upper bound.
+- Alpha Vantage: request full daily history; if denied, try compact history. This endpoint does not accept start/end dates, so raw data can extend outside the requested window and may not cover an older COB.
+- MarketData.app: page backwards with countback through COB; reduce page size at access boundaries.
+- Massive: request backwards in date windows, narrowing rejected windows. Its aggregate search stops at the nonnegative Unix-timestamp boundary (1970) or first unavailable interval.
+- IBKR: use daily chunks within the selected window, respecting a later first-available timestamp. On a range failure, retry from the earliest reported timestamp; if that lookup failed, search backwards with a 1900 safety boundary. No automatic January 2000 substitution exists.
+
+Maximum means **accessible provider history**, not a guarantee of complete coverage. First unavailable intervals, account limits and search safety boundaries are recorded; earlier gaps/coverage remain unverified. The original request, fallback reason and executed fallback windows are saved in request status/summary metadata, alongside unchanged raw responses. Fallbacks may include observations before the requested start. No cleaning, clipping or filling is performed here. Existing compatible broader archives can be reused without downloading or modifying their original files; a request for earlier history than the saved identity rejects reuse instead of silently expanding it.
 
 IBKR options retain `operation: "option_history"` and `{"start":"COB","end":"COB"}` as their configured COB inputs. `src/cob.py` chooses the actual historical or live endpoint by date. Historical parameters specify 1-minute bars, requested data channels, regular trading hours and a 16:00 America/New_York cutoff. Expiry is separate from COB. Only the explicitly listed contracts are requested, including for older dates; the library cannot infer which contracts were listed on a historical date.
+
+## Manual OIS inputs
+
+`config/ois.json` holds manual USD SOFR and EUR ESTR **spot-starting par OIS swap quotes** from `OIS.docx`, dated 09/10/2026: 86 SOFR tenors (1W–50Y) and 44 ESTR tenors (1W–60Y). Only the source's Live column supplies the curve; historical comparison columns are excluded. Rates are percentages per annum, so 3.890 means 3.890%. They are not zero rates. Contract conventions remain null where the source does not provide them; bootstrap, discount factors and forwards are later work.
+
+`run.py` passes `OIS_FILE` to `download_cob(..., ois_file=...)`. `src.ois.load_ois_config()` validates the input before provider calls. No subscription, key, browser session or API is involved. The JSON is separate from the provider request files; directory-based provider loading excludes it.
+
+Each regional list contains exactly one fixed curve. With `date_policy=fixed_for_all_cobs`, every COB uses those same SOFR and ESTR quotes, still dated 09/10/2026. The dump records `usage_policy=fixed_for_all_cobs` and whether the observation date is before, after or equal to COB. `suitable_for_strict_cob` is true only when the dates match; it is provenance metadata, not a restriction on including the fixed inputs. There is no date-based selection, refresh or missing-date exclusion.
+
+New dumps include `ois/input.json`, `ois/us/curve.json`, `ois/us/status.json`, `ois/euro/curve.json`, and `ois/euro/status.json`. The two OIS results also appear in the main summary, even if an API fails. OIS data participates in archive identity checks: changing quotes or adding OIS to a pre-existing archive rejects reuse without overwriting the archive. Completed matching archives are checked and read without API calls or file writes.
+
+Keep exactly one fixed curve per region in `config/ois.json`, preserving its observation date, percent units and quote type. The JSON contains all required OIS inputs; `OIS.docx` is not required for execution or offline tests. Its recorded filename and hash identify the original source only. The comparison against that document was completed when the rates were imported; the tests now cover JSON validation, fixed-curve inclusion and archive reuse. Forward-chart metadata is provenance only; no numerical forward quotes were extracted.
 
 ## Historical and live option limits
 
@@ -58,13 +81,13 @@ Raw HTTP bodies and serialized IBKR callbacks are retained before cleaning. Conf
 
 `complete` means every configured request has been attempted, **not** that every request supplied all data. Inspect `all_requests_succeeded`, per-channel statuses and missing fields. The default rerun reuses a completed archive even if it contains failures. An interrupted run resumes unfinished checkpoints. A different configuration for an existing COB is rejected before API calls to protect the archive. A `.running` lock prevents simultaneous writes; after a forced termination, inspect the previous process before removing a stale lock.
 
-Archive schema 3 fingerprints effective data settings as well as request inputs. Credentials and transport settings are excluded, so credential rotation does not invalidate an archive. Compatible schema 2 archives are read and reused as originally captured. Each new retrieval attempt saves its executed operation and requested start/end in its own `attempt_NNN/request.json`; the request-level metadata and summary expose the latest attempt range. The original `resolved_inputs.json` remains the archive identity, so a retry with the new fallback does not erase the old input history. Their saved instruments, parameters and dates must match; a broader saved history is accepted. Schema 2 did not record effective runtime settings, so those settings cannot be retrospectively verified and a console notice makes that limitation explicit. Completed archives are not rewritten or downloaded again. Changed instruments or recorded adjustment settings still fail the compatibility check; adding tickers is not yet incremental. Saved failures remain visible and are retried only with retry_failed=True.
+Archive schema 3 fingerprints effective data settings as well as request inputs. Credentials and transport settings are excluded, so credential rotation does not invalidate an archive. Compatible schema 2 archives are read and reused as originally captured. Each new retrieval attempt saves its executed operation and requested start/end in its own `attempt_NNN/request.json`; the request-level metadata and summary expose the latest attempt range. The original `resolved_inputs.json` remains the archive identity, so a retry does not erase the old input history. Reuse also checks each saved attempt's requested range: a successful narrower retry cannot satisfy a later broader request merely because the original identity was broader. Default reuse rejects that case without API calls/writes; retry_failed=True retrieves the insufficient range in a new attempt, retaining earlier files. Their saved instruments, parameters and dates must match; a broader saved history is accepted. Schema 2 did not record effective runtime settings, so those settings cannot be retrospectively verified and a console notice makes that limitation explicit. Completed archives are not rewritten or downloaded again. Changed instruments or recorded adjustment settings still fail the compatibility check; adding tickers is not yet incremental. Saved failures remain visible and are retried only with retry_failed=True.
 
 For an intentional retry of failed entries, from Python:
 
 ```python
 import run
-result = run.main("07/10/2026", retry_failed=True)
+result = run.main("07/10/2026", "03/01/2000", retry_failed=True)
 ```
 
 Retries preserve earlier attempt files and use the date rule at the time of the retry. A live result that could not complete yesterday cannot be recreated as live data after its capture day has passed; a later retry will use historical bars with explicit provenance.
@@ -75,9 +98,11 @@ Direct library use:
 from datetime import date
 from src import MarketDataDownloader
 
-dl = MarketDataDownloader.from_json("config", cob_date=date(2026, 10, 7))
+dl = MarketDataDownloader.from_json(
+    "config", cob_date=date(2026, 10, 7), history_start=date(2000, 1, 3)
+)
 result = dl.download_cob("07/10/2026", "tests/data_dumps",
-                         portfolio_file="config/portfolio.json")
+                         portfolio_file="config/portfolio.json", ois_file="config/ois.json")
 ```
 
 Use absolute paths from another working directory. The library never calls `input()`; only `run.py` prompts. Legacy `download_raw()` and normalized `download()` APIs remain for their supported workflows; use `download_cob()` for the current JSON configuration and date policy.

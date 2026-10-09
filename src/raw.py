@@ -1,7 +1,6 @@
 """Save native response bodies before decoding, table conversion or cleaning."""
 from dataclasses import dataclass
 from datetime import datetime, timezone
-import json
 import hashlib
 from pathlib import Path
 from urllib.parse import parse_qsl, quote, quote_plus, urlsplit

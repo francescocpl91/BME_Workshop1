@@ -106,8 +106,7 @@ class CobIntegrityTests(unittest.TestCase):
         initial = config({'yahoo': 'SAMPLE'})
         with tempfile.TemporaryDirectory() as tmp, patch('src.cob.london_today', return_value=TODAY), patch('src.cob._http_history', side_effect=capture) as api:
             dl = MarketDataDownloader.from_config(initial)
-            with patch('src.cob.HISTORY_FALLBACK_START', date(1900,1,1)):
-                result = dl.download_cob('06/10/2026', tmp)
+            result = dl.download_cob('06/10/2026', tmp, history_start=date(1900,1,1))
             before = (result.folder / 'manifest.json').read_bytes()
             self.assertTrue(dl.download_cob('06/10/2026', tmp).reused)
             self.assertEqual(before, (result.folder / 'manifest.json').read_bytes())
@@ -119,7 +118,7 @@ class CobIntegrityTests(unittest.TestCase):
         from src.json_config import load_provider_configs
         from src.providers.massive import MassiveProvider
         root = Path(__file__).resolve().parents[1]
-        jobs = parse_requests(load_provider_configs(root/'config/massive.json', cob_date=date(2026,10,7)))
+        jobs = parse_requests(load_provider_configs(root/'config/massive.json', cob_date=date(2026,10,7),history_start=date(2000,1,3)))
         job = next(j for j in jobs if j.instrument.ticker == 'IEF')
         client = Mock()
         client.get_json.return_value = {'status':'OK', 'results':[{'t':1791326400000,'c':89.11}]}
@@ -137,8 +136,8 @@ class CobIntegrityTests(unittest.TestCase):
                     seen.append(job.window)
                     capture(provider, job)
                     raise RetrievalError('network_error', 'Fixture interruption after a response')
-                with patch('src.cob.HISTORY_FALLBACK_START', date(1900,1,1)), patch('src.cob._http_history', side_effect=failed):
-                    first = dl.download_cob('06/10/2026', tmp)
+                with patch('src.cob._http_history', side_effect=failed):
+                    first = dl.download_cob('06/10/2026', tmp, history_start=date(1900,1,1))
                 inputs_file = first.folder / 'resolved_inputs.json'
                 identity = json.loads(inputs_file.read_text())
                 if schema == 2:
@@ -157,7 +156,7 @@ class CobIntegrityTests(unittest.TestCase):
                     seen.append(job.window)
                     return capture(provider, job)
                 with patch('src.cob._http_history', side_effect=success) as api:
-                    result = dl.download_cob('06/10/2026', tmp, retry_failed=True)
+                    result = dl.download_cob('06/10/2026', tmp, retry_failed=True, history_start=date(2000,1,3))
                 api.assert_called_once()
                 self.assertEqual([w.start for w in seen],[date(1900,1,1),date(2000,1,3)])
                 row = result.summary.iloc[0]

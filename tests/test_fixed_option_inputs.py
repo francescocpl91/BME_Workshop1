@@ -59,7 +59,7 @@ class FixedOptionInputTests(unittest.TestCase):
         self.assertFalse(hasattr(MarketDataDownloader, 'download_option_catalogue'))
 
     def test_local_symbol_is_sufficient_and_inconsistent_identifiers_fail(self):
-        row = json.loads((ROOT / 'config/ibkr.json').read_text())['requests'][2]
+        row = next(r for r in json.loads((ROOT / 'config/ibkr.json').read_text())['requests'] if r.get('contract'))
         self.assertEqual(validate_ib_input(row['input'], 'option', 'USD', row['contract']), row['ticker'])
         for changes in ({'localSymbol': row['input']['localSymbol'].replace('C', 'P')},
                         {'localSymbol': row['ticker']}, {'lastTradeDateOrContractMonth': '20200101'}):
@@ -103,6 +103,6 @@ class FixedOptionInputTests(unittest.TestCase):
             'request_id':'SPX','ticker':'SPX','provider':'ibkr','status':'response_saved','retrieval_method':'reqHistoricalData'}]))
         with patch.object(run.MarketDataDownloader,'from_json') as create,patch('builtins.print'):
             create.return_value.download_cob.return_value=result
-            self.assertIs(run.main('07/10/2026'),result)
-            create.return_value.download_cob.assert_called_once_with(date(2026,10,7),run.RAW_DUMP_DIR,portfolio_file=run.PORTFOLIO_FILE,retry_failed=False)
+            self.assertIs(run.main('07/10/2026', '03/01/2000'),result)
+            create.return_value.download_cob.assert_called_once_with(date(2026,10,7),run.RAW_DUMP_DIR,portfolio_file=run.PORTFOLIO_FILE,retry_failed=False,ois_file=run.OIS_FILE)
             create.return_value.download_raw.assert_not_called()

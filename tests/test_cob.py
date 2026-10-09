@@ -19,10 +19,10 @@ def fixture(count=1):
     doc['requests']=[r for r in doc['requests'] if r.get('contract',{}).get('expiration')=='2026-12-18'][:count]
     with tempfile.TemporaryDirectory() as tmp:
         path=Path(tmp)/'ibkr.json';path.write_text(json.dumps(doc))
-        return load_provider_configs(path,cob_date=date(2026,10,7))
+        return load_provider_configs(path,cob_date=date(2026,10,7),history_start=date(2000,1,3))
 
 
-def history(jobs,*args):
+def history(jobs,*args,**kwargs):
     for job in jobs:
         yield dict(request=job,payloads=[{'method':'reqHistoricalData','bars':[]}],info={},status='response_saved',message='Fixture bars.')
 
@@ -38,8 +38,18 @@ class CobTests(unittest.TestCase):
         self.assertEqual(parse_cob('07/10/2026',today=TODAY),date(2026,10,7))
         for text in ('2026-10-07','7/10/2026','31/02/2026','08/10/2026','09/10/2026','31/12/1899'):
             with self.subTest(text=text), self.assertRaises(ValueError):parse_cob(text,today=TODAY)
-        self.assertEqual(option_route(None,date(2026,12,31),date(2027,1,1)),'live')
-        self.assertEqual(option_route(None,date(2026,10,6),TODAY),'historical')
+        self.assertEqual(option_route(date(2026,12,31),date(2027,1,1)),'live')
+        self.assertEqual(option_route(date(2026,10,6),TODAY),'historical')
+
+    def test_option_route_accepts_equivalent_date_objects_and_strings(self):
+        today=date(2026,10,9)
+        for value,expected in ((date(2026,10,8),'live'),('08/10/2026','live'),
+                               (' 08/10/2026 ','live'),(date(2026,10,7),'historical'),
+                               ('07/10/2026','historical')):
+            with self.subTest(value=value):self.assertEqual(option_route(value,today),expected)
+        self.assertEqual(option_route('31/12/2026',date(2027,1,1)),'live')
+        for value in ('09/10/2026','10/10/2026','31/02/2026','2026-10-08'):
+            with self.subTest(value=value),self.assertRaises(ValueError):option_route(value,today)
 
     def test_yesterday_live_and_archive_reused_even_on_later_day(self):
         dl=MarketDataDownloader.from_config(fixture())
@@ -71,7 +81,7 @@ class CobTests(unittest.TestCase):
             self.assertEqual(old.call_args.args[0][0].window.end,date(2026,10,6))
 
     def test_history_failure_never_switches_to_live_and_is_cached(self):
-        def failed(jobs,*args):
+        def failed(jobs,*args,**kwargs):
             for r in history(jobs):
                 r.update(status='entitlement_error');yield r
         dl=MarketDataDownloader.from_config(fixture())
@@ -92,7 +102,7 @@ class CobTests(unittest.TestCase):
             old.assert_called_once()
 
     def test_interrupted_archive_resumes_without_repeating_saved_request(self):
-        def interrupted(jobs,*args):
+        def interrupted(jobs,*args,**kwargs):
             yield next(history(jobs));raise KeyboardInterrupt()
         dl=MarketDataDownloader.from_config(fixture(2))
         with tempfile.TemporaryDirectory() as tmp, patch('src.cob.london_today',return_value=TODAY):
@@ -114,25 +124,25 @@ class CobTests(unittest.TestCase):
             self.assertEqual(result.summary.iloc[0]['status'],'partial_model_data')
             self.assertIn('undPrice',result.summary.iloc[0]['missing_model_fields'])
 
-    def test_all_market_provider_inputs_use_only_spx_ief_and_maximum_history(self):
+    def test_market_inputs_include_spy_and_user_start_placeholder(self):
         for name in ('yahoo','alpha_vantage','marketdata','massive','ibkr'):
             doc=json.loads((ROOT/'config'/f'{name}.json').read_text())
             prices=[r for r in doc['requests'] if r['product'] in {'index','etf','stock'}]
-            self.assertEqual({r['ticker'] for r in prices},{'SPX','IEF'})
-            self.assertTrue(all(r['timeframe']=={'lookback':'max','end':'COB'} for r in prices))
+            self.assertEqual({r['ticker'] for r in prices},{'SPX','IEF','SPY'})
+            self.assertTrue(all(r['timeframe']=={'start':'HISTORY_START','end':'COB'} for r in prices))
             self.assertTrue(next(r for r in prices if r['ticker']=='IEF')['enabled'])
             if name!='ibkr':self.assertFalse(any(r.get('contract') for r in doc['requests']))
 
-    def test_cob_driver_passes_maximum_window_to_every_price_provider(self):
+    def test_cob_driver_passes_selected_window_to_every_price_provider(self):
         from contextlib import ExitStack
         from src.config import PROVIDERS
-        config=load_provider_configs(ROOT/'config',cob_date=date(2026,10,7))
+        config=load_provider_configs(ROOT/'config',cob_date=date(2026,10,7),history_start=date(2000,1,3))
         config['requests']=[r for r in config['requests'] if r['kind']=='price']
         dl=MarketDataDownloader.from_config(config)
         seen=[]
         def http(provider,job):
             seen.append((provider.name,job.instrument.ticker,job.window));return 'response_saved','fixture'
-        def ib(jobs,*args):
+        def ib(jobs,*args,**kwargs):
             for job in jobs:seen.append(('ibkr',job.instrument.ticker,job.window))
             yield from history(jobs)
         with tempfile.TemporaryDirectory() as tmp, patch('src.cob.london_today',return_value=TODAY), patch('src.cob._http_history',side_effect=http),patch('src.providers.ibkr_history.iter_history',side_effect=ib):
@@ -148,13 +158,13 @@ class CobTests(unittest.TestCase):
             self.assertTrue(all(r['enabled'] for r in doc['requests']))
             with self.subTest(provider=name),tempfile.TemporaryDirectory() as tmp:
                 path=Path(tmp)/f'{name}.json';path.write_text(json.dumps(doc))
-                dl=MarketDataDownloader.from_json(path,cob_date=date(2026,10,6))
+                dl=MarketDataDownloader.from_json(path,cob_date=date(2026,10,6),history_start=date(2000,1,3))
                 def fetch(provider,instrument,symbol,window):
-                    self.assertEqual(instrument.ticker,'IEF')
+                    self.assertIn(instrument.ticker,{'IEF','SPY'})
                     provider.client.capture_response(b'{"fixture":"ETF history"}',200,'application/json','https://example.invalid/history')
                 with patch('src.cob.london_today',return_value=TODAY),patch.object(PROVIDERS[name],'fetch_raw',autospec=True,side_effect=fetch) as api:
                     result=dl.download_cob('06/10/2026',Path(tmp)/'dump')
-                self.assertEqual(api.call_count,1)
+                self.assertEqual(api.call_count,2)
                 rows=result.summary.set_index('ticker')
                 self.assertEqual(rows.loc['IEF','status'],'response_saved')
                 self.assertEqual(rows.loc['SPX','status'],'unsupported_operation')

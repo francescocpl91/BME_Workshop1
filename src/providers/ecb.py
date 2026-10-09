@@ -1,4 +1,5 @@
 from io import StringIO
+import csv
 from urllib.parse import quote
 
 import pandas as pd
@@ -27,19 +28,24 @@ class ECBProvider(MarketDataProvider):
             raise RetrievalError("configuration_error", "Provide one complete ECB series key; wildcard/multi-series queries are disabled.")
         body = self.client.get(
             f"{self.api_url}/{quote(flow, safe='')}/{quote(key, safe='.')}",
-            params={"startPeriod": str(window.start), "endPeriod": str(window.end), "format": "csvdata"},
+            params={**({"startPeriod": str(window.start)} if window.start is not None else {}), "endPeriod": str(window.end), "format": "csvdata"},
             headers={"Accept": "text/csv"},
         )
         if not body.strip():
             raise RetrievalError("no_data", "ECB returned an empty response.")
         if raw:
-            return  # Bodies already saved by HttpClient before parsing.
+            reader = csv.DictReader(StringIO(body))
+            if next(reader, None) is None:
+                raise RetrievalError("no_data", "ECB returned no observations for this window.")
+            return  # Keep the native CSV bytes; no dataframe processing.
         try:
             source = pd.read_csv(StringIO(body), dtype=str)
         except (ValueError, pd.errors.ParserError):
             raise RetrievalError("invalid_response", "ECB response could not be parsed as CSV.") from None
         if not {"TIME_PERIOD", "OBS_VALUE"}.issubset(source):
             raise RetrievalError("invalid_response", "ECB CSV lacks TIME_PERIOD/OBS_VALUE.")
+        if source.empty:
+            raise RetrievalError("no_data", "ECB returned no observations for this window.")
         if "KEY" in source and source["KEY"].nunique() > 1:
             raise RetrievalError("invalid_response", "ECB returned more than one series.")
         def first(column, default=None):

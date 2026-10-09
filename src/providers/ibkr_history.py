@@ -22,7 +22,7 @@ def error_code(exc):
     return 'provider_error'
 
 
-def iter_history(jobs, settings, progress, earliest_available=False):
+def iter_history(jobs, settings, progress, earliest_available=False, *, fallback_max=False):
     from ib_insync import IB, Contract
     jobs = list(jobs)
     if not jobs: return
@@ -151,23 +151,55 @@ def iter_history(jobs, settings, progress, earliest_available=False):
                 head_requests.pop(id(contract),None)
                 result['payloads'].append(head_payload)
                 lower_bound = head_day if head_known and earliest_available else max(head_day, job.window.start)
-                result['info']['effective_history_start'] = lower_bound.isoformat()
-                end_day = job.window.end; total=0; stop_reason='requested_lower_bound'
-                while end_day >= lower_bound:
-                    start = max(lower_bound,end_day-timedelta(days=364))
-                    end = datetime.combine(end_day+timedelta(days=1),time.min,timezone.utc).strftime('%Y%m%d-%H:%M:%S')
-                    payload, code = await history(contract,end,'1 Y','1 day','TRADES')
-                    result['payloads'].append(payload);total += len(payload['bars'])
-                    if not head_known and (code=='no_data' or (code is None and not payload['bars'])):
-                        stop_reason='first_empty_year_without_head_timestamp'
-                        break
-                    if code: raise RetrievalError(code,'Historical price chunk failed; earlier received chunks are retained.')
-                    end_day=start-timedelta(days=1)
-                result['info'].update(bars_returned=total,history_lower_bound_reached=(stop_reason=='requested_lower_bound'),history_stop_reason=stop_reason)
-                if stop_reason!='requested_lower_bound':
-                    result['message']='Historical bars saved back to the first empty yearly interval. Earliest-date lookup failed; coverage before an empty interval is not established.'
-                if not total:result.update(status='no_data',message='No historical prices on or before this COB.')
+                result['info'].update(effective_history_start=lower_bound.isoformat(), history_fallback_used=False,
+                                      requested_history_start=job.window.start.isoformat(), history_attempts=[])
+                modes = [(lower_bound, False)]
+                total = 0
+                for lower_bound, maximum in modes:
+                    end_day = job.window.end
+                    stop_reason = 'requested_lower_bound'
+                    while end_day >= lower_bound:
+                        start = max(lower_bound, end_day-timedelta(days=364))
+                        end = datetime.combine(end_day+timedelta(days=1),time.min,timezone.utc).strftime('%Y%m%d-%H:%M:%S')
+                        days = (end_day-start).days+1
+                        payload, code = await history(contract,end,'1 Y' if days==365 else f'{days} D','1 day','TRADES')
+                        payload.update(history_mode='maximum_accessible' if maximum else 'requested_window',
+                                       requested_start=str(start), requested_end=str(end_day))
+                        result['payloads'].append(payload)
+                        total += len(payload['bars'])
+                        result['info']['history_attempts'].append(dict(mode=payload['history_mode'],start=str(start),end=str(end_day),error=code))
+                        empty = code == 'no_data' or (code is None and not payload['bars'])
+                        if fallback_max and not maximum and (empty or code in {'invalid_request','provider_error','entitlement_error'}):
+                            # A date/data error changes the policy once. Never use
+                            # live data, or widen history for a transport error.
+                            maximum_start = head_day if head_known else date(1900,1,1)
+                            result['info'].update(history_fallback_used=True,history_fallback_reason=code or 'no_data',
+                                history_fallback_start=str(maximum_start), maximum_start_from_head_timestamp=head_known)
+                            modes.append((maximum_start, True))
+                            stop_reason = 'retry_maximum_accessible'
+                            break
+                        if empty and (maximum or not head_known):
+                            stop_reason = 'first_empty_year_without_head_timestamp' if not head_known else 'first_unavailable_window'
+                            break
+                        if code:
+                            raise RetrievalError(code,'Historical price chunk failed; earlier received chunks are retained.')
+                        end_day = start-timedelta(days=1)
+                    if maximum and not head_known and stop_reason == 'requested_lower_bound':
+                        stop_reason = 'search_safety_boundary'
+                    result['info'].update(bars_returned=total,history_lower_bound_reached=(stop_reason=='requested_lower_bound'),history_stop_reason=stop_reason)
+                    if maximum:
+                        result['info']['history_fallback_status'] = 'response_saved' if stop_reason=='requested_lower_bound' else 'limited_history'
+                    if stop_reason not in {'requested_lower_bound','retry_maximum_accessible'}:
+                        result['message']='Historical bars saved to the first unavailable interval. Coverage before this boundary is unverified.'
+                        if maximum: result['status']='limited_history'
+                if not total:
+                    result.update(status='no_data',message='No historical prices on or before this COB.')
+                    if result['info'].get('history_fallback_used'):
+                        result['info']['history_fallback_status'] = 'no_data'
+
         except Exception as exc:
+            if result['info'].get('history_fallback_used'):
+                result['info']['history_fallback_status'] = error_code(exc)
             result.update(status=error_code(exc),message=str(exc) if isinstance(exc,RetrievalError) else 'IBKR historical request failed ('+type(exc).__name__+'); inspect retained responses.')
         return result
 

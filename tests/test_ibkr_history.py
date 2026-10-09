@@ -70,7 +70,7 @@ class HistoricalTests(unittest.TestCase):
         doc['requests']=[r for r in doc['requests'] if not r.get('contract')]
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'input.json';path.write_text(json.dumps(doc))
-            jobs=parse_requests(load_provider_configs(path,cob_date=date(2026,10,7)))
+            jobs=parse_requests(load_provider_configs(path,cob_date=date(2026,10,7),history_start=date(2000,1,3)))
         class PriceIB(HistoricalIB):
             async def reqContractDetailsAsync(self,contract):
                 contract.conId=123
@@ -81,8 +81,8 @@ class HistoricalTests(unittest.TestCase):
         with patch('ib_insync.IB',return_value=ib):
             results=list(iter_history(jobs,{'IBKR_HISTORY_REQUEST_INTERVAL':'.1'},lambda _:None))
         self.assertEqual(ib.connections,1)
-        self.assertEqual({r['request'].instrument.ticker for r in results},{'SPX','IEF'})
-        self.assertEqual(len(ib.calls),6)
+        self.assertEqual({r['request'].instrument.ticker for r in results},{'SPX','IEF','SPY'})
+        self.assertEqual(len(ib.calls),9)
         self.assertTrue(all(c['barSizeSetting']=='1 day' and c['whatToShow']=='TRADES' and not c['keepUpToDate'] for c in ib.calls))
         self.assertTrue(all(c['endDateTime']<='20261008-00:00:00' for c in ib.calls))
         self.assertTrue(all(r['info']['history_lower_bound_reached'] for r in results))
@@ -96,7 +96,7 @@ class HistoricalTests(unittest.TestCase):
         doc['requests']=[r for r in doc['requests'] if r['ticker']=='IEF']
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'input.json';path.write_text(json.dumps(doc))
-            jobs=parse_requests(load_provider_configs(path,cob_date=date(2026,10,7)))
+            jobs=parse_requests(load_provider_configs(path,cob_date=date(2026,10,7),history_start=date(2000,1,3)))
         class NoHeadIB(HistoricalIB):
             async def reqContractDetailsAsync(self,contract):
                 contract.conId=123
