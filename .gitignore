@@ -9,3 +9,6 @@ data/
 .cache/
 .pytest_cache/
 tests/data_dumps/
+
+# Regenerable archive inventory reports
+/reports/

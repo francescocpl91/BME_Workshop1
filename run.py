@@ -1,15 +1,17 @@
-"""Run provider-specific requests from config/*.json in Python or VS Code.
+"""Inspect a saved archive, or download/reuse data and then inspect it.
 
-python run.py       : ask for COB, reuse its archive or retrieve configured data
+python run.py       : choose inventory or download, then enter the required dates
 python -i run.py    : execute and keep result available in a Python prompt
 """
 import os
 from datetime import timedelta
 from pathlib import Path
-from src import MarketDataDownloader
+from src import MarketDataDownloader, inspect_archive
 from src.cob import parse_cob, parse_history_start, london_today
 
 ROOT = Path(__file__).resolve().parent
+
+INVENTORY_DIR = ROOT / "reports"
 
 # Input data details live ONLY in these JSON files. Disable a provider/request
 # with enabled=false in JSON, or change which files are loaded here.
@@ -46,14 +48,13 @@ SETTINGS = {
     "IBKR_HISTORY_TIMEOUT": "60",
 }
 
-# Inspect native provider responses first. No cleaning/normalization in this mode.
+# Preserve native provider responses. Inventory reports are saved separately.
 RAW_DUMP_DIR = ROOT / "tests" / "data_dumps"
 
-def main(cob_text=None, history_start_text=None, *, retry_failed=False):
+def download_main(cob_text=None, history_start_text=None, *, retry_failed=False):
     today = london_today()
     yesterday = today - timedelta(days=1)
-    print("\nPORTFOLIO SIMULATOR")
-    print("Monte Carlo: Historical versus Option-Implied Volatility")
+    print("\nMKT DATA DOWNLOADER")
     print("=" * 58)
     print(f"Today (Europe/London): {today:%d/%m/%Y}")
     print(f"Recommended COB (close of business): {yesterday:%d/%m/%Y} (yesterday)")
@@ -68,7 +69,8 @@ def main(cob_text=None, history_start_text=None, *, retry_failed=False):
     print("\nA completed matching COB archive is reused without new API requests.")
     print("Previously saved option volatilities remain available if captured successfully;")
     print("their actual observation dates must be checked before using them.")
-    print("\nCurrent stage: retrieve and save inputs. Simulation/calibration comes later.")
+    print("\nCurrent stage: retrieve/reuse inputs, then automatically inventory the archive.")
+    print("Cleaning, simulation and calibration come later.")
     print("Manual OIS par curves are loaded from config/ois.json and saved beside API data.")
     print("The same fixed OIS curves are used for every COB, retaining their original observation dates.")
     print("Live data and usable volatility coverage depend on IBKR availability and access.\n")
@@ -104,7 +106,73 @@ def main(cob_text=None, history_start_text=None, *, retry_failed=False):
     print(result.summary[["ticker", "provider", "status", "retrieval_method"]].to_string(index=False))
     print(f"{'Reused' if result.reused else 'Saved'} COB archive: {result.folder}")
     print("Inspect manifest.json and summary.json for unavailable fields or provider limits.")
+    print("\nArchive ready. Starting inventory for the same COB; no further API requests.")
+    try:
+        _inventory_archive(result.folder)
+    except (OSError, ValueError):
+        print(f"Inventory could not finish. The raw archive remains at: {result.folder}")
+        print("After resolving the reported issue, choose Inventory to inspect it again.")
+        raise
     return result
+
+
+def inventory_main(cob_text=None):
+    """Inspect local data without constructing a downloader or checking API keys."""
+    print("\nPORTFOLIO SIMULATOR")
+    print("Step 1: Inventory of saved market data")
+    print("=" * 58)
+    print("Reads an existing completed archive. No provider connections are made.")
+    print("Reports actual fields, coverage and data issues; no cleaning is applied.")
+    print("Use the archive's COB label, even if option captures occurred later.\n")
+    if cob_text is None:
+        while True:
+            try:
+                cob = parse_cob(input("Saved archive COB (DD/MM/YYYY): "))
+                break
+            except ValueError as exc:
+                print(exc)
+    else:
+        cob = parse_cob(cob_text)
+    return _inventory_archive(RAW_DUMP_DIR / cob.isoformat())
+
+
+def _inventory_archive(folder):
+    """Run the same local inspection after a download or as a standalone step."""
+    inventory = inspect_archive(folder, progress=print)
+    json_path, report_path = inventory.save(INVENTORY_DIR / inventory.cob)
+    print(f"\nInspected {len(inventory.requests):,} saved requests.")
+    print(f"Reader errors: {inventory.metadata['requests_with_reader_errors']}")
+    print("A reader error means a saved response could not be trusted or understood.")
+    print("Provider failures, partial data and later option capture dates are listed separately.")
+    print(f"Readable report: {report_path}")
+    print(f"Detailed inventory: {json_path}")
+    return inventory
+
+
+def choose_mode():
+    """Ask at the entry point; no workflow starts until a valid choice is made."""
+    print("\nPORTFOLIO SIMULATOR - Choose a workflow")
+    print("  1. Inventory: inspect an existing saved archive (no API requests).")
+    print("  2. Download + inventory: retrieve/reuse data, then inspect the archive.")
+    choices = {"1": "inventory", "inventory": "inventory",
+               "2": "download", "download": "download"}
+    while True:
+        choice = input("Choose mode (1 = inventory, 2 = download): ").strip().lower()
+        if choice in choices:
+            return choices[choice]
+        print("Please enter 1 (inventory) or 2 (download).")
+
+
+def main(cob_text=None, history_start_text=None, *, mode=None, retry_failed=False):
+    """Download includes inventory; standalone inventory never triggers downloads."""
+    selected = choose_mode() if mode is None else mode
+    if selected == "inventory":
+        if history_start_text is not None or retry_failed:
+            raise ValueError("History start/retry parameters require mode='download'.")
+        return inventory_main(cob_text)
+    if selected == "download":
+        return download_main(cob_text, history_start_text, retry_failed=retry_failed)
+    raise ValueError("Mode must be 'inventory' or 'download'.")
 
 
 if __name__ == "__main__":

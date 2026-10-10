@@ -2,13 +2,75 @@
 
 Inputs live in `config/*.json`; operational setup and credential environment-variable names live in `run.py`. Library modules are directly under `src/`.
 
-## One run, one COB archive
+## Choose a workflow
 
-Run `run.py` using the project `.venv` interpreter in VS Code or Python. It displays today's date in **Europe/London** and prompts for a COB date and a historical start date in **DD/MM/YYYY**. COB must be yesterday or earlier, and history start must be on or before COB.
+Run `run.py` with the project interpreter. It first asks you to choose:
+
+- **1 - Inventory:** enter the saved archive COB and inspect downloaded data.
+- **2 - Download + inventory:** enter the COB and history start to retrieve data or reuse a compatible archive, then automatically inspect that archive.
+
+There is no default mode; blank or invalid choices prompt again. You can also
+type `inventory` or `download`. Inventory has no history-start prompt,
+API connection, credential check, or download if the archive is missing.
+A completed archive is required; an archive with a `.running` lock is refused.
+
+Download runs inventory after retrieval or archive reuse finishes, using the
+same COB without another prompt. Saved provider failures and limited data
+are included in the report. If downloading stops with an exception, inventory
+does not start. If inventory fails, the raw archive remains available; resolve
+the reported issue and use Inventory to retry the inspection without APIs.
+
+`src/preprocessing.py` reads saved metadata and the recorded attempt for each
+request, verifies response checksums, and inventories all its pages/chunks.
+Up to four local readers inspect files concurrently, preserving request order.
+Earlier attempts are not concatenated. Repeated rows and conflicting duplicate
+keys are reported; none are removed.
+
+Outputs are separate from the raw archive:
+
+- `reports/YYYY-MM-DD/inventory.md`: readable coverage, fields and diagnostics.
+- `reports/YYYY-MM-DD/inventory.json`: per-request metadata, actual date ranges,
+  numerical/missing/invalid/unavailable field counts, duplicates, response files
+  and checksums, plus option coverage by underlying, expiry and strike.
+
+This is **step 1 only**. No provider ranking, merging, adjustments, filling,
+date clipping, returns, fitting or simulation. Counts refer to raw records.
+Date gaps are calendar-day diagnostics, not exchange-holiday checks. Numeric
+model fields and ordered bid/ask quotes do not establish option liquidity.
+SDK receipt times are not guaranteed exchange quote times. Fixed OIS curves
+retain their actual observation date and par-rate units. The configured option
+expiry and IBKR last trading date remain separate.
+
+Download statuses (for example, limited history) remain separate from reader
+errors (for example, corrupt files or unknown schemas). Missing values never
+become zeros. A valid number is not automatically a financially usable value.
+For example, a small negative model vega is counted as numeric and separately flagged.
+
+Library use:
+
+```python
+from src import inspect_archive
+
+inventory = inspect_archive("tests/data_dumps/2026-10-08", progress=print)
+inventory.save("reports/2026-10-08")
+# inventory.requests and inventory.option_expiries are available in Python.
+```
+
+Inventory reports can be regenerated; the inventory reader never writes raw archive files.
+For programmatic use, bypass the mode menu with `main(..., mode="inventory")`
+or `main(..., mode="download")`. Supply the dates too to avoid date prompts.
+Download mode generates both reports and returns the original download result;
+Inventory mode returns the inventory object. Direct library `download_cob()`
+calls remain retrieval-only; automatic inventory is orchestrated by `run.py`.
+
+## Download mode: one run, one COB archive
+
+Choose **2 - Download** when running `run.py` using the project `.venv` interpreter in VS Code or Python. It displays today's date in **Europe/London** and prompts for a COB date and a historical start date in **DD/MM/YYYY**. COB must be yesterday or earlier, and history start must be on or before COB.
 
 1. A completed matching `tests/data_dumps/YYYY-MM-DD` archive is reused without API requests, even if the program runs again on a later day.
 2. Otherwise SPX, SPY, IEF and the enabled FRED/ECB references request history from the user-selected start through COB.
-3. Options use the date rule below. All responses and failures are saved in the COB archive, then the run stops. No cleansing or surface calibration is performed.
+3. Options use the date rule below. All responses and failures are saved in the COB archive.
+4. The completed new or reused archive is automatically inspected and the inventory reports are saved in `reports/YYYY-MM-DD/`, then the run stops. No cleansing or surface calibration is performed.
 
 | Input COB relative to today's date | IBKR option API | Observation date |
 |---|---|---|
@@ -31,7 +93,7 @@ The portfolio is 50% S&P 500 index exposure and 50% IEF, reported in EUR, in `co
 
 Provider identifiers differ: Yahoo uses `^GSPC`, Massive uses `I:SPX`, and IBKR uses structured contracts with symbol, security type and exchange. Each JSON contains relevant instructions and input details. Contract lookup validates the already selected option rather than discovering new options.
 
-On startup `run.py` asks for **COB** and **history start**, both in `DD/MM/YYYY`. The start must be on or before COB (minimum 01/01/1900). All non-option JSON requests use `{"start":"HISTORY_START","end":"COB"}`. These placeholders are resolved in memory to the user's actual dates and saved in the archive's `resolved_inputs.json`; the source JSON files are not rewritten at every run. Programmatic use: `MarketDataDownloader.from_json(..., cob_date=date(...), history_start=date(...))`. Explicit dates in custom JSONs are respected when no runtime start override is supplied.
+After choosing Download, `run.py` asks for **COB** and **history start**, both in `DD/MM/YYYY`. The start must be on or before COB (minimum 01/01/1900). All non-option JSON requests use `{"start":"HISTORY_START","end":"COB"}`. These placeholders are resolved in memory to the user's actual dates and saved in the archive's `resolved_inputs.json`; the source JSON files are not rewritten at every run. Programmatic use: `MarketDataDownloader.from_json(..., cob_date=date(...), history_start=date(...))`. Explicit dates in custom JSONs are respected when no runtime start override is supplied.
 
 Legacy `lookback: "max"` without a supplied start is rejected with a migration message; it cannot silently choose January 2000. The chosen window is requested first. If data begins later, the available part is retained without filling missing dates. A date/data-range or plan-range error triggers a provider-specific maximum accessible-history fallback, still bounded by COB where the API supports date bounds. Missing keys, authentication failures, transport failures and pacing errors do not trigger a wider date query. Unsupported index endpoints remain explicit failures.
 
@@ -48,7 +110,7 @@ IBKR options retain `operation: "option_history"` and `{"start":"COB","end":"COB
 
 ## Manual OIS inputs
 
-`config/ois.json` holds manual USD SOFR and EUR ESTR **spot-starting par OIS swap quotes** from `OIS.docx`, dated 09/10/2026: 86 SOFR tenors (1W–50Y) and 44 ESTR tenors (1W–60Y). Only the source's Live column supplies the curve; historical comparison columns are excluded. Rates are percentages per annum, so 3.890 means 3.890%. They are not zero rates. Contract conventions remain null where the source does not provide them; bootstrap, discount factors and forwards are later work.
+`config/ois.json` holds manual USD SOFR and EUR ESTR **spot-starting par OIS swap quotes** from `OIS.docx`, dated 09/10/2026: 86 SOFR tenors (1Wâ€“50Y) and 44 ESTR tenors (1Wâ€“60Y). Only the source's Live column supplies the curve; historical comparison columns are excluded. Rates are percentages per annum, so 3.890 means 3.890%. They are not zero rates. Contract conventions remain null where the source does not provide them; bootstrap, discount factors and forwards are later work.
 
 `run.py` passes `OIS_FILE` to `download_cob(..., ois_file=...)`. `src.ois.load_ois_config()` validates the input before provider calls. No subscription, key, browser session or API is involved. The JSON is separate from the provider request files; directory-based provider loading excludes it.
 
@@ -87,7 +149,7 @@ For an intentional retry of failed entries, from Python:
 
 ```python
 import run
-result = run.main("07/10/2026", "03/01/2000", retry_failed=True)
+result = run.main("07/10/2026", "03/01/2000", mode="download", retry_failed=True)
 ```
 
 Retries preserve earlier attempt files and use the date rule at the time of the retry. A live result that could not complete yesterday cannot be recreated as live data after its capture day has passed; a later retry will use historical bars with explicit provenance.
