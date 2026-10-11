@@ -4,64 +4,133 @@ Inputs live in `config/*.json`; operational setup and credential environment-var
 
 ## Choose a workflow
 
-Run `run.py` with the project interpreter. It first asks you to choose:
+Run `run.py` with the project interpreter. It asks you to choose:
 
-- **1 - Inventory:** enter the saved archive COB and inspect downloaded data.
-- **2 - Download + inventory:** enter the COB and history start to retrieve data or reuse a compatible archive, then automatically inspect that archive.
+- **1 - Process saved archive:** enter a saved COB. Inventory, clean and merge the
+  local data without API connections or a history-start prompt.
+- **2 - Download + process:** enter COB and history start. Retrieve/reuse a compatible
+  archive, then automatically inventory, clean and merge it.
 
-There is no default mode; blank or invalid choices prompt again. You can also
-type `inventory` or `download`. Inventory has no history-start prompt,
-API connection, credential check, or download if the archive is missing.
-A completed archive is required; an archive with a `.running` lock is refused.
+Both choices use the same processing pipeline. The aliases `process`,
+`inventory` and `download` work too. The standalone library function
+`inspect_archive()` remains inventory-only; `download_cob()` remains retrieval-only.
+The entry point joins these stages, with no additional date prompt.
+Missing/incomplete archives or an active `.running` lock are refused.
 
-Download runs inventory after retrieval or archive reuse finishes, using the
-same COB without another prompt. Saved provider failures and limited data
-are included in the report. If downloading stops with an exception, inventory
-does not start. If inventory fails, the raw archive remains available; resolve
-the reported issue and use Inventory to retry the inspection without APIs.
+## Cleaning and merging
 
-`src/preprocessing.py` reads saved metadata and the recorded attempt for each
-request, verifies response checksums, and inventories all its pages/chunks.
-Up to four local readers inspect files concurrently, preserving request order.
-Earlier attempts are not concatenated. Repeated rows and conflicting duplicate
-keys are reported; none are removed.
+`src/preprocessing.py` reads saved response bytes and verifies their checksums.
+`src/data_cleaning.py` processes those observations separately from raw files.
+`config/cleaning.json` contains provider priorities, exchange calendars, thresholds
+and optional instrument overrides. New tickers do not require Python edits.
+Stocks/ETFs, indices, option snapshots, historical option bars, corporate actions,
+reference observations and manual OIS quotes follow separate rules.
 
-Outputs are separate from the raw archive:
+The order is:
 
-- `reports/YYYY-MM-DD/inventory.md`: readable coverage, fields and diagnostics.
-- `reports/YYYY-MM-DD/inventory.json`: per-request metadata, actual date ranges,
-  numerical/missing/invalid/unavailable field counts, duplicates, response files
-  and checksums, plus option coverage by underlying, expiry and strike.
+1. Read the recorded attempt for each provider/request. Inventory failures remain
+   visible; unreadable or checksum-failed observations cannot become selected data.
+2. Clean within each provider: finite numbers, date window, daily frequency,
+   positive prices, consistent OHLC, duplicate and calendar checks. Equal duplicates
+   collapse; conflicting versions are retained but quarantined. Explicit conflicts
+   between configured and provider currencies/denominations are also quarantined;
+   both values are retained, with no automatic currency or unit conversion.
+3. Choose the price basis and primary provider for each product. Prefer documented
+   split/dividend-adjusted close for stocks and ETFs. Indices keep their declared
+   price/total-return convention. Each selected adjusted observation must have the
+   documented adjustment convention. Ordinary closes and corporate actions are retained.
+4. Compare ordinary closes only when currency, units and adjustment basis agree.
+   Never average providers. The initial relative discrepancy threshold is **0.1%**.
+   Same-basis ordinary-price gaps may be filled only after at least two overlapping
+   observations agree within tolerance and no compared overlap fails.
+   **Adjusted-close scales are never spliced automatically.**
+5. Align to exchange sessions and calculate simple/log returns between adjacent
+   sessions only. Missing observations remain missing; no interpolation or forward
+   filling occurs. A missing session invalidates the following one-session return.
+   The common holding-return table requires matching start and end dates for all
+   holdings. Different-calendar interval mismatches are excluded and reported;
+   individual return start dates remain in the selected-price table.
+6. Screen option snapshots independently: positive ordered bid/ask, contract details,
+   expiry, model IV, model underlying and (by policy) nonnegative dividend PV.
+   Initial relative-spread limit: **10% of midpoint**. Missing optional Greeks or volume
+   do not automatically reject a quote; supplied very low/negative model vega is flagged.
+   Select a whole observation, never combine fields across providers or timestamps.
+7. Preserve native reference dates, rate units, corporate actions and fixed par OIS
+   observation dates. Save derived tables, exclusions, source comparisons and a report.
 
-This is **step 1 only**. No provider ranking, merging, adjustments, filling,
-date clipping, returns, fitting or simulation. Counts refer to raw records.
-Date gaps are calendar-day diagnostics, not exchange-holiday checks. Numeric
-model fields and ordered bid/ask quotes do not establish option liquidity.
-SDK receipt times are not guaranteed exchange quote times. Fixed OIS curves
-retain their actual observation date and par-rate units. The configured option
-expiry and IBKR last trading date remain separate.
+The default calendar is **XNYS**, using `exchange-calendars`, with historical holidays,
+exceptional closures and early closes. Override it for other listing markets.
+Do not apply the equity calendar to rates, FX, or option snapshot capture times.
+Dates before an instrument's first observation remain visible as missing coverage,
+not fabricated prices.
 
-Download statuses (for example, limited history) remain separate from reader
-errors (for example, corrupt files or unknown schemas). Missing values never
-become zeros. A valid number is not automatically a financially usable value.
-For example, a small negative model vega is counted as numeric and separately flagged.
+Adjusted-close returns include the provider's distribution adjustment. **Do not add
+the saved dividends to those returns again.** These historical events are not a
+future dividend forecast. The option model dividend PV is not a forecast cashflow schedule.
+
+Option model IV, model price, underlying value and dividend PV remain separate
+from bid/ask, midpoint and bid/ask IVs. IV is an annualized decimal. The configured
+AM/PM expiry clock is explicitly labelled a convention estimate. Timestamp means
+SDK receipt, not verified exchange quote freshness. A capture span above five
+minutes is flagged. Candidate status does not establish simultaneity, liquidity,
+forward consistency or absence of arbitrage. American options are distinguished
+from European surface candidates. Historical bars do not acquire invented IV/Greeks.
+
+### Outputs
+
+Raw inputs remain in `tests/data_dumps/YYYY-MM-DD/`.
+Inventory reports go to `reports/YYYY-MM-DD/inventory.json` and `inventory.md`.
+Derived outputs go to `processed/YYYY-MM-DD/<processing-id>/`:
+
+| File | Purpose |
+|---|---|
+| `provider_prices.csv` | Provider observations, quality flags and duplicate provenance |
+| `selected_prices.csv` | Calendar-aligned selected prices, source, basis, simple/log returns and gaps |
+| `aligned_holding_returns.csv` | Matching date intervals with valid local-currency returns for all holdings |
+| `price_comparisons.csv` | Comparable provider differences and tolerance flags |
+| `corporate_actions.csv` | Distributions and splits, separate from adjusted returns |
+| `option_quotes.csv` | All cleaned option observations, exclusions, IVs, Greeks and model fields |
+| `selected_option_quotes.csv` | Selected whole observations, including failed candidates for inspection |
+| `option_iv_candidates.csv` | Preliminary quotes passing field/spread/vega checks |
+| `historical_option_bars.csv` | Historical bars, kept distinct from snapshots |
+| `reference_observations.csv`, `selected_references.csv` | Native rate/FX observations and source selection |
+| `ois_quotes.csv` | Par quotes in percent and decimal units, with actual dates |
+| `exchange_sessions.csv` | Calendar session open/close timestamps |
+| `request_status.csv`, `issues.csv` | Saved provider statuses and reader/processing diagnostics |
+| `manifest.json`, `report.md` | Policy, current/archived portfolio, coverage, readiness and output hashes |
+
+A processing ID fingerprints inputs, source checksums, policy, portfolio and calendar
+version. Changing weights or cleaning settings creates a separate derived run;
+identical inputs regenerate the same derived output location. Raw responses are never
+changed. Complete means processing finished, not that all data passed quality checks.
+
+Processing uses the **current** portfolio JSON, while retaining the archived portfolio
+in the report. To apply new weights to an old archive choose **1**. Download archive
+compatibility rules remain strict: a changed portfolio/configuration can reject reuse
+in Download mode. Local processing does not bypass those rules or make provider requests.
+
+No portfolio valuation, currency conversion, rebalancing, dividend forecast,
+SPX-to-SPY calibration, OIS bootstrap, surface fitting or Monte Carlo is performed
+in this stage. Foreign-currency holdings need matching FX history before EUR analysis.
 
 Library use:
 
 ```python
-from src import inspect_archive
+from src import process_archive
 
-inventory = inspect_archive("tests/data_dumps/2026-10-08", progress=print)
-inventory.save("reports/2026-10-08")
-# inventory.requests and inventory.option_expiries are available in Python.
+result = process_archive(
+    "tests/data_dumps/2026-10-08", "config/cleaning.json",
+    portfolio_file="config/portfolio.json", progress=print,
+)
+result.save(f"processed/{result.cob}/{result.run_id}")
+# result.tables contains pandas DataFrames; result.summary contains diagnostics.
 ```
 
-Inventory reports can be regenerated; the inventory reader never writes raw archive files.
-For programmatic use, bypass the mode menu with `main(..., mode="inventory")`
-or `main(..., mode="download")`. Supply the dates too to avoid date prompts.
-Download mode generates both reports and returns the original download result;
-Inventory mode returns the inventory object. Direct library `download_cob()`
-calls remain retrieval-only; automatic inventory is orchestrated by `run.py`.
+Use absolute paths outside the project directory. Programmatic entry-point use:
+`run.main("08/10/2026", mode="process")`; the legacy `mode="inventory"` alias
+now also cleans/merges. It returns the inventory object for compatibility.
+Download mode returns the original download result. Use `process_archive()`
+when you want the processed tables directly.
 
 ## Download mode: one run, one COB archive
 
@@ -70,7 +139,7 @@ Choose **2 - Download** when running `run.py` using the project `.venv` interpre
 1. A completed matching `tests/data_dumps/YYYY-MM-DD` archive is reused without API requests, even if the program runs again on a later day.
 2. Otherwise SPX, SPY, IEF and the enabled FRED/ECB references request history from the user-selected start through COB.
 3. Options use the date rule below. All responses and failures are saved in the COB archive.
-4. The completed new or reused archive is automatically inspected and the inventory reports are saved in `reports/YYYY-MM-DD/`, then the run stops. No cleansing or surface calibration is performed.
+4. The new or reused archive is automatically inventoried, cleaned and merged into separate derived outputs, then the run stops. No surface calibration is performed.
 
 | Input COB relative to today's date | IBKR option API | Observation date |
 |---|---|---|
@@ -83,7 +152,7 @@ Example: when today is 08/10/2026, COB 07/10/2026 selects live options on 08/10/
 
 ## Inputs and portfolio
 
-The portfolio is 50% S&P 500 index exposure and 50% IEF, reported in EUR, in `config/portfolio.json`. Options are reference inputs, not holdings. SPX is an index exposure for modelling, not a directly purchasable fund.
+The portfolio is **50% SPY and 50% IEF**, reported in EUR, in `config/portfolio.json`. SPX and SPX options are reference inputs for modelling SPY movements. They are not holdings. The configurable option-reference mapping records this intention; its calibration is later work.
 
 - `yahoo.json`, `massive.json`, `ibkr.json`: SPX, SPY and IEF historical requests.
 - `alpha_vantage.json`, `marketdata.json`: SPX, SPY and IEF are enabled. Their current adapters cannot retrieve SPX index history, so these SPX requests save `unsupported_operation` in JSON without sending a stock request. SPY and IEF use ETF history requests; SPY is additional data, not a replacement for SPX.
@@ -175,7 +244,7 @@ Offline unit/regression tests use fake responses and temporary folders; they do 
 
 Install the project with Python 3.11+ using `python -m pip install -e .`, including the declared ib_insync dependency. The separate official ibapi SDK is no longer used. Import the library as `from src import MarketDataDownloader`; do not add the `src` directory itself to PYTHONPATH because `src/http.py` would shadow Python's standard library.
 
-Data cleansing, aligned observations, dividend forecasts, discount/forward curves, implied-volatility surfaces and Monte Carlo calibration remain later work. ESTR/SOFR observations and sovereign yields are not substitutes for an OIS discount curve. EUR/USD is USD per EUR; conversion to EUR requires the corresponding dated FX observation.
+Cleaning and aligned local-currency returns are implemented. Dividend forecasts, FX conversion, discount/forward curves, implied-volatility surfaces and Monte Carlo calibration remain later work. ESTR/SOFR observations and sovereign yields are not substitutes for an OIS discount curve. EUR/USD is USD per EUR; conversion to EUR requires the corresponding dated FX observation.
 
 IBKR documentation: [historical bars](https://interactivebrokers.github.io/tws-api/historical_bars.html), [historical limitations](https://interactivebrokers.github.io/tws-api/historical_limitations.html).
 

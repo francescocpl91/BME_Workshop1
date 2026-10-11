@@ -272,6 +272,7 @@ class InventoryTests(unittest.TestCase):
         self.finish()
         with patch.object(run,"RAW_DUMP_DIR",self.archive.parent), \
              patch.object(run,"INVENTORY_DIR",self.root/"reports"), \
+             patch.object(run,"_process_inventory") as process, \
              patch.object(run.MarketDataDownloader,"from_json",side_effect=AssertionError("No downloader")), \
              patch("builtins.input",side_effect=["1","08/10/2026"]) as prompt, \
              redirect_stdout(StringIO()):
@@ -378,6 +379,7 @@ class InventoryTests(unittest.TestCase):
                      patch.object(run, "RAW_DUMP_DIR", self.root / "not_the_returned_archive"), \
                      patch.object(run.MarketDataDownloader, "from_json") as factory, \
                      patch.object(run, "inspect_archive", wraps=inspect_archive) as reader, \
+                     patch.object(run, "_process_inventory") as process, \
                      patch("builtins.input", side_effect=["2", "08/10/2026", "03/01/2000"]) as prompt, \
                      patch.object(socket.socket, "connect", side_effect=AssertionError("No network")), \
                      redirect_stdout(output):
@@ -385,7 +387,8 @@ class InventoryTests(unittest.TestCase):
                     self.assertIs(run.main(), result)
                 self.assertEqual(prompt.call_count, 3)
                 factory.return_value.download_cob.assert_called_once()
-                reader.assert_called_once_with(self.archive, progress=print)
+                reader.assert_called_once_with(self.archive, progress=print, include_observations=True)
+                process.assert_called_once()
                 self.assertEqual(before, {p: p.read_bytes() for p in self.archive.rglob("*") if p.is_file()})
                 report = self.root / "reports" / COB
                 self.assertTrue((report / "inventory.md").is_file())
@@ -425,7 +428,7 @@ class InventoryTests(unittest.TestCase):
                 run.main("08/10/2026", "03/01/2000", mode="download")
         factory.return_value.download_cob.assert_called_once()
         self.assertEqual(before, {p: p.read_bytes() for p in self.archive.rglob("*") if p.is_file()})
-        self.assertIn("Inventory could not finish", output.getvalue())
+        self.assertIn("Local processing could not finish", output.getvalue())
         self.assertFalse((self.root / "reports").exists())
 
 

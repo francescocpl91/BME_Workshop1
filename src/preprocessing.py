@@ -1,5 +1,18 @@
 """Inspect a completed COB archive without APIs, cleaning or source selection.
 
+Reading order for this module:
+    inspect_archive -> _RequestReader.read -> parse/add -> profile/finish
+    -> ArchiveInventory (inventory summaries and, optionally, parsed rows).
+
+The common observation format is:
+    {"key": date_or_timestamp_or_tenor, "date": ISO_date_or_None,
+     "timestamp": aware_timestamp_or_None, "values": {field: raw_value},
+     "source": archive_relative_filename}
+Field names and timestamps are translated into this format, but price values
+are not adjusted, merged, filled or filtered for analysis here. data_cleaning.py
+makes those decisions later. Parsing a value and accepting it for modelling
+are separate operations.
+
 Step 1 of preprocessing: describe the observations actually saved. Provider
 parsers below only read local response bytes. They never call download adapters
 or models.normalize(), which would clip, deduplicate or change the data.
@@ -25,11 +38,15 @@ from zoneinfo import ZoneInfo
 
 from .storage import write_json
 
+# Snapshot fields are deliberately split by IBKR computation group. A model IV
+# must not lose its association with model underlying price and dividend PV.
 GREEK_FIELDS = ("impliedVol", "optPrice", "undPrice", "delta", "gamma",
                 "vega", "theta", "pvDividend")
 GREEK_GROUPS = ("bidGreeks", "askGreeks", "lastGreeks", "modelGreeks")
 SNAPSHOT_FIELDS = ("bid", "ask", "last", "close", "bidSize", "askSize",
                    "lastSize", "volume")
+# These statements are included in exported inventory reports. They describe
+# what an inventory can establish, rather than impose cleaning thresholds.
 LIMITS = [
     "Inventory only: no provider selection, filling, clipping, deduplication, returns or calibration.",
     "Field counts include repeated raw rows; unique keys and conflicts are reported separately.",
@@ -42,6 +59,7 @@ LIMITS = [
 
 
 def _json(path):
+    """Read saved JSON; utf-8-sig also accepts an optional UTF-8 byte-order mark."""
     return json.loads(Path(path).read_text(encoding="utf-8-sig"))
 
 
@@ -56,7 +74,13 @@ def _inside(root, relative):
 
 
 def _number(value, field="", ibkr=False):
-    """Separate missing, malformed and provider-unavailable numeric values."""
+    """Return (float_or_None, state), without changing the original record.
+
+    States are numeric, missing (null/blank/provider missing text), invalid
+    (malformed, boolean or non-finite), and unavailable (IBKR sentinels).
+    Numeric does not mean financially acceptable: a negative rate can be
+    valid, whereas a negative price needs later eligibility checks.
+    """
     if value is None or (isinstance(value, str) and value.strip().lower() in
                          {"", ".", "nan", "null", "none", "n/a"}):
         return None, "missing"
@@ -78,6 +102,7 @@ def _number(value, field="", ibkr=False):
 
 
 def _day(value):
+    """Read an ISO date from the first ten characters; invalid input becomes None."""
     if not isinstance(value, str):
         return None
     try:
@@ -87,7 +112,13 @@ def _day(value):
 
 
 def _timestamp(value, zone="America/New_York", milliseconds=False):
-    """Epoch arithmetic also supports pre-1970 timestamps on Windows."""
+    """Return an aware ISO timestamp in zone, or None for invalid input.
+
+    Numeric input is seconds since 1970-01-01 UTC (milliseconds when requested).
+    String timestamps must include a timezone; no timezone is guessed for a
+    naive intraday value. This changes the time representation, not the price.
+    Epoch arithmetic also supports pre-1970 timestamps on Windows.
+    """
     try:
         if isinstance(value, str) and not value.replace(".", "", 1).lstrip("-").isdigit():
             stamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -106,19 +137,34 @@ def _timestamp(value, zone="America/New_York", milliseconds=False):
 
 @dataclass
 class ArchiveInventory:
-    """Aggregate inventory, with a readable report and a detailed JSON report."""
+    """Result of inspecting one completed archive.
+
+    requests: one coverage/metadata/issue dictionary per provider/request.
+    option_expiries: contract counts grouped by provider, underlying and expiry.
+    metadata: archive hashes, saved statuses and aggregate diagnostics.
+    observations: optional {(provider, request_id): {dataset: [raw rows]}}.
+        These rows stay in memory for cleaning and are omitted from reports.
+    """
     folder: Path
     cob: str
     requests: list[dict]
     option_expiries: list[dict]
     metadata: dict
+    observations: dict | None = None  # Opt-in parsed rows for offline cleaning; not serialized in inventory reports.
 
     def to_dict(self):
+        """Build the detailed report, excluding the potentially large raw-row cache."""
         return {"schema_version": 1, "archive": str(self.folder), "cob": self.cob,
                 "limitations": LIMITS, **self.metadata,
                 "requests": self.requests, "option_expiries": self.option_expiries}
 
     def report(self):
+        """Render coverage and field counts as Markdown, without selecting data.
+
+        Counts include repeated records. For example, a field can be present
+        but missing/non-numeric, and positive bid/ask alone does not imply that
+        the option has a usable model IV or a sufficiently narrow spread.
+        """
         lines = [
             "# Saved market-data inventory", "",
             f"Archive COB: **{self.cob}**. Requests inspected: **{len(self.requests)}**.",
@@ -128,6 +174,7 @@ class ArchiveInventory:
             "|---|---|---|---|---:|---:|---|---|",
         ]
         def cell(value):
+            """Keep metadata values from breaking Markdown table cells."""
             return str(value if value is not None else "-").replace("|", "/").replace("\n", " ")
         for item in self.requests:
             if item["is_option"]:
@@ -198,7 +245,15 @@ class ArchiveInventory:
 
 
 class _RequestReader:
+    """Read one saved request; all provider-specific response layouts live here.
+
+    tables holds common-format rows; meta holds instrument/series context.
+    bases records price conventions, sources records file trust/provenance,
+    field_maps maps common names back to provider names, and issues is the
+    diagnostic log. None of these containers modifies the source files.
+    """
     def __init__(self, archive, row, config):
+        """Start with archived request metadata, not today's provider JSON."""
         self.archive, self.row = archive, row
         self.tables = defaultdict(list)
         self.meta = {"currency": config.get("currency"), "unit": config.get("unit"),
@@ -213,16 +268,28 @@ class _RequestReader:
         self.ibkr = row["provider"] == "ibkr"
 
     def issue(self, code, detail):
+        """Record a diagnostic once; its presence need not abort other requests."""
         value = {"code": code, "detail": str(detail)}
         if value not in self.issues:
             self.issues.append(value)
 
     def add(self, table, key, values, source, *, stamp=None, observed=None):
+        """Append without deduplication or clipping.
+
+        key identifies an observation (date, timestamp or OIS tenor).
+        observed overrides the date inferred from key, as a tenor is not a
+        date. values retains the extracted provider values for later profiling.
+        """
         self.tables[table].append({"key": key, "date": observed or _day(key),
                                    "timestamp": stamp, "values": values, "source": source})
 
     def arrays(self, table, timestamps, arrays, source, *, zone="America/New_York",
                milliseconds=False, prefix=""):
+        """Turn parallel timestamp/value arrays into rows, keeping unmatched entries.
+
+        Iterate to the longest array so malformed lengths remain visible.
+        Missing timestamps/values become None and are diagnosed later.
+        """
         lengths = {len(timestamps), *(len(v) for v in arrays.values())}
         if len(lengths) > 1:
             self.issue("array_length_mismatch", f"{source}: timestamps and value arrays differ in length.")
@@ -233,9 +300,17 @@ class _RequestReader:
                      source, stamp=stamp)
 
     def parse(self, body, response, source):
-        """Dispatch by saved provider/response schema, never by current config."""
+        """Decode one response and append observations or metadata.
+
+        Return its role: observations, metadata, diagnostic or unrecognised.
+        A provider error message is not a price dataset. Malformed structures
+        raise into read(), which marks that file unreadable and continues.
+        Dispatch uses the saved provider/response schema, not current config.
+        """
         provider = self.row["provider"]
         params = response.get("parameters", {})
+        # ECB returns CSV. Units/frequency/status are metadata; values are kept
+        # as supplied here. No rate conversion or equity-calendar alignment.
         if provider == "ecb":
             rows = list(csv.DictReader(StringIO(body)))
             if rows and {"TIME_PERIOD", "OBS_VALUE"}.issubset(rows[0]):
@@ -251,6 +326,9 @@ class _RequestReader:
         data = json.loads(body)
         if not isinstance(data, dict):
             raise ValueError("Expected a JSON object.")
+        # Yahoo has parallel daily arrays plus separate corporate-action maps.
+        # close and adj_close stay distinct; an index level is not an ETF total
+        # return series merely because an adjclose array is present.
         if provider == "yahoo" and data.get("chart", {}).get("result"):
             for result in data["chart"]["result"]:
                 metadata = result.get("meta", {})
@@ -274,6 +352,8 @@ class _RequestReader:
                         fields = {k: v for k, v in value.items() if k not in {"date", "splitRatio"}}
                         self.add(event, _day(stamp), fields, source, stamp=stamp)
             return "observations"
+        # Alpha Vantage uses dates as dictionary keys and numbered field names.
+        # Adjusted endpoints may embed dividend amounts and split coefficients.
         if provider == "alpha_vantage" and "Time Series (Daily)" in data:
             mapping = {"1. open": "open", "2. high": "high", "3. low": "low", "4. close": "close",
                        "5. adjusted close": "adj_close", "5. volume": "volume", "6. volume": "volume",
@@ -286,6 +366,8 @@ class _RequestReader:
             self.meta["adjusted_close_basis"] = ("split_and_dividend_adjusted"
                 if any("adj_close" in x["values"] for x in self.tables["prices"]) else None)
             return "observations"
+        # MarketData's close convention comes from the recorded request flags.
+        # The field name "close" alone cannot tell us whether dividends were included.
         if provider == "marketdata" and data.get("s") == "ok" and "t" in data:
             mapping = {"o": "open", "h": "high", "l": "low", "c": "close", "v": "volume"}
             self.arrays("prices", data["t"], {v: data[k] for k, v in mapping.items() if k in data}, source)
@@ -296,6 +378,9 @@ class _RequestReader:
                      "unadjusted_close" if splits == dividends == "false" else "unknown")
             self.bases.add(basis)
             return "observations"
+        # Massive aggregate timestamps are milliseconds, not Unix seconds.
+        # Retain VWAP/trade counts when supplied; adjusted stock bars are labelled
+        # split-adjusted here, not automatically dividend-adjusted.
         if provider == "massive" and isinstance(data.get("results"), list):
             mapping = {"o": "open", "h": "high", "l": "low", "c": "close",
                        "v": "volume", "vw": "vwap", "n": "trade_count"}
@@ -308,6 +393,8 @@ class _RequestReader:
                            "split_adjusted_close" if data.get("adjusted") is True else
                            "unadjusted_close" if data.get("adjusted") is False else "unknown")
             return "observations"
+        # FRED observation dates differ from its real-time/vintage metadata.
+        # Save both: copying vintage bounds does not reconstruct revision history.
         if provider == "fred" and "observations" in data:
             for value in data["observations"]:
                 self.add("observations", value.get("date"), {"value": value.get("value")}, source)
@@ -315,10 +402,15 @@ class _RequestReader:
             self.meta["vintage_end"] = data.get("realtime_end")
             self.field_maps["observations"]["value"] = "observations[].value"
             return "observations"
+        # The separate series-description response supplies units/frequency;
+        # it contributes metadata rather than additional observations.
         if provider == "fred" and "seriess" in data:
             self.meta["series_definition"] = [{k: series.get(k) for k in
                 ("id", "title", "units", "frequency", "seasonal_adjustment")} for series in data["seriess"]]
             return "metadata"
+        # Keep historical channels separate (TRADES, BID, ASK, etc.). Daily
+        # date-only bars are not assigned an invented intraday timestamp.
+        # ADJUSTED_LAST can contain split-and-dividend-adjusted closes.
         if provider == "ibkr" and "bars" in data:
             request = data.get("request", {})
             table = request.get("what_to_show", "UNKNOWN")
@@ -337,6 +429,9 @@ class _RequestReader:
                            "split_adjusted_close" if table == "TRADES" else
                            "split_and_dividend_adjusted_close" if table == "ADJUSTED_LAST" else table)
             return "observations"
+        # Flatten a snapshot while preserving each Greek group's prefix.
+        # Model optPrice/IV/undPrice/pvDividend remain distinct from bid/ask
+        # and are not recalculated from their midpoint. Time is SDK receipt.
         if provider == "ibkr" and isinstance(data.get("ticker"), dict):
             ticker = data["ticker"]
             stamp = _timestamp(ticker.get("time"), "UTC")
@@ -358,6 +453,8 @@ class _RequestReader:
             self.meta["iv_units"] = "annualized_decimal; 0.20 means 20%, as supplied by IBKR"
             self.bases.add("snapshot_quotes_and_separate_model_values")
             return "observations"
+        # Contract discovery/head timestamps and error payloads can be present
+        # beside price responses; classify them without inventing market rows.
         if provider == "ibkr" and data.get("method") in {"reqContractDetails", "reqHeadTimeStamp"}:
             return "metadata"
         if data.get("capture_format") == "serialized_sdk_contract_details":
@@ -368,10 +465,18 @@ class _RequestReader:
         return "unrecognised"
 
     def profile(self, name, rows):
+        """Describe one dataset; count problems without removing observations.
+
+        Field statistics distinguish present from numeric. Duplicate keys are
+        counted and compared, not collapsed. Calendar-day gaps are descriptive;
+        exchange-session gaps are determined later by clean_prices().
+        """
         fields = sorted({field for row in rows for field in row["values"]})
         stats = {field: dict(present=0, numeric=0, missing=0, invalid=0, unavailable=0,
                              zero=0, negative=0, first_numeric_date=None, last_numeric_date=None)
                  for field in fields}
+        # Each key maps to the distinct numerical/content versions seen.
+        # More than one version means conflicting values for that same key.
         versions = defaultdict(set)
         dates, timestamps = [], []
         quality = Counter()
@@ -410,6 +515,8 @@ class _RequestReader:
             if all(numeric.get(k) is not None for k in ("open", "high", "low", "close")):
                 if numeric["high"] < max(numeric[k] for k in ("open", "low", "close")) - 1e-6 or numeric["low"] > min(numeric[k] for k in ("open", "high", "close")) + 1e-6:
                     quality["inconsistent_ohlc"] += 1
+            # These are independent availability counters, not final IV filters.
+            # A numeric model group can still include a questionable vega or IV.
             if name == "snapshot":
                 bid, ask = numeric.get("bid"), numeric.get("ask")
                 if bid is not None and ask is not None:
@@ -441,8 +548,17 @@ class _RequestReader:
         }
 
     def read(self):
+        """Read the summary-selected attempt and verify each indexed response.
+
+        Earlier attempts stay on disk and are not combined with this attempt.
+        Individual file/format failures become issues so other files continue.
+        Rows already parsed from a subsequently failing file may remain in
+        tables; that source is marked unreadable and cleaning excludes its rows.
+        """
         row = self.row
         folder = _inside(self.archive, row["folder"])
+        # Manual curves have their own file layout, not an HTTP response index.
+        # Key by tenor, retain the actual curve date, and never imply a zero rate.
         if row["provider"] == "manual_ois":
             curve_path = folder / "curve.json"
             body = curve_path.read_bytes()
@@ -465,6 +581,8 @@ class _RequestReader:
             request_path = attempt / "request.json"
             if not request_path.exists() and attempt != folder:
                 request_path = folder / "request.json"  # Legacy first-attempt metadata.
+            # Actual attempt metadata can differ from the original archive
+            # identity after a retry. Profile the range that was really requested.
             request = _json(request_path)
             for source, target in {
                 "configured_currency": "currency", "configured_unit": "unit",
@@ -486,6 +604,9 @@ class _RequestReader:
                 responses = _json(index_path)
                 if not isinstance(responses, list):
                     raise ValueError("Response index must contain a list.")
+            # Index entries identify exact response files. Repeated entries
+            # must not count the same file twice; repeated data in different
+            # pages is still retained and diagnosed by profile().
             seen = set()
             for response in responses:
                 path = _inside(attempt, response["file"])
@@ -503,6 +624,9 @@ class _RequestReader:
                     info["sha256"] = digest
                     expected = response.get("sha256")
                     info["checksum_matches"] = digest == expected if expected else None
+                    # Never parse bytes that disagree with their recorded hash.
+                    # A missing hash is reported; cleaning rejects ordinary
+                    # provider rows lacking checksum verification.
                     if expected and digest != expected:
                         self.issue("checksum_mismatch", source)
                         info["role"] = "untrusted"
@@ -520,6 +644,12 @@ class _RequestReader:
         return self.finish()
 
     def finish(self):
+        """Package profiles, provenance and request-level diagnostics.
+
+        A saved retrieval status and a reader error are different things:
+        response_saved does not guarantee a complete, valid dataset.
+        This method records observations outside COB/window without clipping.
+        """
         datasets = {name: self.profile(name, rows) for name, rows in self.tables.items()}
         if not datasets:
             self.issue("no_observations", "No recognised observations were read from the selected attempt.")
@@ -551,6 +681,12 @@ class _RequestReader:
 
 
 def _option_coverage(requests):
+    """Aggregate per-contract availability by provider/underlying/expiry.
+
+    Each request contributes at most one to a given availability counter, even
+    if it has several raw snapshot rows. Different counters can overlap; their
+    totals must not be added together as a count of usable contracts.
+    """
     groups = {}
     for item in requests:
         if not item["is_option"]:
@@ -594,13 +730,21 @@ def _option_coverage(requests):
     return sorted(groups.values(), key=lambda g: (g["provider"], g["underlying"], g["expiration"]))
 
 
-def inspect_archive(folder, *, progress: Callable[[str], None] | None = None, max_workers=4):
+def inspect_archive(folder, *, progress: Callable[[str], None] | None = None, max_workers=4, include_observations=False):
     """Read all recorded requests in a completed COB archive; never request data.
 
     Corrupt/missing response files become explicit inventory issues. An absent,
     unfinished or actively written archive is rejected before inspecting data.
     Configuration is read from the archive, not from today's config/*.json.
+    include_observations retains parsed rows in memory for the separate cleaning stage.
+
+    Pipeline: validate archive -> read requests in bounded local threads ->
+    check archive metadata did not change -> return ArchiveInventory.
+    An archive-level structural error raises ValueError. Individual request
+    errors are recorded instead of discarding the whole inventory.
     """
+    # Validate the archive before starting readers. "complete" means retrieval
+    # finished attempting its requests, not that every provider succeeded.
     if type(max_workers) is not int or not 1 <= max_workers <= 8:
         raise ValueError("max_workers must be an integer between 1 and 8.")
     folder = Path(folder).resolve()
@@ -625,11 +769,15 @@ def inspect_archive(folder, *, progress: Callable[[str], None] | None = None, ma
         raise ValueError("Duplicate provider/request identities in archive summary.")
     if manifest.get("request_count") != len(summary):
         raise ValueError("Manifest request count disagrees with summary.")
+    # Read the saved configuration so later edits to provider JSONs do not
+    # reinterpret the source archive. Each worker gets a copy of its summary row.
     config = {value.get("id"): value for value in inputs.get("requests", [])}
     results = []
+    observations = {} if include_observations else None
     emit = progress or (lambda _: None)
     emit(f"Inventory: reading {len(summary):,} saved requests for COB {manifest.get('cob')}.")
     def read_one(original):
+        """Isolate one request failure and optionally retain its parsed rows."""
         row = dict(original)
         row.setdefault("cob", manifest.get("cob"))
         reader = _RequestReader(folder, row, config.get(row.get("request_id"), {}))
@@ -638,19 +786,24 @@ def inspect_archive(folder, *, progress: Callable[[str], None] | None = None, ma
         except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError) as exc:
             reader.issue("request_read_error", type(exc).__name__ + ": " + str(exc))
             result = reader.finish()
-        return result
+        return result, dict(reader.tables) if include_observations else None
 
     # Only local file reads run concurrently. map preserves the saved request order.
     # The worker bound limits file handles and disk load; no provider code is called.
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        for index, result in enumerate(pool.map(read_one, summary), 1):
+        for index, (result, tables) in enumerate(pool.map(read_one, summary), 1):
             results.append(result)
+            if include_observations:
+                observations[(result["provider"], result["request_id"])] = tables
             if index % 250 == 0 or index == len(summary):
                 emit(f"Inventory: inspected {index:,}/{len(summary):,} requests.")
+    # Detect a retrieval starting or changing manifest/summary during the read.
+    # This is a consistency check, not a lock acquired by the inventory itself.
     if ((folder / ".running").exists()
             or (folder / "manifest.json").read_bytes() != manifest_bytes
             or (folder / "summary.json").read_bytes() != summary_bytes):
         raise ValueError("Archive changed during inspection; discard this inventory and rerun when idle.")
+    # Aggregate diagnostics without losing the per-request detail in results.
     meta = {
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
@@ -666,5 +819,5 @@ def inspect_archive(folder, *, progress: Callable[[str], None] | None = None, ma
         "dataset_start_dates": sorted({table["first_observation"] for item in results
                                   for table in item["datasets"].values() if table["first_observation"]}),
     }
-    return ArchiveInventory(folder, manifest["cob"], results, _option_coverage(results), meta)
+    return ArchiveInventory(folder, manifest["cob"], results, _option_coverage(results), meta, observations)
 

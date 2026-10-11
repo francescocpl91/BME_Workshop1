@@ -136,7 +136,7 @@ class JsonConfigTests(unittest.TestCase):
     def test_supported_product_templates_validate_when_copied_into_requests(self):
         for path in (PROJECT / "config").glob("*.json"):
             document = json.loads(path.read_text())
-            if path.name in {"portfolio.json", "ois.json"}: continue
+            if path.name in {"portfolio.json", "ois.json", "cleaning.json"}: continue
             for guide in document["product_guides"].values():
                 if not guide.get("implemented") or "template" not in guide: continue
                 row = deepcopy(guide["template"]); row["enabled"] = True
