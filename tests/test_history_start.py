@@ -51,12 +51,14 @@ class HistoryStartTests(unittest.TestCase):
         result=SimpleNamespace(folder=Path('fixture'),reused=False,summary=pd.DataFrame(columns=['ticker','provider','status','retrieval_method']))
         with patch.object(run,'london_today',return_value=date(2026,10,9)), patch('builtins.print'), \
              patch('builtins.input',side_effect=['08/10/2026','09/10/2026','02/01/2015']) as prompt, \
-             patch.object(run.MarketDataDownloader,'from_json') as factory:
+             patch.object(run.MarketDataDownloader,'from_json') as factory, \
+             patch.object(run,'_inventory_archive') as inventory:
             factory.return_value.download_cob.return_value=result
-            run.main()
+            run.main(mode="download")
             self.assertEqual(prompt.call_count,3)
             self.assertEqual(factory.call_args.kwargs['history_start'],START)
             self.assertEqual(factory.call_args.kwargs['cob_date'],COB)
+            inventory.assert_called_once_with(result.folder)
 
     def test_custom_json_start_survives_cob_and_wider_request_rejects_archive(self):
         initial=config({'yahoo':'SAMPLE'})

@@ -9,3 +9,9 @@ data/
 .cache/
 .pytest_cache/
 tests/data_dumps/
+
+# Regenerable archive inventory reports
+/reports/
+
+# Reproducible offline cleaning and merging outputs
+/processed/

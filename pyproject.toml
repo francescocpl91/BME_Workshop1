@@ -7,7 +7,7 @@ name = "market-data"
 version = "0.1.0"
 description = "Auditable multi-provider daily price and macro-series retrieval"
 requires-python = ">=3.11"
-dependencies = ["pandas>=2.2,<3", "python-dateutil>=2.9,<3", "yfinance>=0.2.54,<2", "tzdata>=2024.1", "certifi>=2024.2.2", "ib_insync==0.9.86"]
+dependencies = ["pandas>=2.2,<3", "python-dateutil>=2.9,<3", "yfinance>=0.2.54,<2", "tzdata>=2024.1", "certifi>=2024.2.2", "ib_insync==0.9.86", "exchange-calendars>=4.5,<5"]
 
 [tool.setuptools]
 packages = ["src", "src.providers"]

@@ -26,16 +26,17 @@ class PortfolioTests(unittest.TestCase):
             path.write_text(json.dumps(data), encoding='utf-8')
             return load_portfolio(path, self.config)
 
-    def test_requested_two_asset_portfolio_has_equal_weights(self):
+    def test_requested_spy_ief_portfolio_has_50_50_weights(self):
         result = self.load(self.data)
         self.assertTrue(result.weights_ready)
         self.assertEqual(result.reporting_currency, 'EUR')
         self.assertEqual(result.target_allocation, {'equity': .5, 'sovereign_fixed_income': .5})
-        self.assertEqual([(h['request_id'], h['weight']) for h in result.holdings], [('SPX', .5), ('IEF', .5)])
+        self.assertEqual([(h['request_id'], h['weight']) for h in result.holdings], [('SPY', .5), ('IEF', .5)])
         self.assertEqual(len(self.config['requests']), 4189)
 
     def test_complete_weights_are_validated_without_normalizing(self):
         # Synthetic fixture allocations, not proposed portfolio weights.
+        self.data['target_allocation'] = {'equity': .5, 'sovereign_fixed_income': .5}
         for row, weight in zip(self.data['holdings'], [.5, .5]): row['weight'] = weight
         result = self.load(self.data)
         self.assertTrue(result.weights_ready)
@@ -52,9 +53,9 @@ class PortfolioTests(unittest.TestCase):
             with self.subTest(key=key), self.assertRaises(ValueError): self.load(data)
 
     def test_reference_holdings_overlap_and_incomplete_totals_rejected(self):
-        self.data['reference_data'].append('SPX')
+        self.data['reference_data'].append('SPY')
         with self.assertRaises(ValueError): self.load(self.data)
-        self.data['reference_data'].remove('SPX')
+        self.data['reference_data'].remove('SPY')
         for row in self.data['holdings']: row['weight'] = 0
         with self.assertRaises(ValueError): self.load(self.data)
 

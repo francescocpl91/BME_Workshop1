@@ -106,7 +106,7 @@ def load_provider_configs(paths, *, cob_date=None, history_start=None) -> dict:
     """
     if isinstance(paths, (str, Path)):
         path = Path(paths)
-        paths = [p for p in sorted(path.glob("*.json")) if p.name not in {"portfolio.json", "ois.json"}] if path.is_dir() else [path]
+        paths = [p for p in sorted(path.glob("*.json")) if p.name not in {"portfolio.json", "ois.json", "cleaning.json"}] if path.is_dir() else [path]
     else:
         paths = [Path(path) for path in paths]
     if not paths:

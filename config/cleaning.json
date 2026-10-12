@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "prices": {
+    "default_calendar": "XNYS",
+    "provider_priority": [
+      "yahoo",
+      "ibkr",
+      "marketdata",
+      "massive",
+      "alpha_vantage"
+    ],
+    "allow_price_only": true,
+    "allow_compatible_gap_fill": true,
+    "cross_provider_tolerance": 0.001,
+    "large_return_threshold": 0.2,
+    "minimum_return_observations": 252
+  },
+  "options": {
+    "provider_priority": [
+      "ibkr"
+    ],
+    "max_relative_spread": 0.1,
+    "require_dividend_pv": true,
+    "minimum_vega": 1e-08,
+    "expiration_timezone": "America/New_York",
+    "expiration_time_by_settlement": {
+      "AM": "09:30",
+      "PM": "16:00"
+    },
+    "day_count": "ACT/365F",
+    "snapshot_max_span_minutes": 5
+  },
+  "references": {
+    "provider_priority": [
+      "ecb",
+      "fred"
+    ]
+  },
+  "instruments": {
+    "SPY": {
+      "option_reference": "SPX"
+    },
+    "SPX": {
+      "index_return_type": "price"
+    }
+  },
+  "instructions": {
+    "scope": "Offline derived tables only. No APIs, price interpolation, dividend forecast generation, IV inversion, curve bootstrapping or simulation.",
+    "prices": "Prefer known split-and-dividend-adjusted close for stocks/ETFs; index levels retain their explicitly configured price/total-return meaning. Unavailable adjusted data can produce explicitly labelled price-only returns. Do not add dividends to adjusted returns.",
+    "merge": "Use one primary provider per instrument and return convention. Exact-basis close/index fallbacks need overlapping observations within tolerance and matching units/currency. Adjusted-price gap splicing is disabled until scales are explicitly reconciled. Conflicting duplicates are quarantined.",
+    "calendar": "XNYS is the default for daily exchange-traded prices. Override calendar per instrument for other exchanges. Rates/FX retain native observation dates; no forward fill.",
+    "options": "Field/spread filters produce IV candidates, not a validated arbitrage-free surface. IBKR model IV, optPrice, undPrice and pvDividend remain a coherent model group, distinct from quoted midpoint. Unknown quote age and incomplete forward conventions remain explicit.",
+    "expiry": "ACT/365F uses calendar time. AM/PM times are configurable approximations for expiry when only a date was saved, not certified settlement timestamps. Last trading date is never substituted for expiry.",
+    "thresholds": "0.1% close discrepancy and 10% option relative spread are configurable diagnostic/selection choices, not universal market validity rules.",
+    "instruments": "Optional overrides by archive request ID: calendar, provider_priority, index_return_type (price/gross_total_return/net_total_return), option_reference, expiration_timezone, expiration_time. No tickers are special-cased in Python."
+  }
+}

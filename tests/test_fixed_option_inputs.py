@@ -101,8 +101,10 @@ class FixedOptionInputTests(unittest.TestCase):
         from datetime import date
         result=SimpleNamespace(folder=Path('fixture'),reused=False,summary=pd.DataFrame([{
             'request_id':'SPX','ticker':'SPX','provider':'ibkr','status':'response_saved','retrieval_method':'reqHistoricalData'}]))
-        with patch.object(run.MarketDataDownloader,'from_json') as create,patch('builtins.print'):
+        with patch.object(run.MarketDataDownloader,'from_json') as create,patch('builtins.print'), \
+             patch.object(run,'_inventory_archive') as inventory:
             create.return_value.download_cob.return_value=result
-            self.assertIs(run.main('07/10/2026', '03/01/2000'),result)
+            self.assertIs(run.main('07/10/2026', '03/01/2000', mode='download'),result)
             create.return_value.download_cob.assert_called_once_with(date(2026,10,7),run.RAW_DUMP_DIR,portfolio_file=run.PORTFOLIO_FILE,retry_failed=False,ois_file=run.OIS_FILE)
             create.return_value.download_raw.assert_not_called()
+            inventory.assert_called_once_with(result.folder)
