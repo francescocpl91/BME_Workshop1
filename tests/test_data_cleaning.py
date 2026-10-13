@@ -428,6 +428,13 @@ class CleaningIntegrationTests(unittest.TestCase):
         manifest=json.loads((destination/"manifest.json").read_text(encoding="utf-8"))
         self.assertTrue(manifest["complete"])
         self.assertEqual(manifest["run_id"],processed.run_id)
+        statistics_manifests = list((destination/"statistics").glob("*/manifest.json"))
+        self.assertEqual(len(statistics_manifests), 1)
+        stats = json.loads(statistics_manifests[0].read_text(encoding="utf-8"))
+        self.assertTrue(stats["complete"])
+        self.assertFalse(stats["simulation_performed"])
+        self.assertEqual(stats["analysis_currency"], "USD")
+        self.assertFalse(stats["reporting_currency_returns_computed"])
         with self.assertRaises(ValueError):
             processed.save(f.archive/"processed")
         with self.assertRaises(ValueError):

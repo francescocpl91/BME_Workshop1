@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "statistics": {
+    "periods_per_year": 252,
+    "minimum_observations": 20,
+    "rolling_windows": [
+      63,
+      252
+    ],
+    "quantiles": [
+      0.01,
+      0.05,
+      0.5,
+      0.95,
+      0.99
+    ],
+    "stress_periods": [
+      {
+        "name": "GFC",
+        "start": "2007-01-01",
+        "end": "2009-12-31"
+      },
+      {
+        "name": "COVID",
+        "start": "2020-02-01",
+        "end": "2020-06-30"
+      },
+      {
+        "name": "Equity and bond sell-off",
+        "start": "2022-01-01",
+        "end": "2022-12-31"
+      }
+    ],
+    "portfolio_method": "buy_and_hold",
+    "base_value": 100,
+    "plots": true,
+    "fit_student_t": true,
+    "return_types": [
+      "simple",
+      "log"
+    ]
+  },
+  "instructions": {
+    "scope": "Offline historical description of configured holdings; no simulation, pricing, curve or local-vol calibration. Reference products and options do not enter portfolio weights.",
+    "annualization": "Sample standard deviation uses ddof=1 and annual volatility uses sqrt(periods_per_year). Annual mean is daily mean times periods_per_year: arithmetic for simple returns, additive log growth for log returns; neither is CAGR. CAGR and percentage drawdown use the shared wealth path and calendar elapsed years.",
+    "basis": "Adjusted returns approximate reinvested distributions. Never add dividends again. Price-only histories remain explicitly labelled.",
+    "portfolio": "Initial weights from portfolio.json are applied once at the first common observed price date. Buy-and-hold sleeve weights then drift. All active holdings must share a currency and a compatible return meaning. No FX conversion or rebalancing.",
+    "gaps": "Do not fill prices. Daily dependence requires identical return start and end dates. Gaps break rolling windows; full-path metrics are withheld across missing/excluded intervals.",
+    "stress": "Windows are illustrative comparisons, not official crisis boundaries. Their actual data coverage and sample count are reported. No return beginning before a window is included.",
+    "distribution": "Normal and Student-t fits describe historical daily returns only. Student-t scale is not its standard deviation. No Student-t wealth paths are simulated.",
+    "minimum_observations": "Smaller samples retain mathematically defined metrics but are labelled insufficient_history; undefined metrics remain null.",
+    "plots": "Separate simple/log PNG diagnostics use a non-interactive backend. Wealth and drawdown charts are shared. Log returns shown times 100 are labelled log-return units, not percentage investment gains.",
+    "returns": "Analyse simple P_t/P_previous-1 and log log1p(simple) returns over exactly the same valid intervals. All return-dependent tables are labelled return_type. Portfolio log returns come from portfolio wealth, never a weighted sum of asset log returns."
+  }
+}

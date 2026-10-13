@@ -6,7 +6,7 @@ python -i run.py    : execute and keep result available in a Python prompt
 import os
 from datetime import timedelta
 from pathlib import Path
-from src import MarketDataDownloader, inspect_archive, process_inventory
+from src import MarketDataDownloader, inspect_archive, process_inventory, analyze_processed
 from src.cob import parse_cob, parse_history_start, london_today
 
 ROOT = Path(__file__).resolve().parent
@@ -21,6 +21,7 @@ CONFIG_FILES = [CONFIG_DIR / (name + ".json") for name in
                 ("yahoo", "alpha_vantage", "marketdata", "massive", "fred", "ecb", "ibkr")]
 PORTFOLIO_FILE = CONFIG_DIR / "portfolio.json"
 CLEANING_FILE = CONFIG_DIR / "cleaning.json"
+MODELING_FILE = CONFIG_DIR / "modeling.json"
 OIS_FILE = CONFIG_DIR / "ois.json"  # Fixed OIS par quotes reused for every COB; no API.
 
 # Credentials/operational setup remain in Python; never commit actual keys.
@@ -72,7 +73,7 @@ def download_main(cob_text=None, history_start_text=None, *, retry_failed=False)
     print("Previously saved option volatilities remain available if captured successfully;")
     print("their actual observation dates must be checked before using them.")
     print("\nCurrent stage: retrieve/reuse inputs, then process the saved archive.")
-    print("Inventory, cleaning and merging follow automatically; simulation and calibration come later.")
+    print("Inventory, cleaning, merging and historical statistics follow automatically; simulation comes later.")
     print("Manual OIS par curves are loaded from config/ois.json and saved beside API data.")
     print("The same fixed OIS curves are used for every COB, retaining their original observation dates.")
     print("Live data and usable volatility coverage depend on IBKR availability and access.\n")
@@ -121,10 +122,10 @@ def download_main(cob_text=None, history_start_text=None, *, retry_failed=False)
 def inventory_main(cob_text=None):
     """Inspect local data without constructing a downloader or checking API keys."""
     print("\nPORTFOLIO SIMULATOR")
-    print("Saved market data: inventory, cleaning and merging")
+    print("Saved market data: inventory, cleaning, merging and statistics")
     print("=" * 58)
     print("Reads an existing completed archive. No provider connections are made.")
-    print("Checks coverage, cleans provider data and saves separate merged tables.")
+    print("Checks coverage, cleans data and saves merged tables plus historical statistics.")
     print("Use the archive's COB label, even if option captures occurred later.\n")
     if cob_text is None:
         while True:
@@ -163,6 +164,14 @@ def _process_inventory(inventory):
     if result.summary["readiness"]["foreign_currencies"] and not result.summary["readiness"]["available_fx_series"]:
         print("FX history is missing: reporting-currency analysis is not ready.")
     print(f"Cleaned/merged data and report: {destination}")
+    print("Computing historical statistics and stress comparisons for configured holdings.")
+    statistics = analyze_processed(result, MODELING_FILE)
+    statistics.source_folder = destination.resolve()
+    statistics_folder = statistics.save(destination / "statistics" / statistics.run_id)
+    print(f"Statistics portfolio status: {statistics.summary['portfolio_status']}")
+    for notice in statistics.summary["warnings"]:
+        print("Statistics: " + notice)
+    print(f"Historical statistics, tables and plots: {statistics_folder}")
     print("Raw archive unchanged. Simulation/calibration are not run.")
     return result
 
@@ -170,8 +179,8 @@ def _process_inventory(inventory):
 def choose_mode():
     """Ask at the entry point; no workflow starts until a valid choice is made."""
     print("\nPORTFOLIO SIMULATOR - Choose a workflow")
-    print("  1. Process saved archive: inventory, clean and merge (no API requests).")
-    print("  2. Download + process: retrieve/reuse, inventory, clean and merge.")
+    print("  1. Process saved archive: inventory, clean, merge and analyse (no API requests).")
+    print("  2. Download + process: retrieve/reuse, inventory, clean, merge and analyse.")
     choices = {"1": "inventory", "inventory": "inventory", "process": "inventory",
                "2": "download", "download": "download"}
     while True:
@@ -182,7 +191,7 @@ def choose_mode():
 
 
 def main(cob_text=None, history_start_text=None, *, mode=None, retry_failed=False):
-    """Both workflows inventory, clean and merge; local processing never downloads."""
+    """Both workflows clean and analyse; local processing never downloads."""
     selected = choose_mode() if mode is None else mode
     if selected in {"inventory", "process"}:
         if history_start_text is not None or retry_failed:

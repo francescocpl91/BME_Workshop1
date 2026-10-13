@@ -7,15 +7,128 @@ Inputs live in `config/*.json`; operational setup and credential environment-var
 Run `run.py` with the project interpreter. It asks you to choose:
 
 - **1 - Process saved archive:** enter a saved COB. Inventory, clean and merge the
-  local data without API connections or a history-start prompt.
+  local data without API connections or a history-start prompt, then generate statistics.
 - **2 - Download + process:** enter COB and history start. Retrieve/reuse a compatible
-  archive, then automatically inventory, clean and merge it.
+  archive, then automatically inventory, clean, merge and analyse it.
 
 Both choices use the same processing pipeline. The aliases `process`,
 `inventory` and `download` work too. The standalone library function
 `inspect_archive()` remains inventory-only; `download_cob()` remains retrieval-only.
 The entry point joins these stages, with no additional date prompt.
 Missing/incomplete archives or an active `.running` lock are refused.
+
+## Historical statistics
+
+Both run.py workflows now compute statistics after cleaning. Settings live in
+config/modeling.json; tickers and weights remain in config/portfolio.json.
+This stage is offline and analyses configured holdings only. Options and reference
+instruments do not enter portfolio weights. No Monte Carlo or pricing is run yet.
+
+src/statistics.py exposes AssetStatistics (automatic sample statistics) and
+PortfolioStatistics (report(), plots_report(), save()). These analytical objects
+wrap cleaned observations; they do not replace the retrieval PriceSeries.
+
+Set statistics.return_types to ["simple", "log"] (the supplied default), or
+select either convention alone. One calculation engine produces both analyses:
+simple = P_t/P_previous - 1; log = log1p(simple). Both use identical valid intervals.
+Each gets daily mean/std, annualized mean/volatility, skewness, excess kurtosis,
+empirical quantiles/extremes, rolling volatility, normal/Student-t fits, covariance,
+correlation and stress comparisons. No parametric quantiles or simulations are added.
+
+All return-dependent CSV rows include return_type. Annualized mean is daily mean
+times periods_per_year: arithmetic mean for simple returns, additive log growth
+for log returns. It is not CAGR. Volatility uses sample std (ddof=1) times sqrt(252)
+by default. Excess kurtosis uses zero for the normal reference. Undefined values
+are blank/null, never zero. Charts display simple returns in percent and log
+returns multiplied by 100, explicitly labelled as log-return units.
+
+Normalized wealth, cumulative return, CAGR, percentage drawdown and coverage are
+calculated once from prices/wealth and shared between return types. CAGR uses
+elapsed calendar years. The report shows actual dates alongside these metrics:
+individual histories may start earlier than the first common portfolio date.
+Portfolio log returns come from the constructed portfolio wealth; they are never
+a weighted average of holding log returns.
+
+For direct library use, asset.return_statistics["simple"] and ["log"] contain
+metrics, stress, rolling and distribution results; asset.path_metrics and
+asset.stress_paths contain shared wealth results. The original metrics/stress/
+rolling/distribution convenience attributes remain: simple is preferred when
+enabled, otherwise they expose the labelled log analysis. For unambiguous access,
+use return_statistics[kind].
+
+Portfolio statistics represent a hypothetical buy-and-hold backtest: apply the
+current initial weights once at the first common observed price date; reinvested
+sleeve weights then drift. They are not daily-rebalanced 50/50 returns. Adjusted
+series already include distribution adjustments; dividend cash is not added again.
+Price-only portfolios remain labelled price_return.
+
+Every active holding must be available in one common currency with compatible
+return meaning. Missing holdings are not dropped or renormalized. Mixed currencies
+or incompatible bases make portfolio wealth unavailable, while individual
+statistics remain accessible. USD histories produce USD-labelled portfolio
+statistics even when the configuration requests EUR reporting. No FX conversion
+or constant-FX assumption is made.
+
+Missing sessions are never filled. A daily return cannot bridge a gap. Correlation
+and covariance use complete observations with identical interval starts and ends.
+Rolling statistics retain missing dates, so gaps break the window. Cumulative
+return, CAGR and maximum drawdown are withheld when an observed path contains
+missing prices or deliberately excluded intervals. Data before inception does not
+count as an interior gap.
+
+GFC, COVID and 2022 stress windows are configurable illustrative periods. Their
+actual coverage, sample size, volatility, drawdown and cross-asset correlation
+are exported. A return starting before a window is excluded. Full-history
+statistics use each holding's own available dates; cross-asset dependence uses
+the common sample, whose count is reported separately.
+
+Normal/Student-t density fits are descriptive, not simulation parameters.
+Student-t scale is not standard deviation; fits with undefined variance are
+flagged. Short/constant histories skip the fit. Fit failures are reported without
+preventing the other statistics.
+
+Outputs are written below:
+processed/<COB>/<processing-id>/statistics/<statistics-id>/
+
+- statistics.csv: per-series return moments, labelled simple/log.
+- path_statistics.csv: one set of growth, CAGR, drawdown and coverage per series.
+- daily_statistics.csv: selected prices, both return columns, interval starts,
+  normalized wealth and drawdown; each date occurs once per series.
+- rolling_volatility.csv, dependence.csv, rolling_correlations.csv: typed diagnostics.
+- aligned_returns.csv: common intervals per return type, with return::<id> columns.
+- stress_statistics.csv, stress_dependence.csv: typed crisis-return comparisons.
+- stress_path_statistics.csv: shared crisis-window growth/drawdown and actual coverage.
+- distributions.csv: typed normal/t parameters and fit status.
+- report.md, manifest.json: assumptions, warnings, input identity and file hashes.
+- plots/simple/ and plots/log/: per-series volatility/histogram/Q-Q diagnostics
+  and correlation comparison for the selected convention.
+- plots/wealth.png and plots/drawdown.png: shared investment-path charts.
+
+Statistics output schema is now 2: path metrics moved out of statistics.csv into
+path_statistics.csv (and the equivalent stress table), while return tables gained
+return_type. Older reports remain unchanged in their original run directories.
+aligned_observations counts common intervals once, not twice; the manifest also
+records aligned_observations_by_return_type. Plot manifest keys use relative paths
+so identically named simple/log charts each retain their own checksum.
+
+Statistics identity includes the cleaned inputs, weights, settings, code and
+dependency versions. Raw and cleaned source files are preserved. Completion means
+the report was exported, not that every holding or modeling input is available.
+
+To analyse an existing cleaned run directly (no raw-file rescan):
+
+    from pathlib import Path
+    from src import analyze_saved_processing
+
+    folder = Path("processed/2026-10-08/<processing-id>")
+    analysis = analyze_saved_processing(folder, "config/modeling.json")
+    print(analysis.report())
+    analysis.save(folder / "statistics" / analysis.run_id)
+
+Select the intended processing ID explicitly; the library does not guess which
+older run or portfolio settings to use. This path checks the saved price-file
+checksum before analysis. Within Python, analyze_processed(result, config_path)
+also accepts the in-memory result returned by process_archive/process_inventory.
 
 ## Cleaning and merging
 
@@ -109,7 +222,7 @@ in the report. To apply new weights to an old archive choose **1**. Download arc
 compatibility rules remain strict: a changed portfolio/configuration can reject reuse
 in Download mode. Local processing does not bypass those rules or make provider requests.
 
-No portfolio valuation, currency conversion, rebalancing, dividend forecast,
+The cleaning stage performs no portfolio valuation, currency conversion, rebalancing, dividend forecast,
 SPX-to-SPY calibration, OIS bootstrap, surface fitting or Monte Carlo is performed
 in this stage. Foreign-currency holdings need matching FX history before EUR analysis.
 
@@ -244,7 +357,7 @@ Offline unit/regression tests use fake responses and temporary folders; they do 
 
 Install the project with Python 3.11+ using `python -m pip install -e .`, including the declared ib_insync dependency. The separate official ibapi SDK is no longer used. Import the library as `from src import MarketDataDownloader`; do not add the `src` directory itself to PYTHONPATH because `src/http.py` would shadow Python's standard library.
 
-Cleaning and aligned local-currency returns are implemented. Dividend forecasts, FX conversion, discount/forward curves, implied-volatility surfaces and Monte Carlo calibration remain later work. ESTR/SOFR observations and sovereign yields are not substitutes for an OIS discount curve. EUR/USD is USD per EUR; conversion to EUR requires the corresponding dated FX observation.
+Cleaning, aligned local-currency returns and descriptive historical statistics are implemented. Dividend forecasts, FX conversion, discount/forward curves, implied-volatility surfaces and Monte Carlo calibration remain later work. ESTR/SOFR observations and sovereign yields are not substitutes for an OIS discount curve. EUR/USD is USD per EUR; conversion to EUR requires the corresponding dated FX observation.
 
 IBKR documentation: [historical bars](https://interactivebrokers.github.io/tws-api/historical_bars.html), [historical limitations](https://interactivebrokers.github.io/tws-api/historical_limitations.html).
 
