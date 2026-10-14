@@ -435,6 +435,13 @@ class CleaningIntegrationTests(unittest.TestCase):
         self.assertFalse(stats["simulation_performed"])
         self.assertEqual(stats["analysis_currency"], "USD")
         self.assertFalse(stats["reporting_currency_returns_computed"])
+        mc_manifests = list((destination/"monte_carlo").glob("*/manifest.json"))
+        self.assertEqual(len(mc_manifests), 1)
+        mc = json.loads(mc_manifests[0].read_text(encoding="utf-8"))
+        self.assertTrue(mc["complete"])
+        self.assertEqual(mc["status"], "unavailable")
+        self.assertFalse(mc["simulation_performed"])
+
         with self.assertRaises(ValueError):
             processed.save(f.archive/"processed")
         with self.assertRaises(ValueError):

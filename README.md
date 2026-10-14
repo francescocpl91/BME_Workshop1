@@ -7,9 +7,9 @@ Inputs live in `config/*.json`; operational setup and credential environment-var
 Run `run.py` with the project interpreter. It asks you to choose:
 
 - **1 - Process saved archive:** enter a saved COB. Inventory, clean and merge the
-  local data without API connections or a history-start prompt, then generate statistics.
+  local data without API connections or a history-start prompt, then generate statistics and the configured historical Monte Carlo scenarios.
 - **2 - Download + process:** enter COB and history start. Retrieve/reuse a compatible
-  archive, then automatically inventory, clean, merge and analyse it.
+  archive, then automatically inventory, clean, merge, analyse and simulate it.
 
 Both choices use the same processing pipeline. The aliases `process`,
 `inventory` and `download` work too. The standalone library function
@@ -22,7 +22,8 @@ Missing/incomplete archives or an active `.running` lock are refused.
 Both run.py workflows now compute statistics after cleaning. Settings live in
 config/modeling.json; tickers and weights remain in config/portfolio.json.
 This stage is offline and analyses configured holdings only. Options and reference
-instruments do not enter portfolio weights. No Monte Carlo or pricing is run yet.
+instruments do not enter portfolio weights. Statistics remain descriptive; the separate
+Monte Carlo stage below runs afterwards. No option pricing is performed.
 
 src/statistics.py exposes AssetStatistics (automatic sample statistics) and
 PortfolioStatistics (report(), plots_report(), save()). These analytical objects
@@ -33,7 +34,7 @@ select either convention alone. One calculation engine produces both analyses:
 simple = P_t/P_previous - 1; log = log1p(simple). Both use identical valid intervals.
 Each gets daily mean/std, annualized mean/volatility, skewness, excess kurtosis,
 empirical quantiles/extremes, rolling volatility, normal/Student-t fits, covariance,
-correlation and stress comparisons. No parametric quantiles or simulations are added.
+correlation and stress comparisons. This descriptive stage does not generate simulations.
 
 All return-dependent CSV rows include return_type. Annualized mean is daily mean
 times periods_per_year: arithmetic mean for simple returns, additive log growth
@@ -130,6 +131,242 @@ older run or portfolio settings to use. This path checks the saved price-file
 checksum before analysis. Within Python, analyze_processed(result, config_path)
 also accepts the in-memory result returned by process_archive/process_inventory.
 
+
+## Historical Monte Carlo
+
+Both run.py workflows call src/monte_carlo.py after statistics. Set enabled=false
+in config/monte_carlo.json to save a disabled status instead. Retrieval, cleaning,
+and descriptive statistics do not depend on Monte Carlo succeeding. Insufficient
+history or missing conversion factors produce an unavailable report; invalid
+configuration or corrupted saved inputs raise explicit errors.
+
+The initial settings are 10,000 paths per scenario, normalized wealth 100 on
+**9 October 2026**, ending **17 December 2027**, using XNYS sessions. The first
+date is the initial level; the first simulated return ends on the next session.
+These are normalized investment scenarios, not observed prices on 9 October.
+The start must be a session strictly after the archive COB. An end falling on a
+holiday/weekend uses the last prior session with a warning. Dates remain explicit
+JSON choices; no option maturity or instrument symbol controls the horizon.
+
+Calibration uses the latest ten calendar years through COB, or an explicit
+calibration.start override. Each holding's daily log mean and the joint sample
+covariance come from exactly the same valid session-to-session intervals.
+At least 252 common observations are required by default. Missing observations
+are not filled, unequal intervals are not joined, and observations after COB
+are excluded. Actual sample dates/counts are reported. This first engine requires
+holdings on the configured exchange calendar; mixed calendars return unavailable.
+
+For daily log increments g:
+
+    g = historical_mean_log + correlated_shock
+    normalized_wealth_next = normalized_wealth_previous * exp(g)
+
+The historical LOG mean already includes the log-growth convention: do not
+subtract another half-variance. For the Gaussian case the corresponding expected
+one-step gross growth is exp(mean_log + variance_log/2). The daily mean's reported
+standard error is std_log/sqrt(observations), assuming independent observations;
+it does not capture regime uncertainty. Drift and volatility are fixed across
+the forecast, and shocks are independent between sessions.
+
+Holdings are simulated jointly, not collapsed into one previously backtested
+portfolio. Current starting weights apply once at forecast start and then drift:
+portfolio wealth is the weighted sum of normalized holding wealth. Weights are
+not reset daily. Adjusted histories represent reinvested wealth, so dividends
+are not added again. Missing holdings are never dropped or reweighted.
+Weight totals already accepted within the existing 1e-8 rounding tolerance are
+reconciled to a unit allocation for Monte Carlo only. Reports retain configured
+and effective weights and warn when reconciliation occurs; source portfolios
+are unchanged. Larger allocation errors remain rejected. Portfolio gains are
+aggregated around initial wealth, so constant holdings cannot acquire a loss
+from weighted-level summation roundoff. Converted covariance is calculated from
+the transformed simulation factor, avoiding negative variance from cancellation
+when asset and FX shocks almost offset; materially invalid covariance is still
+rejected. All holdings need compatible total-return/price-return meaning.
+
+Two model families are available:
+
+- **Gaussian:** correlated normal log shocks with historical covariance.
+- **Truncated multivariate Student-t:** one joint df, fitted by bounded likelihood
+  while holding the historical mean and covariance fixed. This is not copied
+  from the separate univariate Student-t fits in the statistics report.
+  A shared radial shock links the magnitudes of simultaneous moves.
+
+An unrestricted Student-t log shock has no finite exponential moment, so its
+implied expected wealth is not finite. The implemented t scenario therefore
+conditions shocks on a finite radius and rescales the conditional covariance
+back to the same historical covariance as the Gaussian model. It is labelled
+truncated everywhere. Prices are not clipped after simulation.
+
+Monte Carlo input/output schema is now **2**. Student-t settings are:
+
+    "student_t": {
+      "fit_df": true,
+      "df_bounds": [2.1, 50],
+      "excluded_tail_probability": 0.0005,
+      "sensitivity_tail_probabilities": [0.002, 0.00005]
+    }
+
+fit_df must remain true; fixed df and fixed-radius inputs are rejected. The
+bounds are explicit optimizer limits, not fitted outputs. A boundary fit is
+reported; the code does not silently invent a fallback df or expand the bounds.
+For another history window or holding set, means, covariance and joint df are
+recalibrated. A change only in weights does not change those factor parameters
+when the factor set and sample remain identical.
+
+The main target excludes 0.05% of the fitted untruncated JOINT DAILY shock
+distribution; sensitivities exclude 0.2% and 0.005%. These are configurable
+scenario assumptions, not estimated probabilities or forecast-horizon limits.
+For each target the radius is derived from the fitted df and effective number
+of stochastic factor dimensions, including required FX. Perfectly dependent
+or constant factors do not create extra dimensions. Mathematically:
+
+    radius = sqrt(d*(df-2)/df * F_inverse_survival(target, d, df))
+
+The historical covariance is restored after truncation using its exact
+conditional radial second moment. The report records target and actual excluded
+mass, fitted df, effective dimension, derived radius, variance rescaling and
+effective radius after rescaling. With entirely deterministic data, df is not
+identifiable: shocks remain zero, df is null, and actual exclusion is zero.
+No fake df is assigned.
+
+Legacy schema-1 Monte Carlo input files must be migrated to these probability
+settings; they are rejected rather than silently reinterpreted. Earlier saved
+reports remain untouched. The descriptive statistics configuration is unchanged.
+Identical log means/covariance do not imply identical expected wealth across
+distributions.
+
+Reporting currency comes from the saved processing portfolio. FX definitions
+declare request ID, base currency and quote currency; for EURUSD the quote is
+USD per EUR. Required FX log returns are calibrated and simulated jointly with
+holding returns on common intervals. For USD holdings in EUR:
+
+    EUR_log_growth = USD_log_growth - EURUSD_log_growth
+
+Direct and inverse conversions are supported; triangulation is not. If reporting
+currency FX is missing, invalid or too short, the engine explicitly tries USD.
+An all-USD portfolio can then run without FX. A non-USD holding still needs its
+conversion into USD: the engine never aggregates unconverted currencies.
+Descriptive historical statistics keep their separate local-currency convention.
+
+Each scenario saves horizon loss VaR/Expected Shortfall at configured confidence
+levels (95% and 99% by default), terminal
+quantiles, loss probability, path drawdowns, mean/median wealth, and the Monte
+Carlo standard error of the terminal mean. These describe the full forecast
+horizon, not daily VaR. Losses are fractions of initial wealth; VaR/ES can be
+negative when the corresponding threshold is a gain. Monte Carlo sampling error
+is distinct from uncertainty in historical drift or the model assumptions.
+
+Terminal and short-horizon loss probabilities use the same numerical-zero
+rule: relative losses no larger than 64 float64 machine epsilons (about
+1.42e-14 of initial wealth) do not count as economic losses. This prevents
+floating-point residuals from an exactly offsetting asset/FX position showing
+100% probability of loss. At initial wealth 100 the tolerance is approximately
+1.42e-12 wealth units. Paths, returns, VaR/ES and moments remain unchanged;
+this is not a minimum investment loss or a change to the simulated model.
+
+Quantile and confidence column suffixes preserve the full round-trip decimal
+value of each configured probability. Close settings such as 0.95 and
+0.9500001 have separate columns; conventional names such as loss_var_0.99
+remain unchanged. Reports and chart confidence labels use the same values.
+
+Diagnostics and stress comparisons are explicit optional schema-2 settings:
+
+    "diagnostics": {
+      "enabled": true,
+      "horizons_sessions": [1, 5, 20],
+      "sigma_thresholds": [3, 4],
+      "histogram_bins": 100
+    },
+    "stress_calibrations": [
+      {"name": "gfc", "start": "2008-01-01", "end": "2009-06-30", "drift": "baseline"}
+    ]
+
+The normal ten-year calibration remains `baseline`. Each named stress window
+is configured in JSON; no crisis or product dates are hardcoded in Python.
+Both ends of every stress return interval must lie within the named window.
+The same minimum common-observation requirement applies. Windows ending after
+COB are unavailable, so future observations cannot enter a stress calibration.
+Actual dates, observation counts and unavailable comparisons are reported.
+These dates are illustrative scenario choices, not official crisis boundaries;
+the descriptive statistics module has its own independently configured windows.
+
+`drift: "baseline"` retains each factor's baseline daily LOG mean and its mean
+estimation standard error, replacing covariance (volatility AND correlations)
+with estimates from the stress window. Student-t df is fitted on stress returns
+centered on their own stress sample mean, not on the retained baseline mean.
+The sampled stress mean is exported separately from the simulated drift.
+`drift: "stress"` instead uses the stress sample mean as the simulated drift.
+Keeping log drift unchanged does not keep expected arithmetic wealth unchanged:
+for Gaussian shocks its growth includes half the log variance.
+
+Each comparison uses the same holdings, forecast and actual simulation currency
+as baseline. Missing stress FX/history makes that comparison unavailable; it
+cannot silently switch currency or drop holdings. The successful baseline is
+retained. Matching model names share random streams across calibrations. Adding
+stress comparisons or enabling diagnostics does not alter baseline paths.
+Stress parameters remain constant throughout each forecast: this is a stressed
+risk environment, not a replay of crisis chronology or volatility clustering.
+To disable stress comparisons, use an empty `stress_calibrations` array.
+
+`src/mc_diagnostics.py` examines the already simulated wealth without drawing
+new shocks. It exports pooled daily log moments, skewness, excess kurtosis,
+quantiles, and threshold exceedances. Holding z-scores use calibration moments;
+portfolio z-scores use pooled simulation moments because buy-and-hold weights
+change. Historical holding comparisons use the actual calibration sample in
+the simulation currency and their own sample moments. The historical comparison
+is not a synthetic constant-weight portfolio presented as buy-and-hold history.
+Histograms cover z=-10..10, retaining overflow counts and the full sample as
+the density denominator. No data are clipped; deterministic z-scores are undefined.
+
+Short-horizon VaR/ES use returns from initial wealth to the configured exchange
+session, one outcome per path. These are not overlapping rolling returns.
+A horizon beyond the forecast is explicitly unavailable. Path-risk diagnostics
+record worst single-day return and maximum drawdown independently. Charts
+compare daily tails, short-horizon losses, and the empirical distributions of
+worst daily losses and drawdowns for each calibration. These complement the
+long-horizon terminal distribution; they do not change the simulation model.
+
+Older schema-2 configs can omit both additions: diagnostics defaults to enabled
+with the values above, and stress comparisons default to none.
+
+Outputs are separate from raw/cleaned inputs:
+
+    processed/<COB>/<processing-id>/monte_carlo/<simulation-id>/
+
+- calibration_returns.csv, calibration_parameters.csv, calibration_covariance.csv:
+  exact common sample, daily log means/volatilities/mean standard errors, covariance.
+- simulation_diagnostics.csv: simulated vs target factor means and covariances.
+- risk_summary.csv: holding/portfolio risk metrics; Gaussian analytical mean checks.
+- terminal_values.csv: all terminal outcomes, maximum drawdowns and worst daily returns.
+- daily_distribution_diagnostics.csv, daily_histograms.csv: daily historical/simulated
+  moments, tails and standardized histogram counts including overflow diagnostics.
+- horizon_risk.csv: configured short-horizon VaR/ES and loss probabilities.
+- path_risk.csv: worst daily return and maximum drawdown summary distributions.
+- All tables identify calibration_set; stress models have a <name>__ prefix.
+- bands.csv: date-by-date quantiles/means; these are marginal bands, not sample paths.
+- sample_paths.csv: a configurable small selection of actual trajectories.
+- report.md, manifest.json and plots/: assumptions, currency decisions, model
+  details, checksums, fan charts and terminal histograms.
+
+The seed is reproducible. Model-specific random streams keep outcomes stable
+when model ordering changes. Run identity includes settings, inputs, code and
+dependency versions; numerical changes create a separate output directory.
+No APIs, OIS bootstrapping, option calibration or risk-neutral modeling is used.
+
+To simulate an existing cleaned run without rerunning earlier stages:
+
+    from pathlib import Path
+    from src import simulate_saved_processing
+
+    folder = Path("processed/2026-10-08/<processing-id>")
+    result = simulate_saved_processing(folder, "config/monte_carlo.json")
+    print(result.report())
+    result.save(folder / "monte_carlo" / result.run_id)
+
+The reader verifies input hashes and row counts. simulate_processed accepts the
+in-memory ProcessedArchive instead. With fewer paths, reduce sample_paths too
+if necessary; it cannot exceed paths.
+
 ## Cleaning and merging
 
 `src/preprocessing.py` reads saved response bytes and verifies their checksums.
@@ -223,8 +460,7 @@ compatibility rules remain strict: a changed portfolio/configuration can reject 
 in Download mode. Local processing does not bypass those rules or make provider requests.
 
 The cleaning stage performs no portfolio valuation, currency conversion, rebalancing, dividend forecast,
-SPX-to-SPY calibration, OIS bootstrap, surface fitting or Monte Carlo is performed
-in this stage. Foreign-currency holdings need matching FX history before EUR analysis.
+SPX-to-SPY calibration, OIS bootstrap, surface fitting or Monte Carlo. Foreign-currency holdings need matching FX history before EUR analysis.
 
 Library use:
 
@@ -357,7 +593,7 @@ Offline unit/regression tests use fake responses and temporary folders; they do 
 
 Install the project with Python 3.11+ using `python -m pip install -e .`, including the declared ib_insync dependency. The separate official ibapi SDK is no longer used. Import the library as `from src import MarketDataDownloader`; do not add the `src` directory itself to PYTHONPATH because `src/http.py` would shadow Python's standard library.
 
-Cleaning, aligned local-currency returns and descriptive historical statistics are implemented. Dividend forecasts, FX conversion, discount/forward curves, implied-volatility surfaces and Monte Carlo calibration remain later work. ESTR/SOFR observations and sovereign yields are not substitutes for an OIS discount curve. EUR/USD is USD per EUR; conversion to EUR requires the corresponding dated FX observation.
+Cleaning, aligned local-currency returns, descriptive statistics and historical Monte Carlo are implemented. Monte Carlo can simulate required FX factors jointly when usable history exists. Dividend forecasts, discount/forward curves, implied-volatility surfaces and local-volatility simulation remain later work. ESTR/SOFR observations and sovereign yields are not substitutes for an OIS discount curve. EUR/USD is USD per EUR; conversion to EUR requires the corresponding dated FX observation.
 
 IBKR documentation: [historical bars](https://interactivebrokers.github.io/tws-api/historical_bars.html), [historical limitations](https://interactivebrokers.github.io/tws-api/historical_limitations.html).
 

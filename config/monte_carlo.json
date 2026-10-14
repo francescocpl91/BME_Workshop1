@@ -1,0 +1,123 @@
+{
+  "schema_version": 2,
+  "enabled": true,
+  "models": [
+    "gaussian",
+    "student_t_truncated"
+  ],
+  "forecast_start": "2026-10-09",
+  "forecast_end": "2027-12-17",
+  "paths": 10000,
+  "seed": 1729,
+  "calendar": "XNYS",
+  "initial_value": 100,
+  "portfolio_method": "buy_and_hold",
+  "calibration": {
+    "lookback_years": 10,
+    "start": null,
+    "minimum_observations": 252
+  },
+  "fallback_currency": "USD",
+  "fx_series": [
+    {
+      "request_id": "EURUSD",
+      "base_currency": "EUR",
+      "quote_currency": "USD"
+    }
+  ],
+  "student_t": {
+    "fit_df": true,
+    "df_bounds": [
+      2.1,
+      50
+    ],
+    "excluded_tail_probability": 0.0005,
+    "sensitivity_tail_probabilities": [
+      0.002,
+      5e-05
+    ]
+  },
+  "quantiles": [
+    0.01,
+    0.05,
+    0.5,
+    0.95,
+    0.99
+  ],
+  "confidence_levels": [
+    0.95,
+    0.99
+  ],
+  "sample_paths": 20,
+  "plots": true,
+  "instructions": {
+    "scope": "Offline historical-measure Gaussian and radially truncated multivariate Student-t daily log-return scenarios only. No option pricing, Dupire/local volatility, OIS use or risk-neutral simulation.",
+    "dates": "Normalized wealth is initialized at forecast_start (100 by default); the first shock ends on the next exchange session. Calibration ends at the source COB, strictly before forecast_start. These are not observed prices on forecast_start.",
+    "drift": "Use the arithmetic sample mean of DAILY LOG returns over a shared calibration window. Default latest ten calendar years through COB; explicit start overrides lookback_years. No additional half-variance subtraction. Report drift estimation uncertainty and actual coverage.",
+    "portfolio": "Configured weights apply once at forecast_start, then drift. Adjusted ETF histories represent reinvested wealth; do not add dividends again. Never fit the previously drifted historical portfolio as one asset. Totals within the accepted 1e-8 rounding tolerance are reconciled to one for simulation only; configured and effective weights are recorded. Material allocation errors and missing holdings are not normalized away.",
+    "fx": "FX definitions explicitly declare quote units. Simulate required direct/inverse FX factors jointly and translate normalized holding growth. If reporting-currency FX is missing/insufficient, try USD; never aggregate unconverted currencies. No fixed-FX assumption.",
+    "student_t": "Always fit joint df within df_bounds on the current common historical sample. No fixed df is accepted. Derive each radial cutoff from the fitted df, effective stochastic factor dimension and excluded tail probability, then restore historical covariance using the conditional second moment. The cutoff radius is an output, not an input. Constant factors do not add dimensions; with zero stochastic dimensions, df is not identifiable and shocks remain zero.",
+    "sensitivity": "Probabilities are decimal fractions excluded from the fitted untruncated joint DAILY shock distribution before variance rescaling. 0.0005 means 0.05%, not 5% and not a forecast-horizon probability. Main and sensitivity radii are recomputed on every calibration. Probabilities remain user-selected scenario assumptions; df_bounds remain explicit fitting limits.",
+    "risk": "Risk statistics describe undiscounted terminal losses relative to initial normalized wealth over the full forecast horizon, not daily VaR. VaR and ES may be negative when the loss threshold is a gain. Historical drift is an estimate, not a prediction guarantee.",
+    "output": "Keep raw/cleaned archives unchanged. Save calibration, diagnostics, terminal outcomes, bands, sample paths, risk summaries, report and plots beneath the selected cleaned run.",
+    "stress": "Named windows are user-selected comparisons, not official crisis boundaries. baseline drift retains the baseline daily log mean while covariance and Student-t tails are estimated on the stress window, centered on its own mean. stress drift uses that window mean too. Same holdings, currency and forecast; missing stress history is explicit and never triggers APIs.",
+    "diagnostics": "Daily diagnostics pool simulated path/session returns. Holding z-scores use calibration moments; portfolio z-scores use pooled simulated moments because buy-and-hold weights drift. Short horizons count exchange sessions from forecast start, one outcome per path; unavailable horizons are labelled. Daily histograms retain overflow counts. No shocks or random streams are changed.",
+    "reading_guide": "JSON cannot contain // or # comments. This instructions object explains executable fields elsewhere in this file and is ignored by numerical configuration loading. To change a run, edit the actual setting, not its description. Modeling.json controls descriptive statistics separately; it does not set MC parameters.",
+    "schema_version": "2 identifies this input contract: fitted joint Student-t df and probability-based truncation. It is not the number of scenarios.",
+    "enabled": "true executes offline simulation at this workflow stage. false produces a disabled result and does not delete earlier outputs.",
+    "models": "gaussian generates correlated normal daily LOG increments. student_t_truncated fits one multivariate df and runs the main truncation plus sensitivity cases. Both use the same historical mean/covariance within each calibration. Holdings are simulated jointly, not independently.",
+    "forecast_start": "ISO YYYY-MM-DD date strictly after source COB and itself an exchange session. This is initial normalized wealth, not the first random increment; the first return ends next session. Initial levels are assumed normalized valuations, not observed share prices.",
+    "forecast_end": "ISO inclusive end if an exchange session, otherwise last session on/before it with a warning. These forecast dates are independent of the historical calibration window.",
+    "paths": "Independent joint paths per scenario. Each includes every holding and necessary FX factor. More paths lower MC sampling error approximately as 1/sqrt(paths); they do not reduce financial risk or parameter uncertainty.",
+    "seed": "Nonnegative integer combined with a deterministic model-name hash for repeatable pseudo-random draws. Matching baseline/stress models share streams; differently named sensitivities use different streams. Changing paths changes consumption of draws on later dates.",
+    "calendar": "exchange_calendars identifier, e.g. XNYS. Defines forecast sessions and valid consecutive historical return intervals. Holdings must be compatible with this calendar. Weekends/holidays are not extra daily steps.",
+    "initial_value": "Positive normalized starting wealth such as 100. Each holding index starts at this base for comparison; the portfolio allocates the total using initial weights. This is neither an ETF price/NAV nor 100 of portfolio capital separately allocated to every asset.",
+    "portfolio_method": "Only buy_and_hold: portfolio_t=sum(initial_weight_i * normalized_holding_wealth_i,t). Fixed starting positions imply drifting percentage weights, not daily rebalancing. Derive portfolio log returns from portfolio wealth, never a fixed-weight sum of asset logs.",
+    "calibration.lookback_years": "Calendar years back from archive COB, used only if start is null. Fit daily log means/covariance on common valid intervals within that window. Missing observations are not fabricated.",
+    "calibration.start": "null selects lookback_years. An explicit ISO date overrides it for baseline calibration; end remains archive COB. This does not change the API retrieval window or trigger downloads.",
+    "calibration.minimum_observations": "Minimum matched daily intervals after all holding/FX alignment. Applies to baseline and stresses. Too little data produces unavailable, not a guessed calibration.",
+    "fallback_currency": "USD is the supported fallback if requested reporting currency lacks usable FX. Still convert holdings correctly where needed; insufficient USD inputs also produce unavailable. Stresses must keep baseline simulation currency.",
+    "fx_series": "request_id selects a cleaned reference; base_currency/quote_currency define its units: quote per one base. EURUSD is USD per EUR. Native base-to-quote conversion adds FX log return, quote-to-base subtracts it. Shared FX factors are drawn once jointly with assets.",
+    "student_t.fit_df": "Must be true. Estimate one joint df per calibration on covariance-whitened factor returns, not a separate df per asset. No fixed-df fallback after fitting failure. Fully deterministic inputs have unidentifiable df and zero shocks.",
+    "student_t.df_bounds": "User-defined numerical search interval [lower,upper], with 2 < lower < upper. These are limits, not fitted values or automatically recalculated settings. A near-bound estimate produces a warning. df>2 ensures finite covariance before truncation.",
+    "student_t.excluded_tail_probability": "Decimal removed mass of the joint DAILY standardized radius: 0.0005 = 0.05%. Derive radius from fitted df and stochastic rank (including FX), condition on retained mass, then rescale to restore covariance. It is not a per-asset return cap or terminal loss probability.",
+    "student_t.sensitivity_tail_probabilities": "Additional distinct removed masses, each a full scenario sharing the same calibrated drift/covariance/df. Larger removed mass gives smaller pre-rescaling radius. [] removes extra sensitivities. Each named sensitivity has its own random stream.",
+    "quantiles": "Wealth percentile fractions exported at terminal date and along the horizon. 0.01 is first percentile; fixed 5/50/95 bands are always available too. Outcome percentiles are not confidence intervals for expected wealth.",
+    "confidence_levels": "Loss VaR/ES confidences >0.5, e.g. 0.99. Loss=1-wealth/initial. ES averages exactly worst 1-confidence mass with fractional boundary weighting. risk_summary covers full forecast; horizon_risk covers specified shorter session counts.",
+    "sample_paths": "First path IDs exported in full, between 0 and paths. Does not change how many paths enter any risk measure, percentile or terminal result.",
+    "plots": "Save PNG figures when an explicitly exported run is complete. false skips figures but retains tables. Plotting neither draws shocks nor changes fit parameters.",
+    "diagnostics.enabled": "Enable daily distribution, short-horizon and path-risk diagnostics without changing shocks. Historical comparisons use individual holdings in simulation currency; portfolio diagnostics use actual simulated buy-and-hold wealth.",
+    "diagnostics.horizons_sessions": "Positive session counts from initial valuation, e.g. [1,5,20]. One outcome per path/horizon, not rolling windows. Beyond-forecast horizons are explicitly unavailable, not extrapolated.",
+    "diagnostics.sigma_thresholds": "Standard-deviation distances for two-sided empirical P(abs(z)>threshold), z=(daily_log_return-mean)/std. Not percentiles or percentage returns. Constant series have no meaningful z-score.",
+    "diagnostics.histogram_bins": "Equal-width bin count across z=-10..10 (allowed 10..1000). Two panels use the same bin-centre densities: linear y near the centre and log y for tails. Outside observations are counted and included in the denominator, never clipped away.",
+    "stress_calibrations": "Additional named calibrations; [] disables them. Same holdings, forecast and baseline currency. Unavailable stress does not discard baseline. Treat window parameters as a fixed regime through the forecast, not chronological crisis replay.",
+    "stress_calibrations.name": "Unique lowercase identifier starting with a letter, then letters/digits/underscores, maximum 40 characters; baseline is reserved. It labels results such as gfc__gaussian, but does not infer crisis dates.",
+    "stress_calibrations.start_end": "Explicit ISO start/end of the stress historical window, start < end <= archive COB. Only matched one-session intervals inside it enter calibration. Baseline lookback_years does not override it.",
+    "stress_calibrations.drift": "baseline retains baseline mean daily LOG returns while replacing covariance/tails. stress replaces means too. Tail fitting always centers on its own window mean. At fixed log drift, increased variance raises Gaussian expected wealth but not an individual asset median.",
+    "mean_mc_standard_error": "Output only: terminal wealth sample std/sqrt(paths), in wealth units. Measures simulation precision of the mean, not investment dispersion or uncertainty in estimated drift/covariance/model choice.",
+    "algorithm": "Fit common daily log-return matrix X; mu=column means; C=sample covariance (M-1 denominator). Compute B=Q*sqrt(eigenvalues), where C=Q*diag(eigenvalues)*Q.T; B contains eigenvectors, not only eigenvalues, and is not Cholesky. Each day draw independent standard normals z, set g=mu+B*z, apply asset/FX conversion, accumulate g, compute W=W0*exp(cumulative_g), and aggregate initial-weight holdings. Daily units mean dt=1 session without /252 or another half-variance subtraction.",
+    "loss_probability_precision": "Terminal and short-horizon probability of loss share a numerical-zero tolerance of 64 float64 machine epsilons (about 1.42e-14 of initial wealth). This avoids labelling exact asset/FX cancellation residuals as economic losses. Paths, returns, VaR/ES and moments are not rounded or clipped; genuine losses above that tiny precision bound still count.",
+    "output_labels": "Probability column suffixes preserve the shortest round-trip decimal of each input float. Distinct close quantiles/confidences cannot overwrite one another; normal labels such as 0.95 and 0.99 are unchanged. Report and chart confidence labels use the same values."
+  },
+  "diagnostics": {
+    "enabled": true,
+    "horizons_sessions": [
+      1,
+      5,
+      20
+    ],
+    "sigma_thresholds": [
+      3,
+      4
+    ],
+    "histogram_bins": 100
+  },
+  "stress_calibrations": [
+    {
+      "name": "gfc",
+      "start": "2008-01-01",
+      "end": "2009-06-30",
+      "drift": "stress"
+    }
+  ]
+}

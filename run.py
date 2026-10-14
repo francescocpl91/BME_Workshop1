@@ -6,7 +6,7 @@ python -i run.py    : execute and keep result available in a Python prompt
 import os
 from datetime import timedelta
 from pathlib import Path
-from src import MarketDataDownloader, inspect_archive, process_inventory, analyze_processed
+from src import MarketDataDownloader, inspect_archive, process_inventory, analyze_processed, simulate_processed
 from src.cob import parse_cob, parse_history_start, london_today
 
 ROOT = Path(__file__).resolve().parent
@@ -22,6 +22,7 @@ CONFIG_FILES = [CONFIG_DIR / (name + ".json") for name in
 PORTFOLIO_FILE = CONFIG_DIR / "portfolio.json"
 CLEANING_FILE = CONFIG_DIR / "cleaning.json"
 MODELING_FILE = CONFIG_DIR / "modeling.json"
+MONTE_CARLO_FILE = CONFIG_DIR / "monte_carlo.json"
 OIS_FILE = CONFIG_DIR / "ois.json"  # Fixed OIS par quotes reused for every COB; no API.
 
 # Credentials/operational setup remain in Python; never commit actual keys.
@@ -73,7 +74,7 @@ def download_main(cob_text=None, history_start_text=None, *, retry_failed=False)
     print("Previously saved option volatilities remain available if captured successfully;")
     print("their actual observation dates must be checked before using them.")
     print("\nCurrent stage: retrieve/reuse inputs, then process the saved archive.")
-    print("Inventory, cleaning, merging and historical statistics follow automatically; simulation comes later.")
+    print("Inventory, cleaning, statistics and configured historical Monte Carlo follow automatically.")
     print("Manual OIS par curves are loaded from config/ois.json and saved beside API data.")
     print("The same fixed OIS curves are used for every COB, retaining their original observation dates.")
     print("Live data and usable volatility coverage depend on IBKR availability and access.\n")
@@ -122,10 +123,10 @@ def download_main(cob_text=None, history_start_text=None, *, retry_failed=False)
 def inventory_main(cob_text=None):
     """Inspect local data without constructing a downloader or checking API keys."""
     print("\nPORTFOLIO SIMULATOR")
-    print("Saved market data: inventory, cleaning, merging and statistics")
+    print("Saved market data: inventory, cleaning, statistics and historical Monte Carlo")
     print("=" * 58)
     print("Reads an existing completed archive. No provider connections are made.")
-    print("Checks coverage, cleans data and saves merged tables plus historical statistics.")
+    print("Checks coverage, cleans data, then saves statistics and configured historical simulations.")
     print("Use the archive's COB label, even if option captures occurred later.\n")
     if cob_text is None:
         while True:
@@ -172,7 +173,20 @@ def _process_inventory(inventory):
     for notice in statistics.summary["warnings"]:
         print("Statistics: " + notice)
     print(f"Historical statistics, tables and plots: {statistics_folder}")
-    print("Raw archive unchanged. Simulation/calibration are not run.")
+    print("Running configured historical Monte Carlo scenarios (offline).")
+    # Monte Carlo consumes cleaned holdings/references directly, not the
+    # descriptive statistics tables. Its own JSON controls calibration and
+    # scenarios; this offline stage makes no further provider requests.
+    simulation = simulate_processed(result, MONTE_CARLO_FILE)
+    # Remember the cleaned source to protect it during export. Save in a
+    # separate simulation-ID folder tracking inputs, settings and source code.
+    simulation.source_folder = destination.resolve()
+    simulation_folder = simulation.save(destination / "monte_carlo" / simulation.run_id)
+    print(f"Monte Carlo status: {simulation.summary['status']}")
+    for notice in simulation.summary["warnings"]:
+        print("Monte Carlo: " + notice)
+    print(f"Monte Carlo report and results: {simulation_folder}")
+    print("Raw archive unchanged. Option/local-volatility calibration is not run.")
     return result
 
 
