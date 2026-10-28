@@ -11,11 +11,12 @@ from src.cob import parse_cob, option_route
 from src.json_config import load_provider_configs
 
 ROOT=Path(__file__).resolve().parents[1]
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "config"
 TODAY=date(2026,10,8)
 
 
 def fixture(count=1):
-    doc=json.loads((ROOT/'config/ibkr.json').read_text())
+    doc=json.loads((FIXTURES/'ibkr.json').read_text())
     doc['requests']=[r for r in doc['requests'] if r.get('contract',{}).get('expiration')=='2026-12-18'][:count]
     with tempfile.TemporaryDirectory() as tmp:
         path=Path(tmp)/'ibkr.json';path.write_text(json.dumps(doc))

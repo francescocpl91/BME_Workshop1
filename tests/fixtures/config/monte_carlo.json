@@ -1,0 +1,77 @@
+{
+  "schema_version": 2,
+  "enabled": true,
+  "models": [
+    "gaussian",
+    "student_t_truncated"
+  ],
+  "forecast_start": "2026-10-09",
+  "forecast_end": "2027-12-17",
+  "paths": 10000,
+  "seed": 1729,
+  "calendar": "XNYS",
+  "initial_value": 100,
+  "portfolio_method": "buy_and_hold",
+  "calibration": {
+    "lookback_years": 10,
+    "start": null,
+    "minimum_observations": 252
+  },
+  "fallback_currency": "USD",
+  "fx_series": [
+    {
+      "request_id": "EURUSD",
+      "base_currency": "EUR",
+      "quote_currency": "USD"
+    }
+  ],
+  "student_t": {
+    "fit_df": true,
+    "df_bounds": [
+      2.1,
+      50
+    ],
+    "excluded_tail_probability": 0.0005,
+    "sensitivity_tail_probabilities": [
+      0.002,
+      5e-05
+    ]
+  },
+  "quantiles": [
+    0.01,
+    0.05,
+    0.5,
+    0.95,
+    0.99
+  ],
+  "confidence_levels": [
+    0.95,
+    0.99
+  ],
+  "sample_paths": 20,
+  "plots": true,
+  "instructions": {
+    "scope": "Fixed Monte Carlo policies for synthetic unit-test data."
+  },
+  "diagnostics": {
+    "enabled": true,
+    "horizons_sessions": [
+      1,
+      5,
+      20
+    ],
+    "sigma_thresholds": [
+      3,
+      4
+    ],
+    "histogram_bins": 100
+  },
+  "stress_calibrations": [
+    {
+      "name": "gfc",
+      "start": "2008-01-01",
+      "end": "2009-06-30",
+      "drift": "stress"
+    }
+  ]
+}

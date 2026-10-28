@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "input_type": "manual_ois",
+  "enabled": true,
+  "date_policy": "fixed_for_all_cobs",
+  "source": {
+    "label": "Synthetic par quotes for archive/date tests"
+  },
+  "curves": {
+    "us": [
+      {
+        "curve_id": "USD_SOFR_OIS",
+        "currency": "USD",
+        "overnight_index": "SOFR",
+        "as_of_date": "2026-10-09",
+        "quote_type": "spot_starting_ois_par_swap_rate",
+        "rate_unit": "percent_per_annum",
+        "source_column": "Live",
+        "quote_time": null,
+        "quote_timezone": null,
+        "spot_date": null,
+        "conventions": {
+          "status": "not_provided_in_source",
+          "day_count": null,
+          "fixed_payment_frequency": null,
+          "spot_lag_business_days": null,
+          "payment_lag_business_days": null,
+          "business_day_convention": null,
+          "calendar": null
+        },
+        "points": [
+          {
+            "tenor": "1Y",
+            "rate_percent": 3.0
+          },
+          {
+            "tenor": "2Y",
+            "rate_percent": 3.2
+          }
+        ]
+      }
+    ],
+    "euro": [
+      {
+        "curve_id": "EUR_ESTR_OIS",
+        "currency": "EUR",
+        "overnight_index": "ESTR",
+        "as_of_date": "2026-10-09",
+        "quote_type": "spot_starting_ois_par_swap_rate",
+        "rate_unit": "percent_per_annum",
+        "source_column": "Live",
+        "quote_time": null,
+        "quote_timezone": null,
+        "spot_date": null,
+        "conventions": {
+          "status": "not_provided_in_source",
+          "day_count": null,
+          "fixed_payment_frequency": null,
+          "spot_lag_business_days": null,
+          "payment_lag_business_days": null,
+          "business_day_convention": null,
+          "calendar": null
+        },
+        "points": [
+          {
+            "tenor": "1Y",
+            "rate_percent": 2.0
+          },
+          {
+            "tenor": "2Y",
+            "rate_percent": 2.2
+          }
+        ]
+      }
+    ]
+  },
+  "reference_charts": [
+    {
+      "benchmark": "ESTR",
+      "source_image": "word/media/image1.png",
+      "displayed_last_update": "Fri 9 October 09:16",
+      "timezone": null,
+      "user_described_forward_tenor": "6M",
+      "forward_tenor_visible_in_image": false,
+      "numerical_points_extracted": false
+    },
+    {
+      "benchmark": "SOFR",
+      "source_image": "word/media/image2.png",
+      "displayed_last_update": "Fri 9 October 09:53",
+      "timezone": null,
+      "user_described_forward_tenor": "6M",
+      "forward_tenor_visible_in_image": false,
+      "numerical_points_extracted": false
+    }
+  ],
+  "instructions": {}
+}

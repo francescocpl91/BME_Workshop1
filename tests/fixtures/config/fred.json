@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "provider": "fred",
+  "enabled": true,
+  "requests": [
+    {
+      "id": "US10Y",
+      "enabled": true,
+      "product": "yield",
+      "operation": "observations",
+      "ticker": "US10Y",
+      "description": "US 10-year constant-maturity Treasury yield; not a bond price",
+      "asset_class": "interest_rate",
+      "currency": "USD",
+      "unit": "Percent",
+      "exchange": null,
+      "timeframe": {
+        "start": "HISTORY_START",
+        "end": "COB"
+      },
+      "frequency": "native",
+      "input": {
+        "series_id": "DGS10"
+      },
+      "parameters": {
+        "units": "lin"
+      }
+    },
+    {
+      "id": "SOFR",
+      "enabled": true,
+      "product": "overnight_rate",
+      "operation": "observations",
+      "ticker": "SOFR",
+      "description": "USD secured overnight financing rate; overnight fixing, not a term discount curve",
+      "asset_class": "interest_rate",
+      "currency": "USD",
+      "unit": "Percent per annum",
+      "exchange": null,
+      "timeframe": {
+        "start": "HISTORY_START",
+        "end": "COB"
+      },
+      "frequency": "native",
+      "input": {
+        "series_id": "SOFR"
+      },
+      "parameters": {
+        "units": "lin"
+      }
+    }
+  ],
+  "product_guides": {
+    "observations": {
+      "implemented": true,
+      "products": [
+        "yield",
+        "fx",
+        "macro"
+      ],
+      "instructions": "Use an economic-series identifier or dataset key, not a stock ticker. Set unit and frequency accurately; the provider response is authoritative.",
+      "template": {
+        "id": "US10Y",
+        "enabled": false,
+        "product": "yield",
+        "operation": "observations",
+        "ticker": "US10Y",
+        "description": "US 10-year constant-maturity Treasury yield; not a bond price",
+        "asset_class": "interest_rate",
+        "currency": "USD",
+        "unit": "Percent",
+        "exchange": null,
+        "timeframe": {
+          "start": "HISTORY_START",
+          "end": "COB"
+        },
+        "frequency": "native",
+        "input": {
+          "series_id": "DGS10"
+        },
+        "parameters": {
+          "units": "lin"
+        }
+      }
+    }
+  }
+}

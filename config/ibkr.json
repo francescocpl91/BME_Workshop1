@@ -79,7 +79,7 @@
     },
     {
       "id": "SPX261016C00200000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C00200000",
@@ -131,7 +131,7 @@
     },
     {
       "id": "SPX261016C00400000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C00400000",
@@ -183,7 +183,7 @@
     },
     {
       "id": "SPX261016C00600000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C00600000",
@@ -235,7 +235,7 @@
     },
     {
       "id": "SPX261016C00800000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C00800000",
@@ -287,7 +287,7 @@
     },
     {
       "id": "SPX261016C01000000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C01000000",
@@ -339,7 +339,7 @@
     },
     {
       "id": "SPX261016C01200000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C01200000",
@@ -391,7 +391,7 @@
     },
     {
       "id": "SPX261016C01400000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C01400000",
@@ -443,7 +443,7 @@
     },
     {
       "id": "SPX261016C01600000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C01600000",
@@ -495,7 +495,7 @@
     },
     {
       "id": "SPX261016C01800000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C01800000",
@@ -547,7 +547,7 @@
     },
     {
       "id": "SPX261016C02000000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C02000000",
@@ -599,7 +599,7 @@
     },
     {
       "id": "SPX261016C02200000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C02200000",
@@ -651,7 +651,7 @@
     },
     {
       "id": "SPX261016C02400000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C02400000",
@@ -703,7 +703,7 @@
     },
     {
       "id": "SPX261016C02600000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C02600000",
@@ -755,7 +755,7 @@
     },
     {
       "id": "SPX261016C02700000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C02700000",
@@ -807,7 +807,7 @@
     },
     {
       "id": "SPX261016C02800000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C02800000",
@@ -859,7 +859,7 @@
     },
     {
       "id": "SPX261016C02900000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C02900000",
@@ -911,7 +911,7 @@
     },
     {
       "id": "SPX261016C03000000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C03000000",
@@ -963,7 +963,7 @@
     },
     {
       "id": "SPX261016C03100000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C03100000",
@@ -1015,7 +1015,7 @@
     },
     {
       "id": "SPX261016C03200000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C03200000",
@@ -1067,7 +1067,7 @@
     },
     {
       "id": "SPX261016C03300000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C03300000",
@@ -1119,7 +1119,7 @@
     },
     {
       "id": "SPX261016C03400000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C03400000",
@@ -1171,7 +1171,7 @@
     },
     {
       "id": "SPX261016C03500000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C03500000",
@@ -1223,7 +1223,7 @@
     },
     {
       "id": "SPX261016C03600000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C03600000",
@@ -1275,7 +1275,7 @@
     },
     {
       "id": "SPX261016C03700000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C03700000",
@@ -1327,7 +1327,7 @@
     },
     {
       "id": "SPX261016C03800000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C03800000",
@@ -1379,7 +1379,7 @@
     },
     {
       "id": "SPX261016C03850000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C03850000",
@@ -1431,7 +1431,7 @@
     },
     {
       "id": "SPX261016C03900000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C03900000",
@@ -1483,7 +1483,7 @@
     },
     {
       "id": "SPX261016C03950000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C03950000",
@@ -1535,7 +1535,7 @@
     },
     {
       "id": "SPX261016C04000000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04000000",
@@ -1587,7 +1587,7 @@
     },
     {
       "id": "SPX261016C04050000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04050000",
@@ -1639,7 +1639,7 @@
     },
     {
       "id": "SPX261016C04100000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04100000",
@@ -1691,7 +1691,7 @@
     },
     {
       "id": "SPX261016C04150000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04150000",
@@ -1743,7 +1743,7 @@
     },
     {
       "id": "SPX261016C04200000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04200000",
@@ -1795,7 +1795,7 @@
     },
     {
       "id": "SPX261016C04250000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04250000",
@@ -1847,7 +1847,7 @@
     },
     {
       "id": "SPX261016C04300000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04300000",
@@ -1899,7 +1899,7 @@
     },
     {
       "id": "SPX261016C04350000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04350000",
@@ -1951,7 +1951,7 @@
     },
     {
       "id": "SPX261016C04400000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04400000",
@@ -2003,7 +2003,7 @@
     },
     {
       "id": "SPX261016C04450000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04450000",
@@ -2055,7 +2055,7 @@
     },
     {
       "id": "SPX261016C04500000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04500000",
@@ -2107,7 +2107,7 @@
     },
     {
       "id": "SPX261016C04550000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04550000",
@@ -2159,7 +2159,7 @@
     },
     {
       "id": "SPX261016C04600000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04600000",
@@ -2211,7 +2211,7 @@
     },
     {
       "id": "SPX261016C04625000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04625000",
@@ -2263,7 +2263,7 @@
     },
     {
       "id": "SPX261016C04650000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04650000",
@@ -2315,7 +2315,7 @@
     },
     {
       "id": "SPX261016C04675000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04675000",
@@ -2367,7 +2367,7 @@
     },
     {
       "id": "SPX261016C04700000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04700000",
@@ -2419,7 +2419,7 @@
     },
     {
       "id": "SPX261016C04725000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04725000",
@@ -2471,7 +2471,7 @@
     },
     {
       "id": "SPX261016C04750000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04750000",
@@ -2523,7 +2523,7 @@
     },
     {
       "id": "SPX261016C04775000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04775000",
@@ -2575,7 +2575,7 @@
     },
     {
       "id": "SPX261016C04800000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04800000",
@@ -2627,7 +2627,7 @@
     },
     {
       "id": "SPX261016C04825000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04825000",
@@ -2679,7 +2679,7 @@
     },
     {
       "id": "SPX261016C04850000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04850000",
@@ -2731,7 +2731,7 @@
     },
     {
       "id": "SPX261016C04875000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04875000",
@@ -2783,7 +2783,7 @@
     },
     {
       "id": "SPX261016C04900000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04900000",
@@ -2835,7 +2835,7 @@
     },
     {
       "id": "SPX261016C04925000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04925000",
@@ -2887,7 +2887,7 @@
     },
     {
       "id": "SPX261016C04950000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04950000",
@@ -2939,7 +2939,7 @@
     },
     {
       "id": "SPX261016C04975000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C04975000",
@@ -2991,7 +2991,7 @@
     },
     {
       "id": "SPX261016C05000000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05000000",
@@ -3043,7 +3043,7 @@
     },
     {
       "id": "SPX261016C05025000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05025000",
@@ -3095,7 +3095,7 @@
     },
     {
       "id": "SPX261016C05050000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05050000",
@@ -3147,7 +3147,7 @@
     },
     {
       "id": "SPX261016C05075000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05075000",
@@ -3199,7 +3199,7 @@
     },
     {
       "id": "SPX261016C05100000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05100000",
@@ -3251,7 +3251,7 @@
     },
     {
       "id": "SPX261016C05125000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05125000",
@@ -3303,7 +3303,7 @@
     },
     {
       "id": "SPX261016C05150000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05150000",
@@ -3355,7 +3355,7 @@
     },
     {
       "id": "SPX261016C05175000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05175000",
@@ -3407,7 +3407,7 @@
     },
     {
       "id": "SPX261016C05200000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05200000",
@@ -3459,7 +3459,7 @@
     },
     {
       "id": "SPX261016C05225000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05225000",
@@ -3511,7 +3511,7 @@
     },
     {
       "id": "SPX261016C05250000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05250000",
@@ -3563,7 +3563,7 @@
     },
     {
       "id": "SPX261016C05275000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05275000",
@@ -3615,7 +3615,7 @@
     },
     {
       "id": "SPX261016C05300000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05300000",
@@ -3667,7 +3667,7 @@
     },
     {
       "id": "SPX261016C05325000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05325000",
@@ -3719,7 +3719,7 @@
     },
     {
       "id": "SPX261016C05350000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05350000",
@@ -3771,7 +3771,7 @@
     },
     {
       "id": "SPX261016C05375000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05375000",
@@ -3823,7 +3823,7 @@
     },
     {
       "id": "SPX261016C05400000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05400000",
@@ -3875,7 +3875,7 @@
     },
     {
       "id": "SPX261016C05425000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05425000",
@@ -3927,7 +3927,7 @@
     },
     {
       "id": "SPX261016C05450000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05450000",
@@ -3979,7 +3979,7 @@
     },
     {
       "id": "SPX261016C05475000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05475000",
@@ -4031,7 +4031,7 @@
     },
     {
       "id": "SPX261016C05500000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05500000",
@@ -4083,7 +4083,7 @@
     },
     {
       "id": "SPX261016C05525000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05525000",
@@ -4135,7 +4135,7 @@
     },
     {
       "id": "SPX261016C05550000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05550000",
@@ -4187,7 +4187,7 @@
     },
     {
       "id": "SPX261016C05575000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05575000",
@@ -4239,7 +4239,7 @@
     },
     {
       "id": "SPX261016C05600000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05600000",
@@ -4291,7 +4291,7 @@
     },
     {
       "id": "SPX261016C05625000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05625000",
@@ -4343,7 +4343,7 @@
     },
     {
       "id": "SPX261016C05650000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05650000",
@@ -4395,7 +4395,7 @@
     },
     {
       "id": "SPX261016C05675000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05675000",
@@ -4447,7 +4447,7 @@
     },
     {
       "id": "SPX261016C05700000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05700000",
@@ -4499,7 +4499,7 @@
     },
     {
       "id": "SPX261016C05725000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05725000",
@@ -4551,7 +4551,7 @@
     },
     {
       "id": "SPX261016C05750000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05750000",
@@ -4603,7 +4603,7 @@
     },
     {
       "id": "SPX261016C05775000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05775000",
@@ -4655,7 +4655,7 @@
     },
     {
       "id": "SPX261016C05800000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05800000",
@@ -4707,7 +4707,7 @@
     },
     {
       "id": "SPX261016C05825000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05825000",
@@ -4759,7 +4759,7 @@
     },
     {
       "id": "SPX261016C05850000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05850000",
@@ -4811,7 +4811,7 @@
     },
     {
       "id": "SPX261016C05875000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05875000",
@@ -4863,7 +4863,7 @@
     },
     {
       "id": "SPX261016C05900000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05900000",
@@ -4915,7 +4915,7 @@
     },
     {
       "id": "SPX261016C05925000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05925000",
@@ -4967,7 +4967,7 @@
     },
     {
       "id": "SPX261016C05950000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05950000",
@@ -5019,7 +5019,7 @@
     },
     {
       "id": "SPX261016C05975000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C05975000",
@@ -5071,7 +5071,7 @@
     },
     {
       "id": "SPX261016C06000000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06000000",
@@ -5123,7 +5123,7 @@
     },
     {
       "id": "SPX261016C06025000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06025000",
@@ -5175,7 +5175,7 @@
     },
     {
       "id": "SPX261016C06050000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06050000",
@@ -5227,7 +5227,7 @@
     },
     {
       "id": "SPX261016C06075000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06075000",
@@ -5279,7 +5279,7 @@
     },
     {
       "id": "SPX261016C06100000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06100000",
@@ -5331,7 +5331,7 @@
     },
     {
       "id": "SPX261016C06110000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06110000",
@@ -5383,7 +5383,7 @@
     },
     {
       "id": "SPX261016C06120000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06120000",
@@ -5435,7 +5435,7 @@
     },
     {
       "id": "SPX261016C06125000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06125000",
@@ -5487,7 +5487,7 @@
     },
     {
       "id": "SPX261016C06130000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06130000",
@@ -5539,7 +5539,7 @@
     },
     {
       "id": "SPX261016C06140000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06140000",
@@ -5591,7 +5591,7 @@
     },
     {
       "id": "SPX261016C06150000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06150000",
@@ -5643,7 +5643,7 @@
     },
     {
       "id": "SPX261016C06160000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06160000",
@@ -5695,7 +5695,7 @@
     },
     {
       "id": "SPX261016C06170000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06170000",
@@ -5747,7 +5747,7 @@
     },
     {
       "id": "SPX261016C06175000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06175000",
@@ -5799,7 +5799,7 @@
     },
     {
       "id": "SPX261016C06180000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06180000",
@@ -5851,7 +5851,7 @@
     },
     {
       "id": "SPX261016C06190000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06190000",
@@ -5903,7 +5903,7 @@
     },
     {
       "id": "SPX261016C06200000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06200000",
@@ -5955,7 +5955,7 @@
     },
     {
       "id": "SPX261016C06210000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06210000",
@@ -6007,7 +6007,7 @@
     },
     {
       "id": "SPX261016C06220000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06220000",
@@ -6059,7 +6059,7 @@
     },
     {
       "id": "SPX261016C06225000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06225000",
@@ -6111,7 +6111,7 @@
     },
     {
       "id": "SPX261016C06230000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06230000",
@@ -6163,7 +6163,7 @@
     },
     {
       "id": "SPX261016C06240000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06240000",
@@ -6215,7 +6215,7 @@
     },
     {
       "id": "SPX261016C06250000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06250000",
@@ -6267,7 +6267,7 @@
     },
     {
       "id": "SPX261016C06260000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06260000",
@@ -6319,7 +6319,7 @@
     },
     {
       "id": "SPX261016C06270000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06270000",
@@ -6371,7 +6371,7 @@
     },
     {
       "id": "SPX261016C06275000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06275000",
@@ -6423,7 +6423,7 @@
     },
     {
       "id": "SPX261016C06280000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06280000",
@@ -6475,7 +6475,7 @@
     },
     {
       "id": "SPX261016C06290000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06290000",
@@ -6527,7 +6527,7 @@
     },
     {
       "id": "SPX261016C06300000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06300000",
@@ -6579,7 +6579,7 @@
     },
     {
       "id": "SPX261016C06310000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06310000",
@@ -6631,7 +6631,7 @@
     },
     {
       "id": "SPX261016C06320000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06320000",
@@ -6683,7 +6683,7 @@
     },
     {
       "id": "SPX261016C06325000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06325000",
@@ -6735,7 +6735,7 @@
     },
     {
       "id": "SPX261016C06330000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06330000",
@@ -6787,7 +6787,7 @@
     },
     {
       "id": "SPX261016C06340000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06340000",
@@ -6839,7 +6839,7 @@
     },
     {
       "id": "SPX261016C06350000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06350000",
@@ -6891,7 +6891,7 @@
     },
     {
       "id": "SPX261016C06360000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06360000",
@@ -6943,7 +6943,7 @@
     },
     {
       "id": "SPX261016C06370000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06370000",
@@ -6995,7 +6995,7 @@
     },
     {
       "id": "SPX261016C06375000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06375000",
@@ -7047,7 +7047,7 @@
     },
     {
       "id": "SPX261016C06380000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06380000",
@@ -7099,7 +7099,7 @@
     },
     {
       "id": "SPX261016C06390000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06390000",
@@ -7151,7 +7151,7 @@
     },
     {
       "id": "SPX261016C06400000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06400000",
@@ -7203,7 +7203,7 @@
     },
     {
       "id": "SPX261016C06410000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06410000",
@@ -7255,7 +7255,7 @@
     },
     {
       "id": "SPX261016C06420000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06420000",
@@ -7307,7 +7307,7 @@
     },
     {
       "id": "SPX261016C06425000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06425000",
@@ -7359,7 +7359,7 @@
     },
     {
       "id": "SPX261016C06430000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06430000",
@@ -7411,7 +7411,7 @@
     },
     {
       "id": "SPX261016C06440000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06440000",
@@ -7463,7 +7463,7 @@
     },
     {
       "id": "SPX261016C06450000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06450000",
@@ -7515,7 +7515,7 @@
     },
     {
       "id": "SPX261016C06460000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06460000",
@@ -7567,7 +7567,7 @@
     },
     {
       "id": "SPX261016C06470000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06470000",
@@ -7619,7 +7619,7 @@
     },
     {
       "id": "SPX261016C06475000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06475000",
@@ -7671,7 +7671,7 @@
     },
     {
       "id": "SPX261016C06480000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06480000",
@@ -7723,7 +7723,7 @@
     },
     {
       "id": "SPX261016C06490000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06490000",
@@ -7775,7 +7775,7 @@
     },
     {
       "id": "SPX261016C06500000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06500000",
@@ -7827,7 +7827,7 @@
     },
     {
       "id": "SPX261016C06510000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06510000",
@@ -7879,7 +7879,7 @@
     },
     {
       "id": "SPX261016C06520000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06520000",
@@ -7931,7 +7931,7 @@
     },
     {
       "id": "SPX261016C06525000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06525000",
@@ -7983,7 +7983,7 @@
     },
     {
       "id": "SPX261016C06530000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06530000",
@@ -8035,7 +8035,7 @@
     },
     {
       "id": "SPX261016C06540000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06540000",
@@ -8087,7 +8087,7 @@
     },
     {
       "id": "SPX261016C06550000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06550000",
@@ -8139,7 +8139,7 @@
     },
     {
       "id": "SPX261016C06560000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06560000",
@@ -8191,7 +8191,7 @@
     },
     {
       "id": "SPX261016C06570000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06570000",
@@ -8243,7 +8243,7 @@
     },
     {
       "id": "SPX261016C06575000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06575000",
@@ -8295,7 +8295,7 @@
     },
     {
       "id": "SPX261016C06580000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06580000",
@@ -8347,7 +8347,7 @@
     },
     {
       "id": "SPX261016C06590000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06590000",
@@ -8399,7 +8399,7 @@
     },
     {
       "id": "SPX261016C06600000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06600000",
@@ -8451,7 +8451,7 @@
     },
     {
       "id": "SPX261016C06610000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06610000",
@@ -8503,7 +8503,7 @@
     },
     {
       "id": "SPX261016C06620000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06620000",
@@ -8555,7 +8555,7 @@
     },
     {
       "id": "SPX261016C06625000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06625000",
@@ -8607,7 +8607,7 @@
     },
     {
       "id": "SPX261016C06630000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06630000",
@@ -8659,7 +8659,7 @@
     },
     {
       "id": "SPX261016C06640000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06640000",
@@ -8711,7 +8711,7 @@
     },
     {
       "id": "SPX261016C06650000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06650000",
@@ -8763,7 +8763,7 @@
     },
     {
       "id": "SPX261016C06660000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06660000",
@@ -8815,7 +8815,7 @@
     },
     {
       "id": "SPX261016C06670000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06670000",
@@ -8867,7 +8867,7 @@
     },
     {
       "id": "SPX261016C06675000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06675000",
@@ -8919,7 +8919,7 @@
     },
     {
       "id": "SPX261016C06680000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06680000",
@@ -8971,7 +8971,7 @@
     },
     {
       "id": "SPX261016C06690000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06690000",
@@ -9023,7 +9023,7 @@
     },
     {
       "id": "SPX261016C06700000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06700000",
@@ -9075,7 +9075,7 @@
     },
     {
       "id": "SPX261016C06710000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06710000",
@@ -9127,7 +9127,7 @@
     },
     {
       "id": "SPX261016C06720000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06720000",
@@ -9179,7 +9179,7 @@
     },
     {
       "id": "SPX261016C06725000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06725000",
@@ -9231,7 +9231,7 @@
     },
     {
       "id": "SPX261016C06730000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06730000",
@@ -9283,7 +9283,7 @@
     },
     {
       "id": "SPX261016C06740000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06740000",
@@ -9335,7 +9335,7 @@
     },
     {
       "id": "SPX261016C06750000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06750000",
@@ -9387,7 +9387,7 @@
     },
     {
       "id": "SPX261016C06760000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06760000",
@@ -9439,7 +9439,7 @@
     },
     {
       "id": "SPX261016C06770000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06770000",
@@ -9491,7 +9491,7 @@
     },
     {
       "id": "SPX261016C06775000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06775000",
@@ -9543,7 +9543,7 @@
     },
     {
       "id": "SPX261016C06780000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06780000",
@@ -9595,7 +9595,7 @@
     },
     {
       "id": "SPX261016C06790000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06790000",
@@ -9647,7 +9647,7 @@
     },
     {
       "id": "SPX261016C06800000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06800000",
@@ -9699,7 +9699,7 @@
     },
     {
       "id": "SPX261016C06810000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06810000",
@@ -9751,7 +9751,7 @@
     },
     {
       "id": "SPX261016C06820000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06820000",
@@ -9803,7 +9803,7 @@
     },
     {
       "id": "SPX261016C06825000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06825000",
@@ -9855,7 +9855,7 @@
     },
     {
       "id": "SPX261016C06830000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06830000",
@@ -9907,7 +9907,7 @@
     },
     {
       "id": "SPX261016C06840000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06840000",
@@ -9959,7 +9959,7 @@
     },
     {
       "id": "SPX261016C06850000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06850000",
@@ -10011,7 +10011,7 @@
     },
     {
       "id": "SPX261016C06860000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06860000",
@@ -10063,7 +10063,7 @@
     },
     {
       "id": "SPX261016C06865000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06865000",
@@ -10115,7 +10115,7 @@
     },
     {
       "id": "SPX261016C06870000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06870000",
@@ -10167,7 +10167,7 @@
     },
     {
       "id": "SPX261016C06875000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06875000",
@@ -10219,7 +10219,7 @@
     },
     {
       "id": "SPX261016C06880000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06880000",
@@ -10271,7 +10271,7 @@
     },
     {
       "id": "SPX261016C06885000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06885000",
@@ -10323,7 +10323,7 @@
     },
     {
       "id": "SPX261016C06890000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06890000",
@@ -10375,7 +10375,7 @@
     },
     {
       "id": "SPX261016C06895000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06895000",
@@ -10427,7 +10427,7 @@
     },
     {
       "id": "SPX261016C06900000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06900000",
@@ -10479,7 +10479,7 @@
     },
     {
       "id": "SPX261016C06905000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06905000",
@@ -10531,7 +10531,7 @@
     },
     {
       "id": "SPX261016C06910000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06910000",
@@ -10583,7 +10583,7 @@
     },
     {
       "id": "SPX261016C06915000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06915000",
@@ -10635,7 +10635,7 @@
     },
     {
       "id": "SPX261016C06920000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06920000",
@@ -10687,7 +10687,7 @@
     },
     {
       "id": "SPX261016C06925000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06925000",
@@ -10739,7 +10739,7 @@
     },
     {
       "id": "SPX261016C06930000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06930000",
@@ -10791,7 +10791,7 @@
     },
     {
       "id": "SPX261016C06935000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06935000",
@@ -10843,7 +10843,7 @@
     },
     {
       "id": "SPX261016C06940000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06940000",
@@ -10895,7 +10895,7 @@
     },
     {
       "id": "SPX261016C06945000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06945000",
@@ -10947,7 +10947,7 @@
     },
     {
       "id": "SPX261016C06950000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06950000",
@@ -10999,7 +10999,7 @@
     },
     {
       "id": "SPX261016C06955000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06955000",
@@ -11051,7 +11051,7 @@
     },
     {
       "id": "SPX261016C06960000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06960000",
@@ -11103,7 +11103,7 @@
     },
     {
       "id": "SPX261016C06965000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06965000",
@@ -11155,7 +11155,7 @@
     },
     {
       "id": "SPX261016C06970000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06970000",
@@ -11207,7 +11207,7 @@
     },
     {
       "id": "SPX261016C06975000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06975000",
@@ -11259,7 +11259,7 @@
     },
     {
       "id": "SPX261016C06980000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06980000",
@@ -11311,7 +11311,7 @@
     },
     {
       "id": "SPX261016C06985000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06985000",
@@ -11363,7 +11363,7 @@
     },
     {
       "id": "SPX261016C06990000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06990000",
@@ -11415,7 +11415,7 @@
     },
     {
       "id": "SPX261016C06995000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C06995000",
@@ -11467,7 +11467,7 @@
     },
     {
       "id": "SPX261016C07000000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07000000",
@@ -11519,7 +11519,7 @@
     },
     {
       "id": "SPX261016C07005000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07005000",
@@ -11571,7 +11571,7 @@
     },
     {
       "id": "SPX261016C07010000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07010000",
@@ -11623,7 +11623,7 @@
     },
     {
       "id": "SPX261016C07015000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07015000",
@@ -11675,7 +11675,7 @@
     },
     {
       "id": "SPX261016C07020000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07020000",
@@ -11727,7 +11727,7 @@
     },
     {
       "id": "SPX261016C07025000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07025000",
@@ -11779,7 +11779,7 @@
     },
     {
       "id": "SPX261016C07030000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07030000",
@@ -11831,7 +11831,7 @@
     },
     {
       "id": "SPX261016C07035000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07035000",
@@ -11883,7 +11883,7 @@
     },
     {
       "id": "SPX261016C07040000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07040000",
@@ -11935,7 +11935,7 @@
     },
     {
       "id": "SPX261016C07045000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07045000",
@@ -11987,7 +11987,7 @@
     },
     {
       "id": "SPX261016C07050000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07050000",
@@ -12039,7 +12039,7 @@
     },
     {
       "id": "SPX261016C07055000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07055000",
@@ -12091,7 +12091,7 @@
     },
     {
       "id": "SPX261016C07060000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07060000",
@@ -12143,7 +12143,7 @@
     },
     {
       "id": "SPX261016C07065000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07065000",
@@ -12195,7 +12195,7 @@
     },
     {
       "id": "SPX261016C07070000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07070000",
@@ -12247,7 +12247,7 @@
     },
     {
       "id": "SPX261016C07075000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07075000",
@@ -12299,7 +12299,7 @@
     },
     {
       "id": "SPX261016C07080000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07080000",
@@ -12351,7 +12351,7 @@
     },
     {
       "id": "SPX261016C07085000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07085000",
@@ -12403,7 +12403,7 @@
     },
     {
       "id": "SPX261016C07090000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07090000",
@@ -12455,7 +12455,7 @@
     },
     {
       "id": "SPX261016C07095000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07095000",
@@ -12507,7 +12507,7 @@
     },
     {
       "id": "SPX261016C07100000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07100000",
@@ -12559,7 +12559,7 @@
     },
     {
       "id": "SPX261016C07105000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07105000",
@@ -12611,7 +12611,7 @@
     },
     {
       "id": "SPX261016C07110000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07110000",
@@ -12663,7 +12663,7 @@
     },
     {
       "id": "SPX261016C07115000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07115000",
@@ -12715,7 +12715,7 @@
     },
     {
       "id": "SPX261016C07120000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07120000",
@@ -12767,7 +12767,7 @@
     },
     {
       "id": "SPX261016C07125000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07125000",
@@ -12819,7 +12819,7 @@
     },
     {
       "id": "SPX261016C07130000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07130000",
@@ -12871,7 +12871,7 @@
     },
     {
       "id": "SPX261016C07135000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07135000",
@@ -12923,7 +12923,7 @@
     },
     {
       "id": "SPX261016C07140000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07140000",
@@ -12975,7 +12975,7 @@
     },
     {
       "id": "SPX261016C07145000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07145000",
@@ -13027,7 +13027,7 @@
     },
     {
       "id": "SPX261016C07150000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07150000",
@@ -13079,7 +13079,7 @@
     },
     {
       "id": "SPX261016C07155000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07155000",
@@ -13131,7 +13131,7 @@
     },
     {
       "id": "SPX261016C07160000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07160000",
@@ -13183,7 +13183,7 @@
     },
     {
       "id": "SPX261016C07165000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07165000",
@@ -13235,7 +13235,7 @@
     },
     {
       "id": "SPX261016C07170000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07170000",
@@ -13287,7 +13287,7 @@
     },
     {
       "id": "SPX261016C07175000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07175000",
@@ -13339,7 +13339,7 @@
     },
     {
       "id": "SPX261016C07180000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07180000",
@@ -13391,7 +13391,7 @@
     },
     {
       "id": "SPX261016C07185000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07185000",
@@ -13443,7 +13443,7 @@
     },
     {
       "id": "SPX261016C07190000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07190000",
@@ -13495,7 +13495,7 @@
     },
     {
       "id": "SPX261016C07195000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07195000",
@@ -13547,7 +13547,7 @@
     },
     {
       "id": "SPX261016C07200000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07200000",
@@ -13599,7 +13599,7 @@
     },
     {
       "id": "SPX261016C07205000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07205000",
@@ -13651,7 +13651,7 @@
     },
     {
       "id": "SPX261016C07210000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07210000",
@@ -13703,7 +13703,7 @@
     },
     {
       "id": "SPX261016C07215000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07215000",
@@ -13755,7 +13755,7 @@
     },
     {
       "id": "SPX261016C07220000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07220000",
@@ -13807,7 +13807,7 @@
     },
     {
       "id": "SPX261016C07225000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07225000",
@@ -13859,7 +13859,7 @@
     },
     {
       "id": "SPX261016C07230000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07230000",
@@ -13911,7 +13911,7 @@
     },
     {
       "id": "SPX261016C07235000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07235000",
@@ -13963,7 +13963,7 @@
     },
     {
       "id": "SPX261016C07240000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07240000",
@@ -14015,7 +14015,7 @@
     },
     {
       "id": "SPX261016C07245000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07245000",
@@ -14067,7 +14067,7 @@
     },
     {
       "id": "SPX261016C07250000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07250000",
@@ -14119,7 +14119,7 @@
     },
     {
       "id": "SPX261016C07255000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07255000",
@@ -14171,7 +14171,7 @@
     },
     {
       "id": "SPX261016C07260000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07260000",
@@ -14223,7 +14223,7 @@
     },
     {
       "id": "SPX261016C07265000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07265000",
@@ -14275,7 +14275,7 @@
     },
     {
       "id": "SPX261016C07270000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07270000",
@@ -14327,7 +14327,7 @@
     },
     {
       "id": "SPX261016C07275000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07275000",
@@ -14379,7 +14379,7 @@
     },
     {
       "id": "SPX261016C07280000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07280000",
@@ -14431,7 +14431,7 @@
     },
     {
       "id": "SPX261016C07285000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07285000",
@@ -14483,7 +14483,7 @@
     },
     {
       "id": "SPX261016C07290000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07290000",
@@ -14535,7 +14535,7 @@
     },
     {
       "id": "SPX261016C07295000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07295000",
@@ -14587,7 +14587,7 @@
     },
     {
       "id": "SPX261016C07300000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07300000",
@@ -14639,7 +14639,7 @@
     },
     {
       "id": "SPX261016C07305000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07305000",
@@ -14691,7 +14691,7 @@
     },
     {
       "id": "SPX261016C07310000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07310000",
@@ -14743,7 +14743,7 @@
     },
     {
       "id": "SPX261016C07315000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07315000",
@@ -14795,7 +14795,7 @@
     },
     {
       "id": "SPX261016C07320000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07320000",
@@ -14847,7 +14847,7 @@
     },
     {
       "id": "SPX261016C07325000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07325000",
@@ -14899,7 +14899,7 @@
     },
     {
       "id": "SPX261016C07330000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07330000",
@@ -14951,7 +14951,7 @@
     },
     {
       "id": "SPX261016C07335000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07335000",
@@ -15003,7 +15003,7 @@
     },
     {
       "id": "SPX261016C07340000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07340000",
@@ -15055,7 +15055,7 @@
     },
     {
       "id": "SPX261016C07345000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07345000",
@@ -15107,7 +15107,7 @@
     },
     {
       "id": "SPX261016C07350000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07350000",
@@ -15159,7 +15159,7 @@
     },
     {
       "id": "SPX261016C07355000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07355000",
@@ -15211,7 +15211,7 @@
     },
     {
       "id": "SPX261016C07360000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07360000",
@@ -15263,7 +15263,7 @@
     },
     {
       "id": "SPX261016C07365000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07365000",
@@ -15315,7 +15315,7 @@
     },
     {
       "id": "SPX261016C07370000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07370000",
@@ -15367,7 +15367,7 @@
     },
     {
       "id": "SPX261016C07375000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07375000",
@@ -15419,7 +15419,7 @@
     },
     {
       "id": "SPX261016C07380000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07380000",
@@ -15471,7 +15471,7 @@
     },
     {
       "id": "SPX261016C07385000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07385000",
@@ -15523,7 +15523,7 @@
     },
     {
       "id": "SPX261016C07390000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07390000",
@@ -15575,7 +15575,7 @@
     },
     {
       "id": "SPX261016C07395000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07395000",
@@ -15627,7 +15627,7 @@
     },
     {
       "id": "SPX261016C07400000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07400000",
@@ -15679,7 +15679,7 @@
     },
     {
       "id": "SPX261016C07405000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07405000",
@@ -15731,7 +15731,7 @@
     },
     {
       "id": "SPX261016C07410000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07410000",
@@ -15783,7 +15783,7 @@
     },
     {
       "id": "SPX261016C07415000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07415000",
@@ -15835,7 +15835,7 @@
     },
     {
       "id": "SPX261016C07420000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07420000",
@@ -15887,7 +15887,7 @@
     },
     {
       "id": "SPX261016C07425000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07425000",
@@ -15939,7 +15939,7 @@
     },
     {
       "id": "SPX261016C07430000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07430000",
@@ -15991,7 +15991,7 @@
     },
     {
       "id": "SPX261016C07435000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07435000",
@@ -16043,7 +16043,7 @@
     },
     {
       "id": "SPX261016C07440000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07440000",
@@ -16095,7 +16095,7 @@
     },
     {
       "id": "SPX261016C07445000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07445000",
@@ -16147,7 +16147,7 @@
     },
     {
       "id": "SPX261016C07450000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07450000",
@@ -16199,7 +16199,7 @@
     },
     {
       "id": "SPX261016C07455000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07455000",
@@ -16251,7 +16251,7 @@
     },
     {
       "id": "SPX261016C07460000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07460000",
@@ -16303,7 +16303,7 @@
     },
     {
       "id": "SPX261016C07465000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07465000",
@@ -16355,7 +16355,7 @@
     },
     {
       "id": "SPX261016C07470000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07470000",
@@ -16407,7 +16407,7 @@
     },
     {
       "id": "SPX261016C07475000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07475000",
@@ -16459,7 +16459,7 @@
     },
     {
       "id": "SPX261016C07480000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07480000",
@@ -16511,7 +16511,7 @@
     },
     {
       "id": "SPX261016C07485000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07485000",
@@ -16563,7 +16563,7 @@
     },
     {
       "id": "SPX261016C07490000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07490000",
@@ -16615,7 +16615,7 @@
     },
     {
       "id": "SPX261016C07495000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07495000",
@@ -16667,7 +16667,7 @@
     },
     {
       "id": "SPX261016C07500000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07500000",
@@ -16719,7 +16719,7 @@
     },
     {
       "id": "SPX261016C07505000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07505000",
@@ -16771,7 +16771,7 @@
     },
     {
       "id": "SPX261016C07510000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07510000",
@@ -16823,7 +16823,7 @@
     },
     {
       "id": "SPX261016C07515000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07515000",
@@ -16875,7 +16875,7 @@
     },
     {
       "id": "SPX261016C07520000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07520000",
@@ -16927,7 +16927,7 @@
     },
     {
       "id": "SPX261016C07525000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07525000",
@@ -16979,7 +16979,7 @@
     },
     {
       "id": "SPX261016C07530000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07530000",
@@ -17031,7 +17031,7 @@
     },
     {
       "id": "SPX261016C07535000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07535000",
@@ -17083,7 +17083,7 @@
     },
     {
       "id": "SPX261016C07540000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07540000",
@@ -17135,7 +17135,7 @@
     },
     {
       "id": "SPX261016C07545000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07545000",
@@ -17187,7 +17187,7 @@
     },
     {
       "id": "SPX261016C07550000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07550000",
@@ -17239,7 +17239,7 @@
     },
     {
       "id": "SPX261016C07555000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07555000",
@@ -17291,7 +17291,7 @@
     },
     {
       "id": "SPX261016C07560000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07560000",
@@ -17343,7 +17343,7 @@
     },
     {
       "id": "SPX261016C07565000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07565000",
@@ -17395,7 +17395,7 @@
     },
     {
       "id": "SPX261016C07570000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07570000",
@@ -17447,7 +17447,7 @@
     },
     {
       "id": "SPX261016C07575000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07575000",
@@ -17499,7 +17499,7 @@
     },
     {
       "id": "SPX261016C07580000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07580000",
@@ -17551,7 +17551,7 @@
     },
     {
       "id": "SPX261016C07585000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07585000",
@@ -17603,7 +17603,7 @@
     },
     {
       "id": "SPX261016C07590000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07590000",
@@ -17655,7 +17655,7 @@
     },
     {
       "id": "SPX261016C07595000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07595000",
@@ -17707,7 +17707,7 @@
     },
     {
       "id": "SPX261016C07600000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07600000",
@@ -17759,7 +17759,7 @@
     },
     {
       "id": "SPX261016C07605000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07605000",
@@ -17811,7 +17811,7 @@
     },
     {
       "id": "SPX261016C07610000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07610000",
@@ -17863,7 +17863,7 @@
     },
     {
       "id": "SPX261016C07615000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07615000",
@@ -17915,7 +17915,7 @@
     },
     {
       "id": "SPX261016C07620000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07620000",
@@ -17967,7 +17967,7 @@
     },
     {
       "id": "SPX261016C07625000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07625000",
@@ -18019,7 +18019,7 @@
     },
     {
       "id": "SPX261016C07630000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07630000",
@@ -18071,7 +18071,7 @@
     },
     {
       "id": "SPX261016C07635000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07635000",
@@ -18123,7 +18123,7 @@
     },
     {
       "id": "SPX261016C07640000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07640000",
@@ -18175,7 +18175,7 @@
     },
     {
       "id": "SPX261016C07645000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07645000",
@@ -18227,7 +18227,7 @@
     },
     {
       "id": "SPX261016C07650000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07650000",
@@ -18279,7 +18279,7 @@
     },
     {
       "id": "SPX261016C07655000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07655000",
@@ -18331,7 +18331,7 @@
     },
     {
       "id": "SPX261016C07660000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07660000",
@@ -18383,7 +18383,7 @@
     },
     {
       "id": "SPX261016C07665000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07665000",
@@ -18435,7 +18435,7 @@
     },
     {
       "id": "SPX261016C07670000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07670000",
@@ -18487,7 +18487,7 @@
     },
     {
       "id": "SPX261016C07675000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07675000",
@@ -18539,7 +18539,7 @@
     },
     {
       "id": "SPX261016C07680000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07680000",
@@ -18591,7 +18591,7 @@
     },
     {
       "id": "SPX261016C07685000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07685000",
@@ -18643,7 +18643,7 @@
     },
     {
       "id": "SPX261016C07690000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07690000",
@@ -18695,7 +18695,7 @@
     },
     {
       "id": "SPX261016C07695000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07695000",
@@ -18747,7 +18747,7 @@
     },
     {
       "id": "SPX261016C07700000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07700000",
@@ -18799,7 +18799,7 @@
     },
     {
       "id": "SPX261016C07705000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07705000",
@@ -18851,7 +18851,7 @@
     },
     {
       "id": "SPX261016C07710000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07710000",
@@ -18903,7 +18903,7 @@
     },
     {
       "id": "SPX261016C07715000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07715000",
@@ -18955,7 +18955,7 @@
     },
     {
       "id": "SPX261016C07720000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07720000",
@@ -19007,7 +19007,7 @@
     },
     {
       "id": "SPX261016C07725000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07725000",
@@ -19059,7 +19059,7 @@
     },
     {
       "id": "SPX261016C07730000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07730000",
@@ -19111,7 +19111,7 @@
     },
     {
       "id": "SPX261016C07735000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07735000",
@@ -19163,7 +19163,7 @@
     },
     {
       "id": "SPX261016C07740000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07740000",
@@ -19215,7 +19215,7 @@
     },
     {
       "id": "SPX261016C07745000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07745000",
@@ -19267,7 +19267,7 @@
     },
     {
       "id": "SPX261016C07750000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07750000",
@@ -19319,7 +19319,7 @@
     },
     {
       "id": "SPX261016C07755000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07755000",
@@ -19371,7 +19371,7 @@
     },
     {
       "id": "SPX261016C07760000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07760000",
@@ -19423,7 +19423,7 @@
     },
     {
       "id": "SPX261016C07765000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07765000",
@@ -19475,7 +19475,7 @@
     },
     {
       "id": "SPX261016C07770000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07770000",
@@ -19527,7 +19527,7 @@
     },
     {
       "id": "SPX261016C07775000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07775000",
@@ -19579,7 +19579,7 @@
     },
     {
       "id": "SPX261016C07780000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07780000",
@@ -19631,7 +19631,7 @@
     },
     {
       "id": "SPX261016C07785000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07785000",
@@ -19683,7 +19683,7 @@
     },
     {
       "id": "SPX261016C07790000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07790000",
@@ -19735,7 +19735,7 @@
     },
     {
       "id": "SPX261016C07795000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07795000",
@@ -19787,7 +19787,7 @@
     },
     {
       "id": "SPX261016C07800000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07800000",
@@ -19839,7 +19839,7 @@
     },
     {
       "id": "SPX261016C07805000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07805000",
@@ -19891,7 +19891,7 @@
     },
     {
       "id": "SPX261016C07810000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07810000",
@@ -19943,7 +19943,7 @@
     },
     {
       "id": "SPX261016C07815000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07815000",
@@ -19995,7 +19995,7 @@
     },
     {
       "id": "SPX261016C07820000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07820000",
@@ -20047,7 +20047,7 @@
     },
     {
       "id": "SPX261016C07825000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07825000",
@@ -20099,7 +20099,7 @@
     },
     {
       "id": "SPX261016C07830000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07830000",
@@ -20151,7 +20151,7 @@
     },
     {
       "id": "SPX261016C07835000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07835000",
@@ -20203,7 +20203,7 @@
     },
     {
       "id": "SPX261016C07840000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07840000",
@@ -20255,7 +20255,7 @@
     },
     {
       "id": "SPX261016C07845000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07845000",
@@ -20307,7 +20307,7 @@
     },
     {
       "id": "SPX261016C07850000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07850000",
@@ -20359,7 +20359,7 @@
     },
     {
       "id": "SPX261016C07855000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07855000",
@@ -20411,7 +20411,7 @@
     },
     {
       "id": "SPX261016C07860000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07860000",
@@ -20463,7 +20463,7 @@
     },
     {
       "id": "SPX261016C07865000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07865000",
@@ -20515,7 +20515,7 @@
     },
     {
       "id": "SPX261016C07870000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07870000",
@@ -20567,7 +20567,7 @@
     },
     {
       "id": "SPX261016C07875000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07875000",
@@ -20619,7 +20619,7 @@
     },
     {
       "id": "SPX261016C07880000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07880000",
@@ -20671,7 +20671,7 @@
     },
     {
       "id": "SPX261016C07885000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07885000",
@@ -20723,7 +20723,7 @@
     },
     {
       "id": "SPX261016C07890000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07890000",
@@ -20775,7 +20775,7 @@
     },
     {
       "id": "SPX261016C07895000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07895000",
@@ -20827,7 +20827,7 @@
     },
     {
       "id": "SPX261016C07900000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07900000",
@@ -20879,7 +20879,7 @@
     },
     {
       "id": "SPX261016C07905000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07905000",
@@ -20931,7 +20931,7 @@
     },
     {
       "id": "SPX261016C07910000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07910000",
@@ -20983,7 +20983,7 @@
     },
     {
       "id": "SPX261016C07915000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07915000",
@@ -21035,7 +21035,7 @@
     },
     {
       "id": "SPX261016C07920000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07920000",
@@ -21087,7 +21087,7 @@
     },
     {
       "id": "SPX261016C07925000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07925000",
@@ -21139,7 +21139,7 @@
     },
     {
       "id": "SPX261016C07930000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07930000",
@@ -21191,7 +21191,7 @@
     },
     {
       "id": "SPX261016C07935000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07935000",
@@ -21243,7 +21243,7 @@
     },
     {
       "id": "SPX261016C07940000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07940000",
@@ -21295,7 +21295,7 @@
     },
     {
       "id": "SPX261016C07945000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07945000",
@@ -21347,7 +21347,7 @@
     },
     {
       "id": "SPX261016C07950000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07950000",
@@ -21399,7 +21399,7 @@
     },
     {
       "id": "SPX261016C07955000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07955000",
@@ -21451,7 +21451,7 @@
     },
     {
       "id": "SPX261016C07960000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07960000",
@@ -21503,7 +21503,7 @@
     },
     {
       "id": "SPX261016C07965000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07965000",
@@ -21555,7 +21555,7 @@
     },
     {
       "id": "SPX261016C07970000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07970000",
@@ -21607,7 +21607,7 @@
     },
     {
       "id": "SPX261016C07975000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07975000",
@@ -21659,7 +21659,7 @@
     },
     {
       "id": "SPX261016C07980000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07980000",
@@ -21711,7 +21711,7 @@
     },
     {
       "id": "SPX261016C07985000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07985000",
@@ -21763,7 +21763,7 @@
     },
     {
       "id": "SPX261016C07990000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07990000",
@@ -21815,7 +21815,7 @@
     },
     {
       "id": "SPX261016C07995000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C07995000",
@@ -21867,7 +21867,7 @@
     },
     {
       "id": "SPX261016C08000000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08000000",
@@ -21919,7 +21919,7 @@
     },
     {
       "id": "SPX261016C08005000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08005000",
@@ -21971,7 +21971,7 @@
     },
     {
       "id": "SPX261016C08010000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08010000",
@@ -22023,7 +22023,7 @@
     },
     {
       "id": "SPX261016C08015000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08015000",
@@ -22075,7 +22075,7 @@
     },
     {
       "id": "SPX261016C08020000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08020000",
@@ -22127,7 +22127,7 @@
     },
     {
       "id": "SPX261016C08025000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08025000",
@@ -22179,7 +22179,7 @@
     },
     {
       "id": "SPX261016C08030000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08030000",
@@ -22231,7 +22231,7 @@
     },
     {
       "id": "SPX261016C08035000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08035000",
@@ -22283,7 +22283,7 @@
     },
     {
       "id": "SPX261016C08040000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08040000",
@@ -22335,7 +22335,7 @@
     },
     {
       "id": "SPX261016C08045000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08045000",
@@ -22387,7 +22387,7 @@
     },
     {
       "id": "SPX261016C08050000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08050000",
@@ -22439,7 +22439,7 @@
     },
     {
       "id": "SPX261016C08055000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08055000",
@@ -22491,7 +22491,7 @@
     },
     {
       "id": "SPX261016C08060000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08060000",
@@ -22543,7 +22543,7 @@
     },
     {
       "id": "SPX261016C08065000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08065000",
@@ -22595,7 +22595,7 @@
     },
     {
       "id": "SPX261016C08070000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08070000",
@@ -22647,7 +22647,7 @@
     },
     {
       "id": "SPX261016C08075000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08075000",
@@ -22699,7 +22699,7 @@
     },
     {
       "id": "SPX261016C08080000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08080000",
@@ -22751,7 +22751,7 @@
     },
     {
       "id": "SPX261016C08085000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08085000",
@@ -22803,7 +22803,7 @@
     },
     {
       "id": "SPX261016C08090000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08090000",
@@ -22855,7 +22855,7 @@
     },
     {
       "id": "SPX261016C08095000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08095000",
@@ -22907,7 +22907,7 @@
     },
     {
       "id": "SPX261016C08100000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08100000",
@@ -22959,7 +22959,7 @@
     },
     {
       "id": "SPX261016C08105000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08105000",
@@ -23011,7 +23011,7 @@
     },
     {
       "id": "SPX261016C08110000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08110000",
@@ -23063,7 +23063,7 @@
     },
     {
       "id": "SPX261016C08115000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08115000",
@@ -23115,7 +23115,7 @@
     },
     {
       "id": "SPX261016C08120000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08120000",
@@ -23167,7 +23167,7 @@
     },
     {
       "id": "SPX261016C08125000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08125000",
@@ -23219,7 +23219,7 @@
     },
     {
       "id": "SPX261016C08130000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08130000",
@@ -23271,7 +23271,7 @@
     },
     {
       "id": "SPX261016C08135000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08135000",
@@ -23323,7 +23323,7 @@
     },
     {
       "id": "SPX261016C08140000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08140000",
@@ -23375,7 +23375,7 @@
     },
     {
       "id": "SPX261016C08145000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08145000",
@@ -23427,7 +23427,7 @@
     },
     {
       "id": "SPX261016C08150000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08150000",
@@ -23479,7 +23479,7 @@
     },
     {
       "id": "SPX261016C08155000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08155000",
@@ -23531,7 +23531,7 @@
     },
     {
       "id": "SPX261016C08160000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08160000",
@@ -23583,7 +23583,7 @@
     },
     {
       "id": "SPX261016C08165000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08165000",
@@ -23635,7 +23635,7 @@
     },
     {
       "id": "SPX261016C08170000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08170000",
@@ -23687,7 +23687,7 @@
     },
     {
       "id": "SPX261016C08175000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08175000",
@@ -23739,7 +23739,7 @@
     },
     {
       "id": "SPX261016C08180000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08180000",
@@ -23791,7 +23791,7 @@
     },
     {
       "id": "SPX261016C08185000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08185000",
@@ -23843,7 +23843,7 @@
     },
     {
       "id": "SPX261016C08190000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08190000",
@@ -23895,7 +23895,7 @@
     },
     {
       "id": "SPX261016C08195000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08195000",
@@ -23947,7 +23947,7 @@
     },
     {
       "id": "SPX261016C08200000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08200000",
@@ -23999,7 +23999,7 @@
     },
     {
       "id": "SPX261016C08205000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08205000",
@@ -24051,7 +24051,7 @@
     },
     {
       "id": "SPX261016C08210000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08210000",
@@ -24103,7 +24103,7 @@
     },
     {
       "id": "SPX261016C08215000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08215000",
@@ -24155,7 +24155,7 @@
     },
     {
       "id": "SPX261016C08220000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08220000",
@@ -24207,7 +24207,7 @@
     },
     {
       "id": "SPX261016C08225000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08225000",
@@ -24259,7 +24259,7 @@
     },
     {
       "id": "SPX261016C08230000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08230000",
@@ -24311,7 +24311,7 @@
     },
     {
       "id": "SPX261016C08240000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08240000",
@@ -24363,7 +24363,7 @@
     },
     {
       "id": "SPX261016C08250000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08250000",
@@ -24415,7 +24415,7 @@
     },
     {
       "id": "SPX261016C08260000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08260000",
@@ -24467,7 +24467,7 @@
     },
     {
       "id": "SPX261016C08270000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08270000",
@@ -24519,7 +24519,7 @@
     },
     {
       "id": "SPX261016C08275000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08275000",
@@ -24571,7 +24571,7 @@
     },
     {
       "id": "SPX261016C08280000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08280000",
@@ -24623,7 +24623,7 @@
     },
     {
       "id": "SPX261016C08290000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08290000",
@@ -24675,7 +24675,7 @@
     },
     {
       "id": "SPX261016C08300000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08300000",
@@ -24727,7 +24727,7 @@
     },
     {
       "id": "SPX261016C08310000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08310000",
@@ -24779,7 +24779,7 @@
     },
     {
       "id": "SPX261016C08320000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08320000",
@@ -24831,7 +24831,7 @@
     },
     {
       "id": "SPX261016C08325000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08325000",
@@ -24883,7 +24883,7 @@
     },
     {
       "id": "SPX261016C08330000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08330000",
@@ -24935,7 +24935,7 @@
     },
     {
       "id": "SPX261016C08340000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08340000",
@@ -24987,7 +24987,7 @@
     },
     {
       "id": "SPX261016C08350000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08350000",
@@ -25039,7 +25039,7 @@
     },
     {
       "id": "SPX261016C08360000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08360000",
@@ -25091,7 +25091,7 @@
     },
     {
       "id": "SPX261016C08370000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08370000",
@@ -25143,7 +25143,7 @@
     },
     {
       "id": "SPX261016C08375000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08375000",
@@ -25195,7 +25195,7 @@
     },
     {
       "id": "SPX261016C08380000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08380000",
@@ -25247,7 +25247,7 @@
     },
     {
       "id": "SPX261016C08390000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08390000",
@@ -25299,7 +25299,7 @@
     },
     {
       "id": "SPX261016C08400000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08400000",
@@ -25351,7 +25351,7 @@
     },
     {
       "id": "SPX261016C08410000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08410000",
@@ -25403,7 +25403,7 @@
     },
     {
       "id": "SPX261016C08420000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08420000",
@@ -25455,7 +25455,7 @@
     },
     {
       "id": "SPX261016C08425000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08425000",
@@ -25507,7 +25507,7 @@
     },
     {
       "id": "SPX261016C08430000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08430000",
@@ -25559,7 +25559,7 @@
     },
     {
       "id": "SPX261016C08440000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08440000",
@@ -25611,7 +25611,7 @@
     },
     {
       "id": "SPX261016C08450000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08450000",
@@ -25663,7 +25663,7 @@
     },
     {
       "id": "SPX261016C08460000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08460000",
@@ -25715,7 +25715,7 @@
     },
     {
       "id": "SPX261016C08470000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08470000",
@@ -25767,7 +25767,7 @@
     },
     {
       "id": "SPX261016C08475000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08475000",
@@ -25819,7 +25819,7 @@
     },
     {
       "id": "SPX261016C08480000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08480000",
@@ -25871,7 +25871,7 @@
     },
     {
       "id": "SPX261016C08490000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08490000",
@@ -25923,7 +25923,7 @@
     },
     {
       "id": "SPX261016C08500000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08500000",
@@ -25975,7 +25975,7 @@
     },
     {
       "id": "SPX261016C08510000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08510000",
@@ -26027,7 +26027,7 @@
     },
     {
       "id": "SPX261016C08520000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08520000",
@@ -26079,7 +26079,7 @@
     },
     {
       "id": "SPX261016C08525000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08525000",
@@ -26131,7 +26131,7 @@
     },
     {
       "id": "SPX261016C08530000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08530000",
@@ -26183,7 +26183,7 @@
     },
     {
       "id": "SPX261016C08540000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08540000",
@@ -26235,7 +26235,7 @@
     },
     {
       "id": "SPX261016C08550000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08550000",
@@ -26287,7 +26287,7 @@
     },
     {
       "id": "SPX261016C08560000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08560000",
@@ -26339,7 +26339,7 @@
     },
     {
       "id": "SPX261016C08570000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08570000",
@@ -26391,7 +26391,7 @@
     },
     {
       "id": "SPX261016C08575000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08575000",
@@ -26443,7 +26443,7 @@
     },
     {
       "id": "SPX261016C08580000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08580000",
@@ -26495,7 +26495,7 @@
     },
     {
       "id": "SPX261016C08590000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08590000",
@@ -26547,7 +26547,7 @@
     },
     {
       "id": "SPX261016C08600000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08600000",
@@ -26599,7 +26599,7 @@
     },
     {
       "id": "SPX261016C08625000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08625000",
@@ -26651,7 +26651,7 @@
     },
     {
       "id": "SPX261016C08650000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08650000",
@@ -26703,7 +26703,7 @@
     },
     {
       "id": "SPX261016C08675000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08675000",
@@ -26755,7 +26755,7 @@
     },
     {
       "id": "SPX261016C08700000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08700000",
@@ -26807,7 +26807,7 @@
     },
     {
       "id": "SPX261016C08725000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08725000",
@@ -26859,7 +26859,7 @@
     },
     {
       "id": "SPX261016C08750000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08750000",
@@ -26911,7 +26911,7 @@
     },
     {
       "id": "SPX261016C08775000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08775000",
@@ -26963,7 +26963,7 @@
     },
     {
       "id": "SPX261016C08800000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08800000",
@@ -27015,7 +27015,7 @@
     },
     {
       "id": "SPX261016C08825000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08825000",
@@ -27067,7 +27067,7 @@
     },
     {
       "id": "SPX261016C08850000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08850000",
@@ -27119,7 +27119,7 @@
     },
     {
       "id": "SPX261016C08875000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08875000",
@@ -27171,7 +27171,7 @@
     },
     {
       "id": "SPX261016C08900000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08900000",
@@ -27223,7 +27223,7 @@
     },
     {
       "id": "SPX261016C08925000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08925000",
@@ -27275,7 +27275,7 @@
     },
     {
       "id": "SPX261016C08950000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08950000",
@@ -27327,7 +27327,7 @@
     },
     {
       "id": "SPX261016C08975000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C08975000",
@@ -27379,7 +27379,7 @@
     },
     {
       "id": "SPX261016C09000000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C09000000",
@@ -27431,7 +27431,7 @@
     },
     {
       "id": "SPX261016C09100000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C09100000",
@@ -27483,7 +27483,7 @@
     },
     {
       "id": "SPX261016C09200000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C09200000",
@@ -27535,7 +27535,7 @@
     },
     {
       "id": "SPX261016C09300000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C09300000",
@@ -27587,7 +27587,7 @@
     },
     {
       "id": "SPX261016C09400000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C09400000",
@@ -27639,7 +27639,7 @@
     },
     {
       "id": "SPX261016C09500000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C09500000",
@@ -27691,7 +27691,7 @@
     },
     {
       "id": "SPX261016C09600000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C09600000",
@@ -27743,7 +27743,7 @@
     },
     {
       "id": "SPX261016C09700000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C09700000",
@@ -27795,7 +27795,7 @@
     },
     {
       "id": "SPX261016C09800000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C09800000",
@@ -27847,7 +27847,7 @@
     },
     {
       "id": "SPX261016C10000000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C10000000",
@@ -27899,7 +27899,7 @@
     },
     {
       "id": "SPX261016C10200000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C10200000",
@@ -27951,7 +27951,7 @@
     },
     {
       "id": "SPX261016C10400000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C10400000",
@@ -28003,7 +28003,7 @@
     },
     {
       "id": "SPX261016C10600000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C10600000",
@@ -28055,7 +28055,7 @@
     },
     {
       "id": "SPX261016C10800000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C10800000",
@@ -28107,7 +28107,7 @@
     },
     {
       "id": "SPX261016C11000000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C11000000",
@@ -28159,7 +28159,7 @@
     },
     {
       "id": "SPX261016C11200000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C11200000",
@@ -28211,7 +28211,7 @@
     },
     {
       "id": "SPX261016C11400000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C11400000",
@@ -28263,7 +28263,7 @@
     },
     {
       "id": "SPX261016C11600000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C11600000",
@@ -28315,7 +28315,7 @@
     },
     {
       "id": "SPX261016C12000000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C12000000",
@@ -28367,7 +28367,7 @@
     },
     {
       "id": "SPX261016C12400000_HISTORY",
-      "enabled": true,
+      "enabled": false,
       "product": "index_option",
       "operation": "option_history",
       "ticker": "SPX261016C12400000",

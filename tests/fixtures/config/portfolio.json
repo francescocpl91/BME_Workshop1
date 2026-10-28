@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "reporting_currency": "EUR",
+  "weight_basis": "reporting_currency_market_value",
+  "nav": null,
+  "target_allocation": {
+    "equity": 0.5,
+    "sovereign_fixed_income": 0.5
+  },
+  "holdings": [
+    {
+      "request_id": "SPY",
+      "bucket": "equity",
+      "weight": 0.5
+    },
+    {
+      "request_id": "IEF",
+      "bucket": "sovereign_fixed_income",
+      "weight": 0.5
+    }
+  ],
+  "reference_data": [
+    "SPX",
+    "US10Y",
+    "EUR10Y",
+    "SOFR",
+    "ESTR",
+    "EURUSD"
+  ],
+  "instructions": {
+    "scope": "Synthetic 50/50 portfolio for unit tests, independent of user holdings."
+  }
+}

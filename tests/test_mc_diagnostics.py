@@ -6,6 +6,9 @@ import hashlib
 import json
 import socket
 import unittest
+import matplotlib
+# Offline figure tests own their backend; do not depend on test order or Tk.
+matplotlib.use("Agg")
 import numpy as np
 import pandas as pd
 from scipy.stats import skew, kurtosis
@@ -14,13 +17,14 @@ from src.monte_carlo import simulate_processed, load_monte_carlo_config, _sessio
 from src.mc_diagnostics import daily_distribution, wealth_diagnostics
 
 ROOT = Path(__file__).resolve().parents[1]
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "config"
 
 
 class DiagnosticTests(unittest.TestCase):
     def setUp(self):
         self.tmp = TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
-        self.cfg = json.loads((ROOT/"config/monte_carlo.json").read_text(encoding="utf-8"))
+        self.cfg = json.loads((FIXTURES/"monte_carlo.json").read_text(encoding="utf-8"))
         self.cfg.update(paths=200,plots=False,sample_paths=0,forecast_end="2026-11-10")
         self.cfg["calibration"].update(start="2026-07-01",minimum_observations=20)
         self.cfg["student_t"]["sensitivity_tail_probabilities"] = []

@@ -17,11 +17,12 @@ from src.providers.ibkr_snapshots import iter_snapshots
 from src.models import RetrievalError
 
 ROOT = Path(__file__).resolve().parents[1]
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "config"
 
 
 def config(provider, count=7):
     assert provider == 'ibkr'
-    doc = json.loads((ROOT/'config/ibkr.json').read_text())
+    doc = json.loads((FIXTURES/'ibkr.json').read_text())
     doc['requests'] = [r for r in doc['requests'] if r.get('contract')][:count]
     for row in doc['requests']:
         row['operation']='option_model_snapshot';row['frequency']='snapshot';row.pop('timeframe',None)

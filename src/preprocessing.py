@@ -421,6 +421,10 @@ class _RequestReader:
                 self.add(table, key, {k: v for k, v in bar.items() if k != "date"}, source, stamp=stamp)
             self.meta.setdefault("historical_channels", {})[table] = {
                 k: request.get(k) for k in ("bar_size", "use_rth", "what_to_show")}
+            # Preserve duration per response as well: two chunks of one
+            # channel can have different bar sizes, which must not be conflated.
+            self.meta.setdefault("historical_sources", {})[source.replace("\\", "/")] = {
+                k: request.get(k) for k in ("bar_size", "use_rth", "what_to_show")}
             if data.get("errors"):
                 self.issue("saved_provider_errors", source + ": historical callback errors are recorded.")
             if not data.get("completed", False):
@@ -453,6 +457,18 @@ class _RequestReader:
             self.meta["iv_units"] = "annualized_decimal; 0.20 means 20%, as supplied by IBKR"
             self.bases.add("snapshot_quotes_and_separate_model_values")
             return "observations"
+        # Historical requests save contract details in their own response.
+        # Preserve the resolved identity for later validation against the JSON
+        # contract. This is metadata only, never a historical market quote.
+        if provider == "ibkr" and data.get("method") == "reqContractDetails":
+            details = data.get("contract_details") or []
+            if len(details) == 1:
+                self.meta["resolved_contract"] = details[0].get("contract") or {}
+                self.meta["contract_dates"] = {k: details[0].get(k) for k in
+                    ("realExpirationDate", "lastTradeTime", "timeZoneId", "tradingHours", "liquidHours")}
+            elif details:
+                raise ValueError("Ambiguous saved IBKR contract details.")
+            return "metadata"
         # Contract discovery/head timestamps and error payloads can be present
         # beside price responses; classify them without inventing market rows.
         if provider == "ibkr" and data.get("method") in {"reqContractDetails", "reqHeadTimeStamp"}:

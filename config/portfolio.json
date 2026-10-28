@@ -4,19 +4,19 @@
   "weight_basis": "reporting_currency_market_value",
   "nav": null,
   "target_allocation": {
-    "equity": 0.5,
-    "sovereign_fixed_income": 0.5
+    "equity": 0.7,
+    "sovereign_fixed_income": 0.3
   },
   "holdings": [
     {
       "request_id": "SPY",
       "bucket": "equity",
-      "weight": 0.5
+      "weight": 0.7
     },
     {
       "request_id": "IEF",
       "bucket": "sovereign_fixed_income",
-      "weight": 0.5
+      "weight": 0.3
     }
   ],
   "reference_data": [

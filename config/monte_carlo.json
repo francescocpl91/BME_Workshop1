@@ -5,7 +5,7 @@
     "gaussian",
     "student_t_truncated"
   ],
-  "forecast_start": "2026-10-09",
+  "forecast_start": "2026-10-20",
   "forecast_end": "2027-12-17",
   "paths": 10000,
   "seed": 1729,

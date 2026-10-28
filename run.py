@@ -23,6 +23,7 @@ PORTFOLIO_FILE = CONFIG_DIR / "portfolio.json"
 CLEANING_FILE = CONFIG_DIR / "cleaning.json"
 MODELING_FILE = CONFIG_DIR / "modeling.json"
 MONTE_CARLO_FILE = CONFIG_DIR / "monte_carlo.json"
+CALIBRATION_FILE = CONFIG_DIR / "calibration" / "option_calibration.json"
 OIS_FILE = CONFIG_DIR / "ois.json"  # Fixed OIS par quotes reused for every COB; no API.
 
 # Credentials/operational setup remain in Python; never commit actual keys.
@@ -74,7 +75,7 @@ def download_main(cob_text=None, history_start_text=None, *, retry_failed=False)
     print("Previously saved option volatilities remain available if captured successfully;")
     print("their actual observation dates must be checked before using them.")
     print("\nCurrent stage: retrieve/reuse inputs, then process the saved archive.")
-    print("Inventory, cleaning, statistics and configured historical Monte Carlo follow automatically.")
+    print("Inventory, cleaning, available option calibration, statistics and historical Monte Carlo follow automatically.")
     print("Manual OIS par curves are loaded from config/ois.json and saved beside API data.")
     print("The same fixed OIS curves are used for every COB, retaining their original observation dates.")
     print("Live data and usable volatility coverage depend on IBKR availability and access.\n")
@@ -123,7 +124,7 @@ def download_main(cob_text=None, history_start_text=None, *, retry_failed=False)
 def inventory_main(cob_text=None):
     """Inspect local data without constructing a downloader or checking API keys."""
     print("\nPORTFOLIO SIMULATOR")
-    print("Saved market data: inventory, cleaning, statistics and historical Monte Carlo")
+    print("Saved market data: inventory, cleaning, available option calibration, statistics and historical Monte Carlo")
     print("=" * 58)
     print("Reads an existing completed archive. No provider connections are made.")
     print("Checks coverage, cleans data, then saves statistics and configured historical simulations.")
@@ -165,6 +166,7 @@ def _process_inventory(inventory):
     if result.summary["readiness"]["foreign_currencies"] and not result.summary["readiness"]["available_fx_series"]:
         print("FX history is missing: reporting-currency analysis is not ready.")
     print(f"Cleaned/merged data and report: {destination}")
+    _calibrate_available(destination)
     print("Computing historical statistics and stress comparisons for configured holdings.")
     statistics = analyze_processed(result, MODELING_FILE)
     statistics.source_folder = destination.resolve()
@@ -186,8 +188,39 @@ def _process_inventory(inventory):
     for notice in simulation.summary["warnings"]:
         print("Monte Carlo: " + notice)
     print(f"Monte Carlo report and results: {simulation_folder}")
-    print("Raw archive unchanged. Option/local-volatility calibration is not run.")
+    print("Raw archive unchanged. No implied-volatility surface or Dupire simulation is run.")
     return result
+
+
+def _calibrate_available(destination):
+    """Attempt only local OIS/forward/individual-IV work, then continue analysis.
+
+    Use THIS run's processed directory and recorded observation dates. The
+    configuration contains numerical policies only, never an archive selector.
+    Expected missing-data/dependency/configuration errors are reported visibly;
+    unexpected programming errors are not silently swallowed.
+    """
+    print("Checking saved inputs for OIS, equity-forward and option-IV calibration (offline).")
+    try:
+        from src.option_calibration import calibrate_processed
+        calibration = calibrate_processed(destination, CALIBRATION_FILE)
+        target = calibration.save()
+    except (OSError, ValueError, ImportError) as exc:
+        print(f"Option calibration unavailable: {exc}")
+        print("Continuing historical statistics and Monte Carlo; no data download was attempted.")
+        return None
+    summary = calibration.manifest['summary']
+    print(f"Calibration observation dates: {summary['valuation_dates']}")
+    print(f"Option calibration: {summary['status']}; {summary['iv_calculated']:,} of {summary['option_records']:,} IVs calculated.")
+    if summary['skip_reason']:
+        print("Calibration skip reason: " + summary['skip_reason'])
+    if summary['unavailable_reasons']:
+        print(f"Unavailable option inputs: {summary['unavailable_reasons']}")
+    for curve in summary['curve_status']:
+        if curve['status'] != 'bootstrapped':
+            print(f"Curve unavailable: {curve}")
+    print(f"Calibration results/diagnostics: {target}")
+    return calibration
 
 
 def choose_mode():

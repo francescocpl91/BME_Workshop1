@@ -1,15 +1,15 @@
 # PythonToolBox_Taller1Master - Market data
 
-Inputs live in `config/*.json`; operational setup and credential environment-variable names live in `run.py`. Library modules are directly under `src/`.
+Inputs live in `config/`; operational setup and credential environment-variable names live in `run.py`. Library modules are directly under `src/`.
 
 ## Choose a workflow
 
 Run `run.py` with the project interpreter. It asks you to choose:
 
 - **1 - Process saved archive:** enter a saved COB. Inventory, clean and merge the
-  local data without API connections or a history-start prompt, then generate statistics and the configured historical Monte Carlo scenarios.
+  local data without API connections or a history-start prompt, attempt available option calibration, then generate statistics and the configured historical Monte Carlo scenarios.
 - **2 - Download + process:** enter COB and history start. Retrieve/reuse a compatible
-  archive, then automatically inventory, clean, merge, analyse and simulate it.
+  archive, then automatically inventory, clean, merge, attempt available option calibration, analyse and simulate it.
 
 Both choices use the same processing pipeline. The aliases `process`,
 `inventory` and `download` work too. The standalone library function
@@ -488,7 +488,7 @@ Choose **2 - Download** when running `run.py` using the project `.venv` interpre
 1. A completed matching `tests/data_dumps/YYYY-MM-DD` archive is reused without API requests, even if the program runs again on a later day.
 2. Otherwise SPX, SPY, IEF and the enabled FRED/ECB references request history from the user-selected start through COB.
 3. Options use the date rule below. All responses and failures are saved in the COB archive.
-4. The new or reused archive is automatically inventoried, cleaned and merged into separate derived outputs, then the run stops. No surface calibration is performed.
+4. The new or reused archive is inventoried, cleaned and merged into separate derived outputs. The same run then attempts OIS bootstrapping, equity forwards and individual European-option IVs using the resulting processed folder, followed by statistics and historical Monte Carlo. Missing calibration inputs are reported without fetching more data. No fitted volatility surface or Dupire simulation is performed.
 
 | Input COB relative to today's date | IBKR option API | Observation date |
 |---|---|---|
@@ -501,7 +501,7 @@ Example: when today is 08/10/2026, COB 07/10/2026 selects live options on 08/10/
 
 ## Inputs and portfolio
 
-The portfolio is **50% SPY and 50% IEF**, reported in EUR, in `config/portfolio.json`. SPX and SPX options are reference inputs for modelling SPY movements. They are not holdings. The configurable option-reference mapping records this intention; its calibration is later work.
+Portfolio holdings, weights and reporting currency are defined in `config/portfolio.json`; documentation does not impose a separate allocation. SPX and SPX options are reference inputs for modelling SPY movements. They are not holdings. The configurable option-reference mapping records this intention. Individual option IV calculation is integrated; surface fitting and local-volatility simulation remain later work.
 
 - `yahoo.json`, `massive.json`, `ibkr.json`: SPX, SPY and IEF historical requests.
 - `alpha_vantage.json`, `marketdata.json`: SPX, SPY and IEF are enabled. Their current adapters cannot retrieve SPX index history, so these SPX requests save `unsupported_operation` in JSON without sending a stock request. SPY and IEF use ETF history requests; SPY is additional data, not a replacement for SPX.
@@ -528,11 +528,11 @@ IBKR options retain `operation: "option_history"` and `{"start":"COB","end":"COB
 
 ## Manual OIS inputs
 
-`config/ois.json` holds manual USD SOFR and EUR ESTR **spot-starting par OIS swap quotes** from `OIS.docx`, dated 09/10/2026: 86 SOFR tenors (1W–50Y) and 44 ESTR tenors (1W–60Y). Only the source's Live column supplies the curve; historical comparison columns are excluded. Rates are percentages per annum, so 3.890 means 3.890%. They are not zero rates. Contract conventions remain null where the source does not provide them; bootstrap, discount factors and forwards are later work.
+`config/ois.json` holds manually supplied USD SOFR and EUR ESTR spot-starting **par OIS swap quotes**, retaining the observation dates and units recorded there. They are not zero rates. Retrieval archives the supplied quotes unchanged. After cleaning, `src/option_calibration.py` bootstraps date-matched curves under the explicitly labelled assumptions in `config/calibration/option_calibration.json`. Calibration uses only saved data and reports missing inputs. QuantLib is a normal project dependency; no separate runner or requirements file is needed.
 
 `run.py` passes `OIS_FILE` to `download_cob(..., ois_file=...)`. `src.ois.load_ois_config()` validates the input before provider calls. No subscription, key, browser session or API is involved. The JSON is separate from the provider request files; directory-based provider loading excludes it.
 
-Each regional list contains exactly one fixed curve. With `date_policy=fixed_for_all_cobs`, every COB uses those same SOFR and ESTR quotes, still dated 09/10/2026. The dump records `usage_policy=fixed_for_all_cobs` and whether the observation date is before, after or equal to COB. `suitable_for_strict_cob` is true only when the dates match; it is provenance metadata, not a restriction on including the fixed inputs. There is no date-based selection, refresh or missing-date exclusion.
+Each regional list contains exactly one fixed curve. With `date_policy=fixed_for_all_cobs`, every COB archives those same SOFR and ESTR quotes, retaining their configured observation dates. The dump records `usage_policy=fixed_for_all_cobs` and whether the observation date is before, after or equal to COB. `suitable_for_strict_cob` is true only when the dates match; it is provenance metadata, not a restriction on including the fixed inputs. Retrieval does not refresh or exclude these fixed quotes by date. Subsequent option calibration applies its own strict date-matching checks before using them.
 
 New dumps include `ois/input.json`, `ois/us/curve.json`, `ois/us/status.json`, `ois/euro/curve.json`, and `ois/euro/status.json`. The two OIS results also appear in the main summary, even if an API fails. OIS data participates in archive identity checks: changing quotes or adding OIS to a pre-existing archive rejects reuse without overwriting the archive. Completed matching archives are checked and read without API calls or file writes.
 
@@ -542,7 +542,7 @@ Keep exactly one fixed curve per region in `config/ois.json`, preserving its obs
 
 Historical requests use `reqHistoricalData`, an explicit UTC end time, one-day duration, and `keepUpToDate=False`. IBKR historical option bars do **not** provide per-contract historical IV or Greeks. The adapter records these fields as unavailable rather than inventing them. IBKR does not supply expired-option history; a listed input does not guarantee historical availability. Intraday bars are not official settlement prices. Missing historical channels remain visible in the output.
 
-Live requests use the tutorial's ib_insync workflow: one read-only option connection, qualification of explicit contracts, then `reqTickersAsync` snapshots with at most 50 simultaneous option requests. These are current market-data snapshots; paid regulatory snapshots are disabled. Quotes, model IV/Greeks, dividend present value and underlying price are preserved where returned. Missing model fields receive `partial_model_data`; subscriptions do not guarantee every field for every strike. No IV or Greeks are calculated locally.
+Live requests use the tutorial's ib_insync workflow: one read-only option connection, qualification of explicit contracts, then `reqTickersAsync` snapshots with at most 50 simultaneous option requests. These are current market-data snapshots; paid regulatory snapshots are disabled. Quotes, model IV/Greeks, dividend present value and underlying price are preserved where returned. Missing model fields receive `partial_model_data`; subscriptions do not guarantee every field for every strike. Retrieval preserves provider values without calculating IV or Greeks. After cleaning, the offline calibration stage calculates its own European-option IVs and vega where the required inputs are available.
 
 Historical requests share a separate read-only connection, with at most five concurrent contracts and bounded pacing. A historical option can require four requests. Three consecutive timeout/rate/network failures for a channel pause that channel for the remainder of the run, with explicit failure records. Large option universes can still take considerable time.
 
@@ -593,7 +593,7 @@ Offline unit/regression tests use fake responses and temporary folders; they do 
 
 Install the project with Python 3.11+ using `python -m pip install -e .`, including the declared ib_insync dependency. The separate official ibapi SDK is no longer used. Import the library as `from src import MarketDataDownloader`; do not add the `src` directory itself to PYTHONPATH because `src/http.py` would shadow Python's standard library.
 
-Cleaning, aligned local-currency returns, descriptive statistics and historical Monte Carlo are implemented. Monte Carlo can simulate required FX factors jointly when usable history exists. Dividend forecasts, discount/forward curves, implied-volatility surfaces and local-volatility simulation remain later work. ESTR/SOFR observations and sovereign yields are not substitutes for an OIS discount curve. EUR/USD is USD per EUR; conversion to EUR requires the corresponding dated FX observation.
+Cleaning, aligned local-currency returns, descriptive statistics and historical Monte Carlo are implemented. Monte Carlo can simulate required FX factors jointly when usable history exists. Offline OIS discount/zero curves, equity forwards and individual European-option IVs are implemented after cleaning, with strict observation-date checks and explicitly labelled convention assumptions. Dividend forecast generation, fitted implied-volatility surfaces and local-volatility simulation remain later work. ESTR/SOFR observations and sovereign yields are not substitutes for an OIS discount curve. EUR/USD is USD per EUR; conversion to EUR requires the corresponding dated FX observation.
 
 IBKR documentation: [historical bars](https://interactivebrokers.github.io/tws-api/historical_bars.html), [historical limitations](https://interactivebrokers.github.io/tws-api/historical_limitations.html).
 

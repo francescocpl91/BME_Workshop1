@@ -15,6 +15,7 @@ from src.providers.yahoo import YahooProvider
 from src.providers.alpha_vantage import AlphaVantageProvider
 
 PROJECT = Path(__file__).resolve().parents[1]
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "config"
 
 
 def entry(provider="yahoo"):
@@ -51,10 +52,10 @@ class JsonConfigTests(unittest.TestCase):
             loaded = load_provider_configs(path,cob_date=date(2026,10,8))
             self.assertEqual(loaded['requests'][0]['timeframe'],row['timeframe'])
 
-    def test_supplied_configs_include_reference_rates_and_ibkr(self):
-        config = load_provider_configs(PROJECT / "config", history_start=date(2000,1,3))
-        self.assertEqual(len(config["requests"]), 4189)
-        self.assertEqual(sum(len(row["symbols"]) for row in config["requests"]), 4201)
+    def test_fixture_configs_merge_reference_rates_and_ibkr(self):
+        config = load_provider_configs(FIXTURES, history_start=date(2000,1,3))
+        self.assertEqual(len(config["requests"]), 20)
+        self.assertEqual(sum(len(row["symbols"]) for row in config["requests"]), 32)
         rows = {row["id"]: row for row in config["requests"]}
         self.assertEqual(rows["US10Y"]["symbols"], {"fred": "DGS10"})
         self.assertEqual(rows["EURUSD"]["symbols"], {"ecb": "EXR/D.USD.EUR.SP00.A"})
@@ -125,7 +126,7 @@ class JsonConfigTests(unittest.TestCase):
                 load_provider_configs(path)
 
     def test_ecb_fields_and_frequency_are_validated(self):
-        base = json.loads((PROJECT / "config/ecb.json").read_text())["requests"][1]
+        base = json.loads((FIXTURES / "ecb.json").read_text())["requests"][1]
         for inputs in [{"symbol": "EURUSD"}, {"dataflow": "EXR", "series_key": "D..EUR.SP00.A"},
                        {"dataflow": "EXR", "series_key": "M.USD.EUR.SP00.A"}]:
             with tempfile.TemporaryDirectory() as tmp:
@@ -134,7 +135,7 @@ class JsonConfigTests(unittest.TestCase):
                 with self.assertRaises(ValueError): load_provider_configs(path)
 
     def test_supported_product_templates_validate_when_copied_into_requests(self):
-        for path in (PROJECT / "config").glob("*.json"):
+        for path in (FIXTURES).glob("*.json"):
             document = json.loads(path.read_text())
             if path.name in {"portfolio.json", "ois.json", "cleaning.json", "modeling.json", "monte_carlo.json"}: continue
             for guide in document["product_guides"].values():

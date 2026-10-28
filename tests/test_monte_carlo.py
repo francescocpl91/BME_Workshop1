@@ -19,13 +19,14 @@ from src.monte_carlo import (simulate_processed,simulate_saved_processing,load_m
                             _sessions,_student_parameters,SimulationUnavailable)
 
 ROOT=Path(__file__).resolve().parents[1]
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "config"
 
 
 class MonteCarloTests(unittest.TestCase):
     def setUp(self):
         self.tmp=TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.root=Path(self.tmp.name); self.raw=self.root/"raw"; self.raw.mkdir()
-        self.cfg=json.loads((ROOT/"config/monte_carlo.json").read_text(encoding="utf-8-sig"))
+        self.cfg=json.loads((FIXTURES/"monte_carlo.json").read_text(encoding="utf-8-sig"))
         self.cfg["stress_calibrations"]=[]
         self.cfg["diagnostics"]["enabled"]=False
         self.cfg.update(paths=2000,plots=False,sample_paths=2,forecast_start="2026-10-09",forecast_end="2026-10-16")

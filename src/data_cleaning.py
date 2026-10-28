@@ -351,6 +351,10 @@ def _extract(inventory, issues):
                 if item["is_option"]:
                     row["contract"] = meta.get("contract") or {}
                     row["option_dataset"] = name
+                    # IBKR intraday timestamps label the START of a bar. Keep
+                    # its duration so calibration can check when its close was available.
+                    row["bar_size"] = (meta.get("historical_sources", {}).get(source_name)
+                                       or meta.get("historical_channels", {}).get(name) or {}).get("bar_size")
                     row["market_data_type"] = meta.get("market_data_type")
                     row["snapshot_completed"] = meta.get("snapshot_completed")
                     row["resolved_contract"] = meta.get("resolved_contract")
@@ -804,7 +808,7 @@ def clean_auxiliary(actions, references, curves, bars, policy, issues):
         ("value", "unit", "currency", "eligible", "reasons"), issues)
     curves = _deduplicate(curves, ("instrument_id", "provider", "date", "tenor"),
         ("rate_percent", "currency", "quote_type", "rate_unit", "eligible", "reasons"), issues)
-    bars = _deduplicate(bars, ("instrument_id", "provider", "option_dataset", "timestamp", "date"),
+    bars = _deduplicate(bars, ("instrument_id", "provider", "option_dataset", "timestamp", "date", "bar_size"),
         PRICE_FIELDS + ("eligible", "reasons"), issues)
     # OIS is intentionally absent: fixed curves follow their explicit reuse
     # policy, whereas the other dated observations are checked against the window.
