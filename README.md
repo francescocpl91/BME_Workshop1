@@ -7,9 +7,9 @@ Inputs live in `config/`; operational setup and credential environment-variable 
 Run `run.py` with the project interpreter. It asks you to choose:
 
 - **1 - Process saved archive:** enter a saved COB. Inventory, clean and merge the
-  local data without API connections or a history-start prompt, attempt available option calibration, then generate statistics and the configured historical Monte Carlo scenarios.
+  local data without API connections or a history-start prompt, attempt available option calibration and surface fitting, then generate statistics and the configured historical Monte Carlo scenarios.
 - **2 - Download + process:** enter COB and history start. Retrieve/reuse a compatible
-  archive, then automatically inventory, clean, merge, attempt available option calibration, analyse and simulate it.
+  archive, then automatically inventory, clean, merge, attempt available option calibration and surface fitting, analyse and simulate it.
 
 Both choices use the same processing pipeline. The aliases `process`,
 `inventory` and `download` work too. The standalone library function
@@ -488,7 +488,7 @@ Choose **2 - Download** when running `run.py` using the project `.venv` interpre
 1. A completed matching `tests/data_dumps/YYYY-MM-DD` archive is reused without API requests, even if the program runs again on a later day.
 2. Otherwise SPX, SPY, IEF and the enabled FRED/ECB references request history from the user-selected start through COB.
 3. Options use the date rule below. All responses and failures are saved in the COB archive.
-4. The new or reused archive is inventoried, cleaned and merged into separate derived outputs. The same run then attempts OIS bootstrapping, equity forwards and individual European-option IVs using the resulting processed folder, followed by statistics and historical Monte Carlo. Missing calibration inputs are reported without fetching more data. No fitted volatility surface or Dupire simulation is performed.
+4. The new or reused archive is inventoried, cleaned and merged into separate derived outputs. The same run then attempts OIS bootstrapping, equity forwards and individual European-option IVs using the resulting processed folder, followed by statistics and historical Monte Carlo. Missing calibration inputs are reported without fetching more data. The surface-fitting stage follows individual IV calibration; no Dupire simulation is performed.
 
 | Input COB relative to today's date | IBKR option API | Observation date |
 |---|---|---|
@@ -501,7 +501,7 @@ Example: when today is 08/10/2026, COB 07/10/2026 selects live options on 08/10/
 
 ## Inputs and portfolio
 
-Portfolio holdings, weights and reporting currency are defined in `config/portfolio.json`; documentation does not impose a separate allocation. SPX and SPX options are reference inputs for modelling SPY movements. They are not holdings. The configurable option-reference mapping records this intention. Individual option IV calculation is integrated; surface fitting and local-volatility simulation remain later work.
+Portfolio holdings, weights and reporting currency are defined in `config/portfolio.json`; documentation does not impose a separate allocation. SPX and SPX options are reference inputs for modelling SPY movements. They are not holdings. The configurable option-reference mapping records this intention. Individual option IV calculation and offline surface fitting are integrated; local-volatility simulation remains later work.
 
 - `yahoo.json`, `massive.json`, `ibkr.json`: SPX, SPY and IEF historical requests.
 - `alpha_vantage.json`, `marketdata.json`: SPX, SPY and IEF are enabled. Their current adapters cannot retrieve SPX index history, so these SPX requests save `unsupported_operation` in JSON without sending a stock request. SPY and IEF use ETF history requests; SPY is additional data, not a replacement for SPX.
@@ -593,8 +593,62 @@ Offline unit/regression tests use fake responses and temporary folders; they do 
 
 Install the project with Python 3.11+ using `python -m pip install -e .`, including the declared ib_insync dependency. The separate official ibapi SDK is no longer used. Import the library as `from src import MarketDataDownloader`; do not add the `src` directory itself to PYTHONPATH because `src/http.py` would shadow Python's standard library.
 
-Cleaning, aligned local-currency returns, descriptive statistics and historical Monte Carlo are implemented. Monte Carlo can simulate required FX factors jointly when usable history exists. Offline OIS discount/zero curves, equity forwards and individual European-option IVs are implemented after cleaning, with strict observation-date checks and explicitly labelled convention assumptions. Dividend forecast generation, fitted implied-volatility surfaces and local-volatility simulation remain later work. ESTR/SOFR observations and sovereign yields are not substitutes for an OIS discount curve. EUR/USD is USD per EUR; conversion to EUR requires the corresponding dated FX observation.
+Cleaning, aligned local-currency returns, descriptive statistics and historical Monte Carlo are implemented. Monte Carlo can simulate required FX factors jointly when usable history exists. Offline OIS discount/zero curves, equity forwards and individual European-option IVs are implemented after cleaning, with strict observation-date checks and explicitly labelled convention assumptions. Offline implied-volatility surface fitting follows individual IV calculation. Dividend forecast generation and local-volatility simulation remain later work. ESTR/SOFR observations and sovereign yields are not substitutes for an OIS discount curve. EUR/USD is USD per EUR; conversion to EUR requires the corresponding dated FX observation.
 
 IBKR documentation: [historical bars](https://interactivebrokers.github.io/tws-api/historical_bars.html), [historical limitations](https://interactivebrokers.github.io/tws-api/historical_limitations.html).
 
 Console results distinguish `[HISTORICAL]` from `[LIVE SNAPSHOT]`. Existing request IDs ending in `_HISTORY` are stable identifiers retained for archive reuse; they do not select the endpoint. New result metadata records the executed `operation` separately from `configured_operation`.
+
+
+## Offline implied-volatility surface and input eligibility
+
+`run.py` automatically passes this run's processed inputs through option
+calibration and surface fitting. No archive path, ticker or date is hardcoded
+in the surface modules. The configuration is `config/calibration/surface.json`.
+
+The implementation has four parts:
+
+- `src/volatility_surface.py`: configuration, input preparation, orchestration and immutable export.
+- `src/surface_model.py`: normalized Black pricing, SSVI/raw-SVI fitting and numerical shape audits.
+- `src/surface_checks.py`: price/refit/derivative checks and final domain-limited eligibility.
+- `src/surface_reporting.py`: concise Markdown/HTML decision report and separately linked charts.
+
+Eligibility is `blocked`, `eligible_with_warnings` or `eligible`, independently
+for each underlying/date/route/convention cohort. The four essential requirements
+are usable inputs/coverage/price fit; arbitrage/derivative accuracy; refit and
+derivative stability; supported domain/conditioning. Missing evidence blocks.
+JSON permissions explicitly govern intraday approximation, historical closes
+and reviewed maturity jumps. These permissions never waive essential failures.
+Negative boundary derivatives, inadequate density and missing boundary evidence
+remain blocking even when large maturity jumps are permitted.
+
+`eligibility.json` exports the permission, reasons, warnings and exact intervals.
+The safe domain intersects the baseline and numerical-refit supports. Exact
+whole-interval bounds are used for both SVI and SSVI; sampled interior bounds
+cannot authorize unsupported strikes near a maturity boundary. Exact
+expiry knots, before-first/after-last maturities and unsupported wings are
+excluded. `allows_surface_point` and `allows_surface_stencil` in surface_checks
+let a future consumer enforce the contract: a stencil must stay in ONE interval.
+`dupire_input_eligible` is the input permission; `local_volatility_implemented`
+remains false. The former ambiguous constant `dupire_ready` has been removed.
+This is not a validated local-volatility engine or full Monte Carlo permission.
+
+`report.html` and `report.md` show the decision, essential checks, supported
+domain, warnings and expiry price fit. Charts open separately. Detailed CSVs
+retain selection, numerical grids, refit comparisons, maturity jumps and
+unsupported observations; the manifest retains every setting and checksum.
+Results are fingerprinted new derived folders; source archives and prior
+results are preserved. No local volatility, smoothing or downloads are run.
+Exports are assembled and verified in a private sibling staging directory,
+then published by directory rename. A failed write can be retried. Older
+incomplete final folders are preserved under `.i-UNIQUE` and
+recorded in the new manifest. Completed outputs still require matching identity
+and checksums; corruption is never silently replaced.
+
+The default `diagnostics.extended=false` skips optional research work (SSVI
+benchmark, conditioning/forward sensitivity, residual correlations and discrete
+quote-interval feasibility). All essential safeguards remain active. Older
+configurations omitting this flag retain their prior extended diagnostics;
+those omitting eligibility cannot authorize the next module. Historical routes
+never fabricate bid/ask evidence. The maturity-jump and derivative review bands
+remain labelled prototype policies, not universal financial standards.

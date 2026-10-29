@@ -24,6 +24,7 @@ CLEANING_FILE = CONFIG_DIR / "cleaning.json"
 MODELING_FILE = CONFIG_DIR / "modeling.json"
 MONTE_CARLO_FILE = CONFIG_DIR / "monte_carlo.json"
 CALIBRATION_FILE = CONFIG_DIR / "calibration" / "option_calibration.json"
+SURFACE_FILE = CONFIG_DIR / "calibration" / "surface.json"
 OIS_FILE = CONFIG_DIR / "ois.json"  # Fixed OIS par quotes reused for every COB; no API.
 
 # Credentials/operational setup remain in Python; never commit actual keys.
@@ -75,7 +76,7 @@ def download_main(cob_text=None, history_start_text=None, *, retry_failed=False)
     print("Previously saved option volatilities remain available if captured successfully;")
     print("their actual observation dates must be checked before using them.")
     print("\nCurrent stage: retrieve/reuse inputs, then process the saved archive.")
-    print("Inventory, cleaning, available option calibration, statistics and historical Monte Carlo follow automatically.")
+    print("Inventory, cleaning, available option calibration/surface fitting, statistics and historical Monte Carlo follow automatically.")
     print("Manual OIS par curves are loaded from config/ois.json and saved beside API data.")
     print("The same fixed OIS curves are used for every COB, retaining their original observation dates.")
     print("Live data and usable volatility coverage depend on IBKR availability and access.\n")
@@ -124,7 +125,7 @@ def download_main(cob_text=None, history_start_text=None, *, retry_failed=False)
 def inventory_main(cob_text=None):
     """Inspect local data without constructing a downloader or checking API keys."""
     print("\nPORTFOLIO SIMULATOR")
-    print("Saved market data: inventory, cleaning, available option calibration, statistics and historical Monte Carlo")
+    print("Saved market data: inventory, cleaning, available option calibration/surface fitting, statistics and historical Monte Carlo")
     print("=" * 58)
     print("Reads an existing completed archive. No provider connections are made.")
     print("Checks coverage, cleans data, then saves statistics and configured historical simulations.")
@@ -166,7 +167,8 @@ def _process_inventory(inventory):
     if result.summary["readiness"]["foreign_currencies"] and not result.summary["readiness"]["available_fx_series"]:
         print("FX history is missing: reporting-currency analysis is not ready.")
     print(f"Cleaned/merged data and report: {destination}")
-    _calibrate_available(destination)
+    calibration = _calibrate_available(destination)
+    _surface_available(calibration)
     print("Computing historical statistics and stress comparisons for configured holdings.")
     statistics = analyze_processed(result, MODELING_FILE)
     statistics.source_folder = destination.resolve()
@@ -188,7 +190,7 @@ def _process_inventory(inventory):
     for notice in simulation.summary["warnings"]:
         print("Monte Carlo: " + notice)
     print(f"Monte Carlo report and results: {simulation_folder}")
-    print("Raw archive unchanged. No implied-volatility surface or Dupire simulation is run.")
+    print("Raw archive unchanged. Surface diagnostics are separate; no Dupire or local-volatility simulation is run.")
     return result
 
 
@@ -221,6 +223,50 @@ def _calibrate_available(destination):
             print(f"Curve unavailable: {curve}")
     print(f"Calibration results/diagnostics: {target}")
     return calibration
+
+
+
+def _surface_available(calibration):
+    """Fit only this execution's saved IV inputs; never start a downloader.
+
+    Missing calibration or insufficient coverage does not block the existing
+    historical statistics/Monte Carlo. Expected policy/filesystem errors are
+    reported; unexpected programming errors remain visible for debugging.
+    """
+    if calibration is None:
+        print("Surface fitting skipped: option calibration unavailable.")
+        return None
+    print("Fitting an implied-volatility surface from saved IVs (intraday/close approximation).")
+    try:
+        from src.volatility_surface import fit_calibrated
+        surface = fit_calibrated(calibration, SURFACE_FILE, progress=print)
+        target = surface.save()
+    except (OSError, ValueError, ImportError) as exc:
+        print(f"Surface fitting unavailable: {exc}. Continuing historical analysis.")
+        return None
+    summary = surface.manifest['summary']
+    print(f"Surface fitting: {summary['status']}; {summary['fitted_cohorts']} fitted cohorts, "
+          f"{summary['diagnostic_cohorts']} diagnostic-only fits.")
+    if summary.get('skip_reason'):
+        print('Surface skip reason: ' + summary['skip_reason'])
+    for cohort in surface.tables['cohort_status']:
+        print(f"Surface {cohort.get('underlying')} [{cohort.get('model', 'unavailable')}]: {cohort['status']}; "
+              f"market fit={cohort.get('market_fit_pass')}, stability={cohort.get('stability_status')}; "
+              f"{cohort.get('reason', '')}")
+    for cohort in surface.tables['cohort_status']:
+        permission=cohort['local_vol_eligibility']
+        print(f"Local-volatility input eligibility: {cohort.get('underlying')} — {permission['status']}; {len(permission['domain'])} supported intervals.")
+        if permission['blockers']:print('Blocked: '+', '.join(permission['blockers']))
+    practical=[m for m in surface.tables['expiry_metrics'] if m.get('practical_coverage_fraction') is not None]
+    if practical:
+        passed=sum(m['practical_coverage_pass'] for m in practical)
+        unknown=sum(m['practical_unassessed_observations'] for m in practical)
+        print(f"Practical quote coverage: {passed}/{len(practical)} expiries pass; {unknown} live quotes unassessed.")
+        print("Exact bid/ask coverage remains a diagnostic. RMSE, arbitrage and stability checks still apply.")
+    print(f"Surface tables, plots and diagnostics: {target}")
+    print(f"Open the browser-readable surface report: {target / 'report.html'}")
+    print("Intraday timing assumptions remain explicit. No Dupire calculation or new simulation.")
+    return surface
 
 
 def choose_mode():

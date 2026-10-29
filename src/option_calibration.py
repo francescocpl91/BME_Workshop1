@@ -489,7 +489,8 @@ def calculate_option(row, route, contract, curves, prices, cfg):
             raise ValueError('source_currency_mismatch')
         result.update(currency=currency,underlying=contract['underlying'],
                       expiration=contract['expiration'],strike=_number(contract['strike']),
-                      option_type=contract['option_type'])
+                      option_type=contract['option_type'],exercise_style=contract.get('exercise_style'),
+                      settlement=contract.get('settlement'),settlement_time=contract.get('settlement_time'))
         if contract['exercise_style'] != 'european':
             raise ValueError('non_european_option_not_supported')
         if contract.get('settlement') not in ('cash','physical'):

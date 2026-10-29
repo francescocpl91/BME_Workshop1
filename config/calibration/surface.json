@@ -1,0 +1,102 @@
+{
+  "schema_version": 3,
+  "enabled": true,
+  "timing": {
+    "mode": "intraday_approximation",
+    "maximum_capture_minutes": 30.0,
+    "maximum_spot_range_fraction": 0.005,
+    "maximum_carry_dispersion_fraction": 0.0005
+  },
+  "selection": {
+    "minimum_expiries": 3,
+    "minimum_unique_strikes": 12,
+    "minimum_each_side": 3,
+    "minimum_near_forward": 3,
+    "near_forward_abs_k": 0.04,
+    "maximum_abs_k": 0.3,
+    "maximum_relative_spread": 0.1,
+    "maximum_expiry_gap_years": 0.3,
+    "maximum_strike_gap_k": 0.08
+  },
+  "fit": {
+    "initial_rhos": [
+      -0.7,
+      -0.3,
+      0.2
+    ],
+    "maximum_evaluations": 2000,
+    "model": "raw_svi",
+    "svi": {
+      "midpoint_weight": 0.05,
+      "constraint_points": 161,
+      "audit_points": 1001,
+      "constraint_iterations": 500,
+      "constraint_refinements": 3,
+      "arbitrage_tolerance": 1e-09
+    }
+  },
+  "quality": {
+    "price_error_floor_spot_fraction": 1e-05,
+    "historical_relative_error": 0.05,
+    "maximum_scaled_price_rmse": 2.0,
+    "minimum_practical_coverage": 0.7,
+    "maximum_relative_outside_error": 0.02,
+    "maximum_outside_half_spreads": 1.0,
+    "maximum_outside_iv_error": 0.0025
+  },
+  "stability": {
+    "enabled": true,
+    "holdout_stride": 5,
+    "maximum_holdout_scaled_rmse": 3.0,
+    "maximum_iv_change": 0.02,
+    "seed": 1729,
+    "narrow_window_minutes": 5.0,
+    "maturity_holdout_scope": "supported_domain",
+    "timing_role": "diagnostic"
+  },
+  "grid": {
+    "moneyness_points": 81,
+    "maturity_points": 41,
+    "derivative_tolerance": 0.0001
+  },
+  "plots": true,
+  "instructions": {
+    "scope": "Saved inputs from this run only. No downloads, smoothing or Dupire. Four modules: volatility_surface (workflow), surface_model (math), surface_checks (validation/permission), surface_reporting (report/plots).",
+    "fit": "European options only. Dates and upstream curves must agree. Raw SVI and optional SSVI retain their existing fit and arbitrage constraints; no automatic model fallback.",
+    "quality": "Live practical coverage requires all three outside-spread limits per quote plus the expiry RMSE gate. Strict coverage is diagnostic. Historical closes retain RMSE-only assessment, without invented spreads.",
+    "stability": "Required numerical refits and derivative sensitivity must pass. Missing evidence blocks eligibility. Timing subsets are diagnostics; shared-domain comparisons never validate omitted wings.",
+    "derivative_diagnostics": "Prototype score=abs(change)/(absolute_tolerance+relative_tolerance*max(abs(values))). Review when P95>maximum_p95_score or maximum>maximum_score. Maturity jumps are measured at three shrinking offsets; their estimates must converge. These bands are not universal standards.",
+    "eligibility": "Only explicit approximation permissions may turn limitations into warnings. Essential checks cannot be waived. Permission covers the intersection of baseline and numerical-refit domains; exact maturity knots and extrapolation are excluded. Every derivative stencil must remain in one open interval. Eligibility is not local-volatility implementation or simulation approval.",
+    "diagnostics": "extended=false skips the optional SSVI comparison, quote-conditioning, forward-bump, timing-correlation and interval-feasibility research tables. It does not disable fitting, price quality, arbitrage, coverage, refit or derivative safeguards.",
+    "outputs": "Read report.html for the decision, essential checks, domain and warnings. eligibility.json is the machine-readable permission; detailed CSVs and manifest retain evidence/settings. Earlier archives and reports are not overwritten."
+  },
+  "diagnostics": {
+    "forward_bump_fraction": 0.0001,
+    "block_holdout_fraction": 0.15,
+    "check_mid_expiry": true,
+    "extended": false
+  },
+  "derivative_diagnostics": {
+    "enabled": true,
+    "strike_points": 41,
+    "relative_tolerance": 0.25,
+    "absolute_tolerances": {
+      "w_k": 0.001,
+      "w_kk": 0.01,
+      "w_t": 0.001,
+      "density_factor": 0.01
+    },
+    "maximum_p95_score": 1.0,
+    "maximum_score": 4.0,
+    "minimum_density_factor": 0.05,
+    "negative_tolerance": 1e-09,
+    "jump_step_fraction": 0.0001,
+    "jump_convergence_score": 0.01
+  },
+  "eligibility": {
+    "allow_intraday_approximation": true,
+    "allow_historical_closes": true,
+    "allow_maturity_jumps": true,
+    "maturity_knots": "exclude"
+  }
+}
