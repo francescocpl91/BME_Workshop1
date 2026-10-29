@@ -1,4 +1,5 @@
 # Guía en español — Taller B1 T1
+[← Volver al README principal](README.md)
 
 ## 1. ¿En qué consiste nuestro proyecto?
 

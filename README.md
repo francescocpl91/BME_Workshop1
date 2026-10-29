@@ -1,5 +1,14 @@
 # PythonToolBox_Taller1Master - Market data
 
+**Documentación en español 🇪🇸**
+
+- [README en español](README.es.md)
+- [Guía en español](GUIA_ES.MD)
+
+---
+
+
+
 Inputs live in `config/*.json`; operational setup and credential environment-variable names live in `run.py`. Library modules are directly under `src/`.
 
 ## Choose a workflow
