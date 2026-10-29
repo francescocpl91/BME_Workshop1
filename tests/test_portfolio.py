@@ -71,3 +71,8 @@ class PortfolioTests(unittest.TestCase):
         result = self.load(self.data)
         self.assertFalse(result.weights_ready)
         self.assertTrue(all(h['weight'] is None for h in result.holdings))
+
+    def test_negative_nav_is_rejected(self):
+        self.data['nav'] = -1000
+        with self.assertRaises(ValueError):
+            self.load(self.data)
