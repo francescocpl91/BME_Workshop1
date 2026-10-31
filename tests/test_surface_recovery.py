@@ -92,6 +92,18 @@ class RecoveryTests(unittest.TestCase):
         backup=target.parent/manifest['recovered_incomplete_output']
         self.assertEqual((backup/name).read_text(),'preserved')
 
+    def test_malformed_manifest_shapes_fail_closed_without_overwriting(self):
+        self.result.save()
+        path=self.target/'manifest.json'
+        original=json.loads(path.read_text(encoding='utf-8'))
+        for malformed in ([], None, {**original,'files':[]}, {**original,'files':None}):
+            with self.subTest(manifest=malformed):
+                path.write_text(json.dumps(malformed),encoding='utf-8')
+                before=path.read_bytes()
+                with self.assertRaisesRegex(ValueError,'surface_existing_output_inconsistent'):
+                    self.result.save()
+                self.assertEqual(path.read_bytes(),before)
+
     def test_output_id_cannot_escape_surface_directory(self):
         for value in ('..','../escape','C:\\escape',''):
             self.result.run_id=value

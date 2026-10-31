@@ -29,7 +29,7 @@ class MonteCarloTests(unittest.TestCase):
         self.cfg=json.loads((FIXTURES/"monte_carlo.json").read_text(encoding="utf-8-sig"))
         self.cfg["stress_calibrations"]=[]
         self.cfg["diagnostics"]["enabled"]=False
-        self.cfg.update(paths=2000,plots=False,sample_paths=2,forecast_start="2026-10-09",forecast_end="2026-10-16")
+        self.cfg.update(paths=2000,plots=False,sample_paths=2,forecast_start="cob_plus_one",forecast_end="2026-10-16")
         self.cfg["calibration"].update(start="2026-09-01",minimum_observations=10)
         self.cfg["student_t"]["sensitivity_tail_probabilities"]=[]
         self.file=self.root/"mc.json"; self.write_config()
@@ -98,17 +98,39 @@ class MonteCarloTests(unittest.TestCase):
         self.assertEqual(dates[-1],"2026-10-16")
         self.assertEqual(result.summary["steps"],len(dates)-1)
         self.assertNotIn("2026-10-10",dates)
-        self.cfg["forecast_start"]="2026-10-10"; self.write_config()
-        self.assertEqual(simulate_processed(self.processed(),self.file).summary["status"],"unavailable")
+        p=self.processed(); p.cob="2026-10-09"
+        weekend=simulate_processed(p,self.file)
+        self.assertEqual(weekend.summary["status"],"complete")
+        self.assertEqual(weekend.summary["forecast_dates"][:2],["2026-10-10","2026-10-12"])
+        self.assertEqual(weekend.settings["forecast_start"],"2026-10-10")
+        self.assertNotEqual(result.run_id,weekend.run_id)
 
-    def test_start_not_after_cob_is_saved_as_unavailable(self):
-        self.cfg["forecast_start"]="2026-10-08"; self.write_config()
+    def test_end_not_after_cob_plus_one_is_saved_as_unavailable(self):
+        self.cfg["forecast_end"]="2026-10-09"; self.write_config()
         result=simulate_processed(self.processed(),self.file)
         self.assertFalse(result.summary["simulation_performed"])
         output=result.save(self.root/"output")
         manifest=json.loads((output/"manifest.json").read_text())
         self.assertTrue(manifest["complete"])
         self.assertEqual(manifest["status"],"unavailable")
+
+    def test_fixed_start_is_rejected_instead_of_overriding_archive(self):
+        self.cfg["forecast_start"]="2026-10-09"; self.write_config()
+        with self.assertRaisesRegex(ValueError,"cob_plus_one"):
+            simulate_processed(self.processed(),self.file)
+
+    def test_start_policy_handles_leap_year_and_holiday(self):
+        from src.cob import forecast_start_for_cob
+        self.assertEqual(forecast_start_for_cob("2028-02-28"),"2028-02-29")
+        self.assertEqual(forecast_start_for_cob("2028-02-29"),"2028-03-01")
+        self.assertEqual(forecast_start_for_cob("2026-12-31"),"2027-01-01")
+        for invalid in (None,"08/10/2026","bad",True):
+            with self.assertRaisesRegex(ValueError,"archive_cob"):
+                forecast_start_for_cob(invalid)
+        self.cfg.update(forecast_end="2026-12-29",paths=20,models=["gaussian"])
+        self.write_config(); p=self.processed();p.cob="2026-12-24"
+        result=simulate_processed(p,self.file)
+        self.assertEqual(result.summary["forecast_dates"][:2],["2026-12-25","2026-12-28"])
 
     def test_lookback_filter_and_future_observations_do_not_leak(self):
         p=self.processed()

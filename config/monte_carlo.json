@@ -5,7 +5,7 @@
     "gaussian",
     "student_t_truncated"
   ],
-  "forecast_start": "2026-10-20",
+  "forecast_start": "cob_plus_one",
   "forecast_end": "2027-12-17",
   "paths": 10000,
   "seed": 1729,
@@ -52,7 +52,7 @@
   "plots": true,
   "instructions": {
     "scope": "Offline historical-measure Gaussian and radially truncated multivariate Student-t daily log-return scenarios only. No option pricing, Dupire/local volatility, OIS use or risk-neutral simulation.",
-    "dates": "Normalized wealth is initialized at forecast_start (100 by default); the first shock ends on the next exchange session. Calibration ends at the source COB, strictly before forecast_start. These are not observed prices on forecast_start.",
+    "dates": "Forecast starts exactly one calendar day after the selected archive COB, resolved by Python. Calibration ends at COB. The first shock ends on the next exchange session strictly after the initial point. Initial levels are normalized assumed valuations, not observed quotes on that date.",
     "drift": "Use the arithmetic sample mean of DAILY LOG returns over a shared calibration window. Default latest ten calendar years through COB; explicit start overrides lookback_years. No additional half-variance subtraction. Report drift estimation uncertainty and actual coverage.",
     "portfolio": "Configured weights apply once at forecast_start, then drift. Adjusted ETF histories represent reinvested wealth; do not add dividends again. Never fit the previously drifted historical portfolio as one asset. Totals within the accepted 1e-8 rounding tolerance are reconciled to one for simulation only; configured and effective weights are recorded. Material allocation errors and missing holdings are not normalized away.",
     "fx": "FX definitions explicitly declare quote units. Simulate required direct/inverse FX factors jointly and translate normalized holding growth. If reporting-currency FX is missing/insufficient, try USD; never aggregate unconverted currencies. No fixed-FX assumption.",
@@ -66,7 +66,7 @@
     "schema_version": "2 identifies this input contract: fitted joint Student-t df and probability-based truncation. It is not the number of scenarios.",
     "enabled": "true executes offline simulation at this workflow stage. false produces a disabled result and does not delete earlier outputs.",
     "models": "gaussian generates correlated normal daily LOG increments. student_t_truncated fits one multivariate df and runs the main truncation plus sensitivity cases. Both use the same historical mean/covariance within each calibration. Holdings are simulated jointly, not independently.",
-    "forecast_start": "ISO YYYY-MM-DD date strictly after source COB and itself an exchange session. This is initial normalized wealth, not the first random increment; the first return ends next session. Initial levels are assumed normalized valuations, not observed share prices.",
+    "forecast_start": "Must be cob_plus_one. The selected archive COB plus one calendar day is always the initial normalized valuation date. No fixed start date is accepted. On weekends/holidays the initial point is retained; the first random return ends on the next exchange session.",
     "forecast_end": "ISO inclusive end if an exchange session, otherwise last session on/before it with a warning. These forecast dates are independent of the historical calibration window.",
     "paths": "Independent joint paths per scenario. Each includes every holding and necessary FX factor. More paths lower MC sampling error approximately as 1/sqrt(paths); they do not reduce financial risk or parameter uncertainty.",
     "seed": "Nonnegative integer combined with a deterministic model-name hash for repeatable pseudo-random draws. Matching baseline/stress models share streams; differently named sensitivities use different streams. Changing paths changes consumption of draws on later dates.",

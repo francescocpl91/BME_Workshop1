@@ -3,8 +3,10 @@
 This is a pricing assumption, not a wider market-supported domain. Each expiry
 keeps its original smile on a core containing the approved strips. Outside it,
 positive mixtures of powers match the OTM premium and its first derivative.
-Between expiries we retain the original linear normalized-call interpolation.
-Before the first expiry we scale its completed total variance from zero to one.
+The unsmoothed construction uses linear normalized calls between expiries
+and scaled first-smile total variance before the first expiry. An optional
+positive time average then smooths the completed PRICES, subject to unchanged
+fit tolerances. The PDE and opted-in state/MC interfaces use that same model.
 The strict public local-volatility evaluator is never modified.
 """
 import math
@@ -19,10 +21,11 @@ class CalibratedBoundaryLocalVol(BoundaryLocalVol):
 
     Wing exponents >1 on the put side and >0 on the call side give positive
     density and the correct limiting prices/digitals. Successive mixtures are
-    chosen so the slow component alone dominates the preceding entire tail
-    beyond the new join. The remaining transition strip is audited separately.
-    Continuity is C1 in strike; density can jump at a join. Exact maturity knots
-    retain the right-interval convention, with a left limit at the terminal.
+    chosen by the exact minimum of successive tail-price differences; legacy
+    zero-seed settings retain the older sufficient dominance rule. The core
+    and transition strips are audited separately. Price is C1 in strike;
+    density can jump at a join. Positive time averaging smooths maturity
+    derivatives without assuming additional market support.
     """
     def __init__(self, evaluator, cfg, variant='baseline'):
         super().__init__(evaluator, cfg, variant)
@@ -71,20 +74,75 @@ class CalibratedBoundaryLocalVol(BoundaryLocalVol):
         self.low = np.array([1+fraction*(exponents[:, 0].min()-1), fraction*exponents[:, 1].min()])
         for j, pair in enumerate(self.ends):
             for side, end in enumerate(pair):
-                weight = 0.
+                # Every maturity needs the same positive asymptotic component.
+                # With weight=0 at the first node but >0 later, the ratio of
+                # successive tail prices can explode as k tends to infinity.
+                # Price and slope still determine the remaining exponent.
+                weight = cfg['first_wing_tail_weight']
                 if j:
                     previous = self.ends[j-1][side]
                     distance = (end['join']-previous['join'])*(1 if side == 0 else -1)
                     prior = previous['premium']*(previous['weight']*math.exp(self.low[side]*distance)
                         +(1-previous['weight'])*math.exp(previous['high']*distance))
-                    weight = prior/end['premium']
+                    if cfg['first_wing_tail_weight']:
+                        weight = self._minimal_ordered_weight(previous,end,side,distance)
+                    else:
+                        weight = prior/end['premium']
                 if not 0 <= weight < 1:
                     raise ValueError('wing_calendar_dominance_not_feasible')
                 high = (end['effective']-weight*self.low[side])/(1-weight)
                 end.update(weight=weight, high=high)
                 self.records.append(dict(years=float(self.times[j]), side='put' if side == 0 else 'call',
                     **end, low=float(self.low[side]), variant=variant, observed_support=False))
+        # Width scales with THIS surface's smallest expiry gap, never a
+        # hardcoded date, asset or volatility. Zero retains the legacy model.
+        self.smoothing_width = cfg['time_smoothing_fraction']*float(np.min(np.diff(np.r_[0.,self.times])))
+        self._time_nodes, self._time_weights = np.polynomial.legendre.leggauss(cfg['time_smoothing_quadrature'])
         self.audit = self._audit()
+        self.audit.update(calibration=('node_anchors_before_time_average' if self.smoothing_width else 'exact_first_smile_anchor'),
+            first_wing_tail_weight=cfg['first_wing_tail_weight'],
+            time_smoothing_width_years=self.smoothing_width,
+            time_smoothing_arbitrage='positive_average_of_monotone_time_changes',
+            common_positive_asymptotic_tail=cfg['first_wing_tail_weight']>0)
+
+    def _minimal_ordered_weight(self, previous, end, side, distance):
+        """Smallest slow-tail mass satisfying exact global calendar ordering.
+
+        The old sufficient rule made the NEW slow component dominate BOTH old
+        components. That unnecessarily promoted fast-decaying mass into the
+        slow tail at every expiry. Instead compare the two mixtures exactly.
+
+        At outward distance x>=0 from the new join, factor out exp(-p*x).
+        The price difference is Anew-Aold + Bnew*exp(-u*x)-Bold*exp(-v*x).
+        Its minimum occurs at zero, infinity, or its single stationary point.
+        Increasing the mixture weight raises every tail price while leaving
+        the join price/slope fixed, so a bracketed scalar bisection is valid.
+        This uses each node's prices/slopes; there is no asset-specific tuning.
+        """
+        p=float(self.low[side]); price=end['premium']; effective=end['effective']
+        a=previous['premium']*previous['weight']*math.exp(p*distance)
+        b=previous['premium']*(1-previous['weight'])*math.exp(previous['high']*distance)
+        v=previous['high']-p
+        if price < a+b-1e-12*price:raise ValueError('wing_join_calendar_crossing')
+        lower=a/price; upper=(a+b)/price
+        if not 0<=lower<=upper<1:raise ValueError('wing_calendar_weight_bracket_failed')
+        def minimum(weight):
+            new_b=price*(1-weight)
+            u=(effective-p)/(1-weight)
+            value=min(price-a-b,price*weight-a)
+            # u>v is the only case with an interior MINIMUM. For u<=v,
+            # any stationary point is a maximum and the endpoints suffice.
+            if b>0 and v>0 and u>v:
+                location=math.log((u*new_b)/(v*b))/(u-v)
+                if location>0:
+                    value=min(value,price*weight-a+new_b*math.exp(-u*location)-b*math.exp(-v*location))
+            return value
+        if minimum(lower)>=0:return lower
+        for _ in range(64):
+            middle=(lower+upper)/2
+            if minimum(middle)>=0:upper=middle
+            else:lower=middle
+        return upper
 
     def node(self, j, k):
         """OTM premium, k derivative and (c_kk-c_k), without ITM cancellation.
@@ -147,7 +205,7 @@ class CalibratedBoundaryLocalVol(BoundaryLocalVol):
                     raise ValueError('completed_wing_calendar_crossing')
             previous = value
         return dict(status='passed', points=len(k), minimum_calendar_price_difference=minimum_calendar,
-                    minimum_density=minimum_density, outer_tail_ordering='analytic_dominance',
+                    minimum_density=minimum_density, outer_tail_ordering=('analytic_stationary_minimum' if self.cfg['first_wing_tail_weight'] else 'analytic_dominance'),
                     core_and_transition_ordering='numerical_audit', calibration='exact_first_smile_anchor',
                     maximum_tail_exponent=max(r['high'] for r in self.records),
                     price_continuity='C1_at_wing_joins_density_may_jump',
@@ -254,7 +312,7 @@ class CalibratedBoundaryLocalVol(BoundaryLocalVol):
             inverse = np.bincount(cached['indices'], weights=cached['weights']/v, minlength=len(centres))
         return cached['mass']/inverse
 
-    def variance(self, t, k):
+    def _unsmoothed_variance(self, t, k):
         if not np.isfinite(t) or not 0 <= t <= self.times[-1]:
             raise ValueError('pricing_time_outside_horizon')
         k = np.asarray(k, float)
@@ -284,3 +342,116 @@ class CalibratedBoundaryLocalVol(BoundaryLocalVol):
             result = 2*np.maximum(change, 0)/(width*density)
         if not np.isfinite(result).all() or np.any(result < 0):raise ValueError('invalid_extended_variance')
         return result
+
+
+    def _base_price_density_variance(self, t, k):
+        """Completed OTM premium, log density and Dupire variance before smoothing.
+
+        Log density avoids 0/0 in far-OTM short-time tails. It is a numerical
+        representation of the same positive density, not a density floor.
+        """
+        variance = self._unsmoothed_variance(t,k)
+        if t < self.times[0]:
+            w1,wk1,wkk1 = self._cache['first']
+            power = self.cfg['short_end_power_alternative'] if self.variant=='short_end_alternative' else 1.
+            a = (t/self.times[0])**power
+            w,wk,wkk = a*w1,a*wk1,a*wkk1
+            g = (1-k*wk/(2*w))**2-.25*wk*wk*(1/w+.25)+.5*wkk
+            d1 = -k/np.sqrt(w)+.5*np.sqrt(w)
+            # density = phi(d1)*g/sqrt(w), valid for both OTM calls and puts.
+            log_density = -.5*d1*d1-.5*math.log(2*math.pi)+np.log(g)-.5*np.log(w)
+            premium = black_prices(1.,np.exp(k),1.,1.,np.sqrt(w),k>=0)
+        else:
+            j=int(np.clip(np.searchsorted(self.times,t,side='right')-1,0,len(self.times)-2))
+            alpha=(t-self.times[j])/(self.times[j+1]-self.times[j])
+            first,second=self._cache['nodes'][j:j+2]
+            premium=(1-alpha)*first[0]+alpha*second[0]
+            log_density=np.log((1-alpha)*first[2]+alpha*second[2])
+        return premium,log_density,variance
+
+    def _time_window(self,t):
+        """Smooth finite window, vanishing at origin and final expiry.
+
+        h=delta*(1-exp(-(t/delta)^2))*(1-exp(-((Tmax-t)/delta)^2)).
+        h<min(t,Tmax-t), |h'|<sqrt(2/e)<1. Thus every mapped time
+        g_z=t+h*z, -1<=z<=1, stays in the fitted horizon and increases
+        with t. Near zero h/t tends to zero, retaining the original limit.
+        """
+        delta=self.smoothing_width; last=float(self.times[-1])
+        u,v=t/delta,(last-t)/delta
+        eu,ev=math.exp(-u*u),math.exp(-v*v)
+        a,b=-math.expm1(-u*u),-math.expm1(-v*v)
+        return delta*a*b, 2*u*eu*b-2*v*ev*a
+
+    def completed_values(self,t,k):
+        """Positive uniform time average of completed option prices.
+
+        C_new(t,k)=1/2 integral[-1,1] C_old(t+h(t)*z,k) dz.
+        Each slice is convex in strike. Every mapped time is increasing, so
+        calendar monotonicity also survives. Density is the positive average
+        of old densities; C_t averages old C_t*(1+h'*z), also nonnegative.
+        Split integration at EVERY expiry: a quadrature rule may not straddle
+        a derivative jump. Linear-price intervals integrate exactly; only the
+        nonlinear short end needs Gaussian quadrature. No variance cap is used.
+
+        Smoothing can slightly move prices at intermediate quoted expiries.
+        The unchanged fit/PDE/IV budgets must accept those moves; node matching
+        is not falsely claimed to remain exact after time smoothing.
+        """
+        t=float(t);k=np.asarray(k,float)
+        if not np.isfinite(t) or not 0<t<=self.times[-1] or not k.size or not np.isfinite(k).all():
+            raise ValueError('invalid_completed_price_query')
+        if self.smoothing_width==0 or t==self.times[-1]:
+            p,ld,v=self._base_price_density_variance(t,k)
+            return dict(premium=p,density=np.exp(ld),time_derivative=.5*np.exp(ld)*v,variance=v)
+        h,hp=self._time_window(t)
+        if h<=np.finfo(float).eps*t:
+            p,ld,v=self._base_price_density_variance(t,k)
+            return dict(premium=p,density=np.exp(ld),time_derivative=.5*np.exp(ld)*v,variance=v)
+        edges=np.r_[-1.,(self.times[(self.times>t-h)&(self.times<t+h)]-t)/h,1.]
+        samples=[]
+        for left,right in zip(edges[:-1],edges[1:]):
+            mid=(left+right)/2; half=(right-left)/2
+            if t+h*mid < self.times[0]:
+                nodes=mid+half*self._time_nodes; weights=.5*half*self._time_weights
+            else:
+                nodes=np.array([mid]);weights=np.array([half])
+            for z,weight in zip(nodes,weights):
+                p,ld,v=self._base_price_density_variance(t+h*z,k)
+                samples.append((float(weight),p,ld,v*(1+hp*z)))
+        log_scale=np.maximum.reduce([item[2] for item in samples])
+        mass=np.zeros_like(k); numerator=np.zeros_like(k); premium=np.zeros_like(k)
+        for weight,p,ld,v in samples:
+            scaled=weight*np.exp(ld-log_scale)
+            mass+=scaled; numerator+=scaled*v; premium+=weight*p
+        variance=numerator/mass
+        if not np.isfinite(variance).all() or np.any(variance<0) or np.any(mass<=0):
+            raise ValueError('invalid_smoothed_completion')
+        density=np.exp(log_scale)*mass
+        return dict(premium=premium,density=density,time_derivative=.5*density*variance,variance=variance)
+
+    def variance(self,t,k):
+        """Use the SAME completed coefficient for PDE, state lookup and MC."""
+        if self.smoothing_width==0 or t==0:
+            return self._unsmoothed_variance(t,k)
+        return self.completed_values(t,k)['variance']
+
+
+    def time_nodes(self,start,end,steps_per_year):
+        """Resolve the smoothing window instead of stepping over it.
+
+        Additional nodes depend only on this surface's expiries/width and the
+        requested numerical resolution. Doubling steps_per_year also doubles
+        the local refinement; fine/coarse PDE tests remain meaningful.
+        """
+        n=max(2,int(math.ceil((end-start)*steps_per_year)))
+        nodes=[np.linspace(start,end,n+1)]
+        if self.smoothing_width:
+            delta=self.smoothing_width
+            resolution=max(2,int(math.ceil(self.cfg['time_smoothing_time_points']*steps_per_year/365)))
+            for knot in np.r_[0.,self.times]:
+                a=max(start,float(knot)-3*delta);b=min(end,float(knot)+3*delta)
+                if a<b:
+                    count=max(1,int(math.ceil((b-a)/(delta/resolution))))
+                    nodes.append(np.linspace(a,b,count+1))
+        return np.unique(np.concatenate(nodes))

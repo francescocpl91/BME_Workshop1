@@ -70,7 +70,7 @@ def write_implied_view(result,gid,path):
         path.write_text('<!doctype html><meta charset="utf-8"><p>No supported surface domain available.</p>',encoding='utf-8');return
     observations=[[float(r['years']),math.exp(float(r['k'])),100*float(r['observed_iv'])]
         for r in result.tables.get('repricing',[]) if r['group_id']==gid]
-    path.write_text(render_surface_3d(str(cohort.get('underlying'))+' — implied volatility',patches,observations,
+    path.write_text(render_surface_3d(str(cohort.get('underlying'))+' - implied volatility',patches,observations,
         'Fitted IV on the bounded conversion domain. Pink observations may lie outside this domain. Intraday approximation and eligibility warnings remain in report.html.'),encoding='utf-8')
 
 
@@ -111,5 +111,5 @@ def write_local_view(result,gid,path):
         path.write_text('<!doctype html><meta charset="utf-8"><p>No complete local-volatility grid cells available. See report.html.</p>',encoding='utf-8')
         return
     title=next(r.get('underlying') for r in result.tables['cohorts'] if r['group_id']==gid)
-    path.write_text(render_surface_3d(str(title)+' — local volatility',patches,notice=
+    path.write_text(render_surface_3d(str(title)+' - local volatility',patches,notice=
         'Annualized local volatility on available interior samples; cohort validation is stated in the labels and report. Missing cells, short end, wings and exact maturity knots are not plotted as market-supported data. Pricing extensions remain assumptions.'),encoding='utf-8')

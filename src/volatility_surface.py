@@ -417,7 +417,12 @@ class SurfaceResult:
 
     def _verify_saved(self,target,expected):
         """Completed outputs are immutable: any mismatch still fails closed."""
-        saved=_read_json(target/'manifest.json');files=saved.get('files',{})
+        saved=_read_json(target/'manifest.json')
+        # A syntactically valid JSON value can still have the wrong shape.
+        # Report a controlled integrity error instead of leaking AttributeError.
+        if not isinstance(saved,dict) or not isinstance(saved.get('files'),dict):
+            raise ValueError('surface_existing_output_inconsistent')
+        files=saved['files']
         if saved.get('identity')!=self.manifest['identity'] or saved.get('complete') is not True or set(files)!=set(expected):
             raise ValueError('surface_existing_output_inconsistent')
         for name,filename in expected.items():
@@ -452,6 +457,8 @@ class SurfaceResult:
             if not target.is_dir():raise ValueError('surface_output_is_not_directory')
             if (target/'manifest.json').exists():
                 saved=_read_json(target/'manifest.json')
+                if not isinstance(saved,dict):
+                    raise ValueError('surface_existing_output_inconsistent')
                 if saved.get('complete') is True:
                     self._verify_saved(target,expected);return True
                 if saved.get('complete') is not False or saved.get('identity')!=self.manifest['identity']:

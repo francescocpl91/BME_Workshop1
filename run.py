@@ -26,6 +26,7 @@ MONTE_CARLO_FILE = CONFIG_DIR / "monte_carlo.json"
 CALIBRATION_FILE = CONFIG_DIR / "calibration" / "option_calibration.json"
 SURFACE_FILE = CONFIG_DIR / "calibration" / "surface.json"
 LOCAL_VOL_FILE = CONFIG_DIR / "calibration" / "local_volatility.json"
+LOCAL_VOL_MC_FILE = CONFIG_DIR / "calibration" / "local_vol_monte_carlo.json"
 OIS_FILE = CONFIG_DIR / "ois.json"  # Fixed OIS par quotes reused for every COB; no API.
 
 # Credentials/operational setup remain in Python; never commit actual keys.
@@ -72,7 +73,7 @@ def download_main(cob_text=None, history_start_text=None, *, retry_failed=False)
     print("\nFor an older COB without a completed local archive:")
     print("  - Only historical data is requested; no current live option quotes.")
     print("  - IBKR historical option bars do not include historical IV or Greeks.")
-    print("    The planned simulation would therefore use historical volatility.")
+    print("    Historical option calibration also requires matching dated curves and carry inputs.")
     print("\nA completed matching COB archive is reused without new API requests.")
     print("Previously saved option volatilities remain available if captured successfully;")
     print("their actual observation dates must be checked before using them.")
@@ -126,7 +127,7 @@ def download_main(cob_text=None, history_start_text=None, *, retry_failed=False)
 def inventory_main(cob_text=None):
     """Inspect local data without constructing a downloader or checking API keys."""
     print("\nPORTFOLIO SIMULATOR")
-    print("Saved market data: inventory, cleaning, available option calibration/surface fitting, statistics and historical Monte Carlo")
+    print("Saved market data: cleaning, volatility study, historical statistics and portfolio Monte Carlo")
     print("=" * 58)
     print("Reads an existing completed archive. No provider connections are made.")
     print("Checks coverage, cleans data, then saves statistics and configured historical simulations.")
@@ -168,9 +169,25 @@ def _process_inventory(inventory):
     if result.summary["readiness"]["foreign_currencies"] and not result.summary["readiness"]["available_fx_series"]:
         print("FX history is missing: reporting-currency analysis is not ready.")
     print(f"Cleaned/merged data and report: {destination}")
-    calibration = _calibrate_available(destination)
-    surface = _surface_available(calibration)
-    _local_vol_available(surface)
+    # One readable overview joins the existing stages. Each stage still owns
+    # its mathematical checks and full evidence; rejected inputs are not failures
+    # of every downstream model. Historical analysis continues independently.
+    from src.volatility_workflow import capture_console, save_overview
+    with capture_console() as console:
+        print("\nVOLATILITY STUDY (saved data; risk-neutral underlying validation)")
+        calibration = _calibrate_available(destination)
+        surface = _surface_available(calibration)
+        local_vol = _local_vol_available(surface)
+        local_mc = _local_vol_mc_available(local_vol, surface)
+    try:
+        overview = save_overview(destination, (calibration, surface, local_vol, local_mc), console.getvalue())
+        print(f"Volatility overview (start here): {overview / 'report.html'}")
+        print("Detailed stage reports and exclusion reasons are linked from this overview.")
+    except (OSError, ValueError) as exc:
+        # A presentation/integrity problem must remain visible without
+        # discarding the existing numerical results or stopping other analysis.
+        print(f"Volatility overview could not be saved: {exc}")
+        print("Original stage reports remain in the processed folder. Continuing historical analysis.")
     print("Computing historical statistics and stress comparisons for configured holdings.")
     statistics = analyze_processed(result, MODELING_FILE)
     statistics.source_folder = destination.resolve()
@@ -189,10 +206,13 @@ def _process_inventory(inventory):
     simulation.source_folder = destination.resolve()
     simulation_folder = simulation.save(destination / "monte_carlo" / simulation.run_id)
     print(f"Monte Carlo status: {simulation.summary['status']}")
+    forecast = simulation.summary.get('identity', {}).get('settings', {})
+    if forecast.get('forecast_start'):
+        print(f"Historical MC start (COB + 1): {forecast['forecast_start']}; end: {forecast['forecast_end']}")
     for notice in simulation.summary["warnings"]:
         print("Monte Carlo: " + notice)
     print(f"Monte Carlo report and results: {simulation_folder}")
-    print("Raw archive unchanged. Bounded local-volatility conversion is separate from historical Monte Carlo; no local-volatility simulation is run.")
+    print("Raw archive unchanged. Risk-neutral option validation is separate from the existing historical portfolio simulations.")
     return result
 
 
@@ -204,7 +224,7 @@ def _calibrate_available(destination):
     Expected missing-data/dependency/configuration errors are reported visibly;
     unexpected programming errors are not silently swallowed.
     """
-    print("Checking saved inputs for OIS, equity-forward and option-IV calibration (offline).")
+    print("[1/4] OIS curves, equity forwards and individual option IVs.")
     try:
         from src.option_calibration import calibrate_processed
         calibration = calibrate_processed(destination, CALIBRATION_FILE)
@@ -213,17 +233,8 @@ def _calibrate_available(destination):
         print(f"Option calibration unavailable: {exc}")
         print("Continuing historical statistics and Monte Carlo; no data download was attempted.")
         return None
-    summary = calibration.manifest['summary']
-    print(f"Calibration observation dates: {summary['valuation_dates']}")
-    print(f"Option calibration: {summary['status']}; {summary['iv_calculated']:,} of {summary['option_records']:,} IVs calculated.")
-    if summary['skip_reason']:
-        print("Calibration skip reason: " + summary['skip_reason'])
-    if summary['unavailable_reasons']:
-        print(f"Unavailable option inputs: {summary['unavailable_reasons']}")
-    for curve in summary['curve_status']:
-        if curve['status'] != 'bootstrapped':
-            print(f"Curve unavailable: {curve}")
-    print(f"Calibration results/diagnostics: {target}")
+    from src.volatility_workflow import show_stage
+    show_stage(0, calibration, target)
     return calibration
 
 
@@ -236,38 +247,18 @@ def _surface_available(calibration):
     reported; unexpected programming errors remain visible for debugging.
     """
     if calibration is None:
-        print("Surface fitting skipped: option calibration unavailable.")
         return None
-    print("Fitting an implied-volatility surface from saved IVs (intraday/close approximation).")
+    print("[2/4] Fit implied surface; check price quality, arbitrage and refit stability.")
+    from src.volatility_workflow import Progress, show_stage
+    progress = Progress("Surface fitting and checks")
     try:
         from src.volatility_surface import fit_calibrated
-        surface = fit_calibrated(calibration, SURFACE_FILE, progress=print)
+        surface = fit_calibrated(calibration, SURFACE_FILE, progress=progress)
         target = surface.save()
     except (OSError, ValueError, ImportError) as exc:
         print(f"Surface fitting unavailable: {exc}. Continuing historical analysis.")
         return None
-    summary = surface.manifest['summary']
-    print(f"Surface fitting: {summary['status']}; {summary['fitted_cohorts']} fitted cohorts, "
-          f"{summary['diagnostic_cohorts']} diagnostic-only fits.")
-    if summary.get('skip_reason'):
-        print('Surface skip reason: ' + summary['skip_reason'])
-    for cohort in surface.tables['cohort_status']:
-        print(f"Surface {cohort.get('underlying')} [{cohort.get('model', 'unavailable')}]: {cohort['status']}; "
-              f"market fit={cohort.get('market_fit_pass')}, stability={cohort.get('stability_status')}; "
-              f"{cohort.get('reason', '')}")
-    for cohort in surface.tables['cohort_status']:
-        permission=cohort['local_vol_eligibility']
-        print(f"Local-volatility input eligibility: {cohort.get('underlying')} — {permission['status']}; {len(permission['domain'])} supported intervals.")
-        if permission['blockers']:print('Blocked: '+', '.join(permission['blockers']))
-    practical=[m for m in surface.tables['expiry_metrics'] if m.get('practical_coverage_fraction') is not None]
-    if practical:
-        passed=sum(m['practical_coverage_pass'] for m in practical)
-        unknown=sum(m['practical_unassessed_observations'] for m in practical)
-        print(f"Practical quote coverage: {passed}/{len(practical)} expiries pass; {unknown} live quotes unassessed.")
-        print("Exact bid/ask coverage remains a diagnostic. RMSE, arbitrage and stability checks still apply.")
-    print(f"Surface tables, plots and diagnostics: {target}")
-    print(f"Open the browser-readable surface report: {target / 'report.html'}")
-    print("Surface fitting complete. Intraday timing assumptions remain explicit; local-volatility conversion is assessed next.")
+    show_stage(1, surface, target, progress)
     return surface
 
 
@@ -279,27 +270,42 @@ def _local_vol_available(surface):
     stage does not invoke the existing historical Monte Carlo workflow.
     """
     if surface is None:
-        print("Local-volatility conversion skipped: surface unavailable.")
         return None
-    print("Converting eligible saved surfaces to local volatility (bounded domains only).")
+    print("[3/4] Dupire conversion, explicit boundary completion and PDE repricing.")
+    from src.volatility_workflow import Progress, show_stage
+    progress = Progress("Local volatility and PDE validation")
     try:
         from src.local_volatility import convert_surface
-        result = convert_surface(surface, LOCAL_VOL_FILE, progress=print)
+        result = convert_surface(surface, LOCAL_VOL_FILE, progress=progress)
         target = result.save()
     except (OSError, ValueError, ImportError) as exc:
         print(f"Local-volatility conversion unavailable: {exc}. Continuing historical analysis.")
         return None
-    for cohort in result.tables['cohorts']:
-        print(f"Local volatility {cohort.get('underlying')}: {cohort['status']}; "
-              f"{cohort.get('validation_passes', 0)}/{cohort.get('requested_points', 0)} numerical checks pass; "
-              f"{cohort.get('reason') or 'supported interior grid only'}")
-    print(f"Local-volatility report: {target / 'report.html'}")
-    for assessment in result.tables['pricing_summary']:
-        print(f"Local-volatility PDE pricing {assessment.get('underlying')}: {assessment['status']}; {assessment.get('reason') or 'see explicit boundary assumptions and checks in report'}")
-    for mapping in result.tables['state_mapping']:
-        print(f"Local-volatility date/spot interface {mapping.get('underlying')}: {mapping['status']}; "
-              f"{mapping.get('reason') or mapping.get('reference_timestamp')}.")
-    print("Strict domain remains unchanged. Explicit boundary opt-in is required; no local-volatility Monte Carlo.")
+    show_stage(2, result, target, progress)
+    return result
+
+
+
+def _local_vol_mc_available(local_vol, surface):
+    """Validate this run's eligible underlying diffusion, never its portfolio.
+
+    This stage cannot download. Missing or rejected inputs remain explicit
+    and do not block the established historical analysis. Its own JSON owns
+    paths, seed and numerical tolerances, not portfolio weights or drift.
+    """
+    if local_vol is None or surface is None:
+        return None
+    print("[4/4] Risk-neutral underlying Monte Carlo; price, forward and precision checks.")
+    from src.volatility_workflow import Progress, show_stage
+    progress = Progress("Risk-neutral Monte Carlo")
+    try:
+        from src.local_vol_monte_carlo import validate_local_vol
+        result = validate_local_vol(local_vol, surface, LOCAL_VOL_MC_FILE, progress=progress)
+        target = result.save()
+    except (OSError, ValueError, ImportError) as exc:
+        print(f"Risk-neutral local-volatility MC unavailable: {exc}. Continuing historical analysis.")
+        return None
+    show_stage(3, result, target, progress)
     return result
 
 

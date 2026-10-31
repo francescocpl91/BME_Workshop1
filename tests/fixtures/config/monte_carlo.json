@@ -5,7 +5,7 @@
     "gaussian",
     "student_t_truncated"
   ],
-  "forecast_start": "2026-10-09",
+  "forecast_start": "cob_plus_one",
   "forecast_end": "2027-12-17",
   "paths": 10000,
   "seed": 1729,
@@ -51,7 +51,9 @@
   "sample_paths": 20,
   "plots": true,
   "instructions": {
-    "scope": "Fixed Monte Carlo policies for synthetic unit-test data."
+    "scope": "Fixed Monte Carlo policies for synthetic unit-test data.",
+    "forecast_start": "Must be cob_plus_one. The selected archive COB plus one calendar day is always the initial normalized valuation date. No fixed start date is accepted. On weekends/holidays the initial point is retained; the first random return ends on the next exchange session.",
+    "dates": "Forecast starts exactly one calendar day after the selected archive COB, resolved by Python. Calibration ends at COB. The first shock ends on the next exchange session strictly after the initial point. Initial levels are normalized assumed valuations, not observed quotes on that date."
   },
   "diagnostics": {
     "enabled": true,

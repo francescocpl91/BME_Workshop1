@@ -48,6 +48,7 @@ from scipy.stats import f as f_distribution
 
 from .statistics import _read_json, _day, _prepare, _basis_kind
 from .storage import write_json
+from .cob import forecast_start_for_cob
 from .mc_diagnostics import (daily_distribution, wealth_diagnostics, diagnostic_figures,
                              probability_of_loss, probability_label, confidence_label,
                              LOSS_PROBABILITY_TOLERANCE)
@@ -87,10 +88,11 @@ def load_monte_carlo_config(path):
             any(not isinstance(m,str) or m not in {"gaussian","student_t_truncated"} for m in models)
             or len(set(models)) != len(models)):
         raise ValueError("Choose distinct gaussian/student_t_truncated models.")
-    # Check date order now. Actual exchange sessions and separation from the
-    # archive COB are checked later, when those inputs are available.
-    if _day(cfg["forecast_start"]) >= _day(cfg["forecast_end"]):
-        raise ValueError("Forecast end must follow start.")
+    # A policy marker is allowed, never a user-entered fixed forecast start.
+    # The actual date is resolved from the selected archive in _simulate_core.
+    if cfg["forecast_start"] != "cob_plus_one":
+        raise ValueError("forecast_start must be cob_plus_one; fixed start dates are not supported.")
+    _day(cfg["forecast_end"])
     # At least two paths permit sample standard deviations. The integer seed
     # controls repeatable random draws. sample_paths controls exports only.
     for k,minimum in (("paths",2),("seed",0),("sample_paths",0)):
@@ -542,7 +544,7 @@ class MonteCarloResult:
         s = self.summary
         lines = ["# Historical Monte Carlo","",f"Status: {s['status']}",f"Source COB: {self.cob}",
                  f"Processing ID: {self.processing_id}",f"Simulation ID: {self.run_id}","",
-                 f"Configured forecast: {self.settings['forecast_start']} to {self.settings['forecast_end']}",
+                 f"COB-derived forecast: {self.settings['forecast_start']} to {self.settings['forecast_end']}",
                  f"Paths per scenario: {self.settings['paths']:,}",
                  f"Requested reporting currency: {s.get('reporting_currency','unavailable')}",
                  f"Actual simulation currency: {s.get('simulation_currency','unavailable')}",""]
@@ -869,6 +871,8 @@ def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_cur
     """
     # Copy only relevant cleaned inputs. Raw provider payloads, option quotes
     # and OIS curves are not used by these historical-measure models.
+    cfg = deepcopy(cfg)
+    cfg["forecast_start"] = forecast_start_for_cob(processed.cob)
     source_tables = {k:processed.tables[k].copy(deep=True) for k in ("selected_prices","selected_references")
                      if k in processed.tables}
     # Identity hashes settings, source tables, code and dependency versions.
@@ -879,7 +883,7 @@ def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_cur
                     inputs={k:hashlib.sha256(v.to_csv(index=False).encode()).hexdigest()
                             for k,v in source_tables.items()},
                     code={p.name:hashlib.sha256(p.read_bytes()).hexdigest()
-                          for p in (Path(__file__),Path(__file__).with_name("statistics.py"),Path(__file__).with_name("mc_diagnostics.py"))},
+                          for p in (Path(__file__),Path(__file__).with_name("statistics.py"),Path(__file__).with_name("mc_diagnostics.py"),Path(__file__).with_name("cob.py"))},
                     dependencies={k:version(k) for k in ("numpy","pandas","scipy","exchange-calendars","matplotlib")})
     # Sorted JSON makes a stable compact identifier for this exact setup.
     # Explanatory JSON instructions were excluded by the loader above.
@@ -894,13 +898,16 @@ def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_cur
     if not cfg["enabled"]:
         return result
     try:
-        if cfg["forecast_start"] <= _day(processed.cob):
-            raise SimulationUnavailable("Forecast start must be after archive COB; update the configured dates.")
-        # Initial date must be a session after COB. Non-session forecast end uses
-        # the last preceding session, with a warning recorded below.
-        dates = _sessions(cfg["calendar"],cfg["forecast_start"],cfg["forecast_end"])
-        if len(dates) < 2 or dates[0] != cfg["forecast_start"]:
-            raise SimulationUnavailable("Forecast start must be an exchange session with a later forecast session.")
+        if cfg["forecast_end"] <= cfg["forecast_start"]:
+            raise SimulationUnavailable("Forecast end must follow archive COB + 1 calendar day; update forecast_end.")
+        # Preserve the requested calendar-day initial valuation, even on a
+        # weekend/holiday. Random daily returns end only on subsequent exchange
+        # sessions; no extra weekend shocks or fabricated observed prices.
+        sessions_after_start = [d for d in _sessions(cfg["calendar"],cfg["forecast_start"],cfg["forecast_end"])
+                                if d > cfg["forecast_start"]]
+        dates = [cfg["forecast_start"]] + sessions_after_start
+        if not sessions_after_start:
+            raise SimulationUnavailable("No exchange session after COB + 1 within the configured forecast horizon.")
         portfolio,holdings,native,sessions,requested_start = _holding_inputs(processed,cfg,risk_window)
         # Baseline tries reporting currency then permitted USD fallback. Stress
         # must use the already chosen baseline currency for a valid comparison.

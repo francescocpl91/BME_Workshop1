@@ -291,7 +291,7 @@ class SurfaceWorkflowTests(unittest.TestCase):
         import run
         with redirect_stdout(StringIO()) as output:
             self.assertIsNone(run._surface_available(None))
-        self.assertIn('skipped',output.getvalue())
+        self.assertEqual(output.getvalue(), '')  # upstream cause is shown once, not repeated
         with patch.object(run,'SURFACE_FILE',self.root/'absent.json'),redirect_stdout(StringIO()) as output:
             self.assertIsNone(run._surface_available(self.calibration))
         self.assertIn('unavailable',output.getvalue())
@@ -309,7 +309,7 @@ class SurfaceWorkflowTests(unittest.TestCase):
         def surface(value):self.assertIs(value,self.calibration);order.append('surface')
         def statistics(*args):order.append('statistics');return stats
         def simulation(*args):order.append('mc');return mc
-        with patch.object(run,'process_inventory',return_value=processed), \
+        with patch('src.volatility_workflow.save_overview',return_value=Path('.')),patch.object(run,'process_inventory',return_value=processed), \
              patch.object(run,'_calibrate_available',return_value=self.calibration), \
              patch.object(run,'_surface_available',side_effect=surface), \
              patch.object(run,'analyze_processed',side_effect=statistics), \

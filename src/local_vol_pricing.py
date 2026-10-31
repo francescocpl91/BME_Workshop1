@@ -22,7 +22,8 @@ DEFAULT_PRICING = dict(enabled=False, short_end='flat_first_local_variance',
     wing_transition_width=.2, interior_time_fraction=1e-7,
     absolute_price_forward_fraction=1e-5, relative_price_tolerance=.001,
     numerical_budget_fraction=.25, maximum_iv_error=.0005, wing_tail_fraction=.5, wing_tail_fraction_alternative=.65,
-    short_end_power_alternative=1.2, boundary_audit_points=14001)
+    short_end_power_alternative=1.2, boundary_audit_points=14001,
+    first_wing_tail_weight=0., time_smoothing_fraction=0., time_smoothing_quadrature=12, time_smoothing_time_points=4)
 
 
 def pricing_config(raw):
@@ -39,7 +40,9 @@ def pricing_config(raw):
         if cfg[name]!=DEFAULT_PRICING[name]:raise ValueError('unsupported_'+name)
     for name in ('space_points','steps_per_year','refinement'):
         if type(cfg[name]) is not int:raise ValueError('invalid_'+name)
-    if not 101<=cfg['space_points']<=4001 or cfg['space_points']%2!=1:
+    # A wider domain needs more points to retain spatial resolution; the
+    # finite cap still bounds memory/work for arbitrary configured surfaces.
+    if not 101<=cfg['space_points']<=8001 or cfg['space_points']%2!=1:
         raise ValueError('invalid_space_points')
     if not 12<=cfg['steps_per_year']<=4000 or not 2<=cfg['refinement']<=4:
         raise ValueError('invalid_pricing_resolution')
@@ -64,6 +67,16 @@ def pricing_config(raw):
     if type(power) not in (int,float) or not 1<power<=2:raise ValueError('invalid_short_end_power_alternative')
     if type(cfg['boundary_audit_points']) is not int or not 1001<=cfg['boundary_audit_points']<=100001:
         raise ValueError('invalid_boundary_audit_points')
+    for name, upper in (('first_wing_tail_weight',1.),('time_smoothing_fraction',.1)):
+        value=cfg[name]
+        if type(value) not in (int,float) or not math.isfinite(value) or not 0<=value<upper:
+            raise ValueError('invalid_'+name)
+    if type(cfg['time_smoothing_quadrature']) is not int or not 4<=cfg['time_smoothing_quadrature']<=32:
+        raise ValueError('invalid_time_smoothing_quadrature')
+    if type(cfg['time_smoothing_time_points']) is not int or not 2<=cfg['time_smoothing_time_points']<=32:
+        raise ValueError('invalid_time_smoothing_time_points')
+    if not new_policy and (cfg['first_wing_tail_weight'] or cfg['time_smoothing_fraction']):
+        raise ValueError('completion_stabilization_requires_calibrated_prices')
     return cfg
 
 
@@ -198,7 +211,7 @@ def solve_calls(boundary,times,*,bounds,points,steps_per_year):
         return out
     for end in times:
         n=max(2,int(math.ceil((end-start)*steps_per_year)))
-        nodes=np.linspace(start,end,n+1)
+        nodes=boundary.time_nodes(start,float(end),steps_per_year) if hasattr(boundary,'time_nodes') else np.linspace(start,end,n+1)
         for i,(a,b) in enumerate(zip(nodes[:-1],nodes[1:])):
             if i==0:
                 mid=(a+b)/2;values=advance(values,a,mid,1.);values=advance(values,mid,b,1.)

@@ -28,7 +28,7 @@ def _table(headers,rows):
 def render_report(result):
     """Report the actual eligibility decision; never infer a different one."""
     cfg=result.manifest['identity']['config'];q=cfg['quality']
-    lines=['# Implied-volatility surface — decision', '',
+    lines=['# Implied-volatility surface - decision', '',
         f'Archive COB: **{result.manifest.get("archive_cob","not available")}**. Analysis: `{result.run_id}`.', '',
         '## Outcome', '',
         'An eligible result supplies inputs for the separate bounded Dupire stage. '
@@ -41,13 +41,13 @@ def render_report(result):
         if gid not in result.models:
             reasons=sorted({str(r.get('reason')).replace('_',' ') for r in rows('selection')
                             if r.get('reason')})
-            lines += [f'## Excluded inputs — {cohort.get("underlying")} ({cohort.get("valuation_date")})', '',
+            lines += [f'## Excluded inputs - {cohort.get("underlying")} ({cohort.get("valuation_date")})', '',
                 f'{len(rows("selection"))} input records. **Blocked:** '
                 +str(cohort.get('reason','no fitted surface')).replace('_',' ')+'. '
                 'No fitted surface is available for this group.', '']
             if reasons:lines += ['Input exclusions: '+', '.join(reasons)+'.', '']
             continue
-        lines += [f'## {cohort.get("underlying")} — {cohort.get("valuation_date")} ({cohort.get("route")})', '']
+        lines += [f'## {cohort.get("underlying")} - {cohort.get("valuation_date")} ({cohort.get("route")})', '']
         lines += _table(['Decision','Next-step permission','Price-fit status'],[
             (decision.get('status','blocked'),'Allowed inside stated domain' if decision.get('allowed') else 'Not allowed',cohort['status'])])
         if decision.get('blockers'):
@@ -219,7 +219,7 @@ figure{margin:24px 0}img{max-width:100%;height:auto;border:1px solid var(--line)
 @media(max-width:960px){aside{position:static;width:auto}aside a{display:inline-block;margin-right:16px}main{margin:16px;padding:24px}h1{font-size:27px}}
 @media print{aside{display:none}main{margin:0;border:0;padding:0;max-width:none}body{background:white;font-size:11pt}.table-wrap{overflow:visible}thead{display:table-header-group}tr,figure{break-inside:avoid}h2,h3,h4{break-after:avoid}a{color:inherit}.notice{background:white}}
 </style></head><body><aside><strong>Surface review</strong>'''+nav+'''</aside><main>
-<div class="notice"><strong>Prototype validation — bounded domain</strong>A bounded permission decision for future local-volatility input. No Dupire calculation or full-simulation approval.</div>
+<div class="notice"><strong>Prototype validation - bounded domain</strong>A bounded permission decision for future local-volatility input. No Dupire calculation or full-simulation approval.</div>
 '''+''.join(body)+''.join(figures)+'''<footer>Generated from the same recorded results as <a href="report.md">report.md</a>. <a href="manifest.json">Integrity manifest</a>. All resources are local.</footer></main></body></html>
 '''
 

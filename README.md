@@ -501,7 +501,7 @@ Example: when today is 08/10/2026, COB 07/10/2026 selects live options on 08/10/
 
 ## Inputs and portfolio
 
-Portfolio holdings, weights and reporting currency are defined in `config/portfolio.json`; documentation does not impose a separate allocation. SPX and SPX options are reference inputs for modelling SPY movements. They are not holdings. The configurable option-reference mapping records this intention. Individual option IV calculation and offline surface fitting are integrated; local-volatility simulation remains later work.
+Portfolio holdings, weights and reporting currency are defined in `config/portfolio.json`; documentation does not impose a separate allocation. SPX and SPX options are reference inputs for modelling SPY movements. They are not holdings. The configurable option-reference mapping records this intention. Individual option IV calculation and offline surface fitting are integrated; local-volatility portfolio simulation remains later work; an SPX/underlying-only risk-neutral MC validation follows the local-volatility stage.
 
 - `yahoo.json`, `massive.json`, `ibkr.json`: SPX, SPY and IEF historical requests.
 - `alpha_vantage.json`, `marketdata.json`: SPX, SPY and IEF are enabled. Their current adapters cannot retrieve SPX index history, so these SPX requests save `unsupported_operation` in JSON without sending a stock request. SPY and IEF use ETF history requests; SPY is additional data, not a replacement for SPX.
@@ -593,7 +593,7 @@ Offline unit/regression tests use fake responses and temporary folders; they do 
 
 Install the project with Python 3.11+ using `python -m pip install -e .`, including the declared ib_insync dependency. The separate official ibapi SDK is no longer used. Import the library as `from src import MarketDataDownloader`; do not add the `src` directory itself to PYTHONPATH because `src/http.py` would shadow Python's standard library.
 
-Cleaning, aligned local-currency returns, descriptive statistics and historical Monte Carlo are implemented. Monte Carlo can simulate required FX factors jointly when usable history exists. Offline OIS discount/zero curves, equity forwards and individual European-option IVs are implemented after cleaning, with strict observation-date checks and explicitly labelled convention assumptions. Offline implied-volatility surface fitting follows individual IV calculation. Dividend forecast generation and local-volatility simulation remain later work. ESTR/SOFR observations and sovereign yields are not substitutes for an OIS discount curve. EUR/USD is USD per EUR; conversion to EUR requires the corresponding dated FX observation.
+Cleaning, aligned local-currency returns, descriptive statistics and historical Monte Carlo are implemented. Monte Carlo can simulate required FX factors jointly when usable history exists. Offline OIS discount/zero curves, equity forwards and individual European-option IVs are implemented after cleaning, with strict observation-date checks and explicitly labelled convention assumptions. Offline implied-volatility surface fitting follows individual IV calculation. Dividend forecast generation and local-volatility portfolio simulation remain later work. Risk-neutral underlying MC validation is implemented separately. ESTR/SOFR observations and sovereign yields are not substitutes for an OIS discount curve. EUR/USD is USD per EUR; conversion to EUR requires the corresponding dated FX observation.
 
 IBKR documentation: [historical bars](https://interactivebrokers.github.io/tws-api/historical_bars.html), [historical limitations](https://interactivebrokers.github.io/tws-api/historical_limitations.html).
 
@@ -687,8 +687,7 @@ decimals; the chart uses percent. No live provider or market-data calls occur.
 The strict evaluator still implements conversion only on approved intervals.
 A separate boundary wrapper and forward-PDE check now run automatically from
 that same local-volatility stage when `pricing.enabled` is true. The original
-surface and domain permission are never modified. Local-volatility Monte Carlo
-is not implemented; the existing historical Monte Carlo remains unchanged.
+surface and domain permission are never modified. A separate risk-neutral underlying Monte Carlo validation follows this stage; the existing historical portfolio Monte Carlo remains unchanged.
 
 ### Deterministic option repricing and boundary assumptions
 
@@ -779,3 +778,163 @@ intermediate expiry knots; it does not simulate. See `state_mapping.csv`,
 `state_mapping_checks.csv` and the mapping section of `report.html`. This API
 is for the surface underlying in its quote currency; no ETF or FX translation
 is performed. Full simulation readiness remains false.
+
+
+## Risk-neutral underlying Monte Carlo validation
+
+After local-volatility conversion and PDE checks, `run.py` passes the same
+local-volatility and surface objects to `src/local_vol_monte_carlo.py`.
+`config/calibration/local_vol_monte_carlo.json` controls this separate stage.
+It uses saved data only. Missing/blocked cohorts are recorded and skipped;
+failed numerical checks remain `review_required`, never an automatic pass.
+No portfolio, SPX-to-SPY proxy, historical drift or FX simulation is added.
+The existing historical portfolio workflow is unchanged and is not called by
+this validation helper.
+
+The simulated state is X(t)=S(t)/F(0,t), initially one. With deterministic
+carry, dX/X=sigma_local(t,S)dW. The log-Euler update is
+`log_X += -0.5 * variance * dt + sqrt(variance) * dW`, with S=F*X.
+Time starts at the actual saved observation timestamp, uses ACT/365F, splits
+at every expiry, and stops at the final exact expiry timestamp. The Monte
+Carlo configuration does not invent a separate date or archive selector.
+
+Every supported quote assessed by the PDE is assessed again at its common
+reference strike and time. Fine/coarse paths share Brownian increments.
+Antithetic partners are treated as pairs for standard errors. A deterministic
+Black-delta control variate reduces payoff noise; raw payoff estimates and
+unadjusted forward tests remain visible. The common-reference price comparison
+retains upstream intraday timing limitations; it is not a comparison of a
+synchronous Monte Carlo snapshot with asynchronous original bids/asks.
+
+The report checks fitted-price agreement, PDE-price agreement, paired
+coarse/fine convergence, sampling precision and E[S/F]=1. Price budgets and
+precision limits are in JSON. Confidence multipliers use a Bonferroni normal
+approximation across all assessed price/forward tests. Two resolutions and
+approximate intervals provide numerical evidence, not a proof of convergence.
+Coefficients are evaluated from the original surface/completion without
+variance interpolation or caps. Invalid states and computational-boundary
+exits abort the cohort; paths are never dropped, clipped or resampled.
+
+Immutable outputs are under
+`processed/<COB>/<processing-id>/local_vol_mc/<validation-id>/`:
+
+- `report.html`: outcome, methods, thresholds, expiry checks, forwards and boundary usage.
+- `quotes.csv`: every price, pair-based SE, PDE/fitted errors and convergence comparison.
+- `forwards.csv`: raw normalized forward means and their errors at each expiry.
+- `boundaries.csv`: short-end/wing usage, observed state range and evaluated volatility.
+- `failures.csv`: exact rejected step, level, state, coefficient and shock where available. Completed early expiries remain explicitly partial diagnostics after an abort; they never count as full validation.
+- `expiries.csv`, `cohorts.csv`: all acceptance gates and unavailable reasons.
+- `manifest.json`: configuration, source identities, code/dependency versions and checksums.
+
+A passing status is `validated_with_boundary_assumptions`, not permission to
+simulate a portfolio. Local-volatility portfolio dynamics and proxy/FX
+assumptions remain a separate future step.
+
+
+## Stabilized short-end and wing completion
+
+The calibrated completion supports additional controls in
+`config/calibration/local_volatility.json`: `first_wing_tail_weight`,
+`time_smoothing_fraction` and numerical quadrature/time-grid resolutions.
+The positive first tail weight avoids introducing a new, slower asymptotic
+component only at later expiries. Later weights use the exact stationary
+minimum of two power-mixture differences, preserving global tail calendar
+ordering without unnecessarily promoting all previous fast-tail mass into
+the next slow tail. Join prices and slopes remain fixed by the fitted smiles.
+
+Time smoothing averages completed option PRICES at nearby, monotonically
+mapped times. Positive averaging preserves strike convexity; increasing time
+maps preserve calendar ordering. Its width is a fraction of the smallest
+expiry gap, shrinks to zero at origin/final expiry, and never extrapolates.
+Quadrature splits at every expiry, and both PDE and MC time grids resolve the
+transition windows. Local variance follows from derivatives of these prices;
+it is not clipped or directly averaged. Intermediate node prices can move
+slightly and must pass the existing price, IV, PDE and market-fit gates.
+
+The strict original local-volatility evaluator remains available. With
+boundary opt-in, both the date/spot interface and MC use the SAME completed
+coefficient as PDE pricing, including time smoothing inside supported strips.
+The output labels this additional assumption. Finite computational bounds,
+invalid-state rejection and inherited intraday limitations remain unchanged.
+Zero new controls retain legacy behaviour for reproducibility. All parameters
+and expiry-dependent widths are independent of ticker, dates and portfolio.
+
+## Wider-domain and higher-precision validation
+
+The computational box is configurable and remains distinct from observed
+strike support. Increase spatial points with its width, then retain the
+refined/wider-grid PDE comparison. Leaving the box still stops the simulation;
+there are no absorbing/reflecting boundaries or discarded paths.
+
+`control_variate` in the risk-neutral MC JSON accepts `delta` (legacy default)
+or `coupled_black`. The latter retains the simulated local-vol dynamics but
+uses an auxiliary lognormal Y driven by the same accumulated Brownian motion:
+`H(X) - H(Y) + BlackPrice - delta * (X-Y)`. Both auxiliary expectations are
+known analytically. No coefficient is fitted on pricing samples, and the
+analytic price is computed independently of the target/PDE price. Antithetic
+PAIR means still determine standard errors. The shared control cancels in
+the coarse/fine difference and preserves call-put parity. Raw and legacy
+fixed-delta prices and standard errors remain in `quotes.csv`, together with
+measured variance reduction. Increasing `paths` reduces sampling uncertainty;
+it does not change fit, arbitrage, precision or convergence tolerances.
+
+
+## Routine risk-neutral MC reports and path snapshots
+
+The routine risk-neutral configuration uses 10,000 total paths (5,000 independent
+antithetic pairs). Existing price, precision, convergence and forward thresholds
+are unchanged. A completed run can therefore be `review_required` because of
+sampling precision; it still saves its diagnostics and plots. Higher path budgets
+remain an explicit numerical experiment rather than an automatic retry.
+
+`reporting` in `config/calibration/local_vol_monte_carlo.json` controls:
+
+- `plots`: path overview, terminal distribution (including log-count tail view),
+  and per-expiry validation-score PNGs embedded in `report.html`.
+- `sample_paths`: number of randomly selected thin trajectories to display. This
+  selection uses an independent RNG and cannot change the simulation shocks.
+- `time_points`: target number of stored observations, rounded forward to existing
+  fine-grid nodes. Time zero and all expiries are retained in addition.
+- `save_all_paths`: store every simulated path at those observations in a
+  compressed `paths_<group-id>.npz`. Rows are times, columns are paths. Arrays are
+  `years`, `timestamps`, `forward`, `path_ids`, `log_normalized_paths`.
+  Underlying prices equal `exp(log_normalized_paths) * forward[:, None]`.
+
+`path_summary.csv` contains bands and means calculated from ALL paths;
+`sample_paths.csv` contains the displayed trajectories as underlying prices;
+`terminal_paths.csv` contains every final underlying value. The NPZ is the complete
+set of paths at saved observations, not a record of every Euler step. Storage is
+limited to 20 million path-time values per cohort; reduce observation count or
+turn off full-path storage for very large diagnostic samples.
+
+Every workflow launch still recalculates Monte Carlo. The fixed seed makes
+unchanged inputs reproducible. Saving is not calculation caching: after a rerun,
+an existing identical result folder is verified and returned without overwrite.
+Changed data, code or settings receive a different immutable result ID. Old input
+archives and previous benchmark outputs remain intact. Stopped/skipped cohorts do
+not receive misleading complete path plots; completed precision failures remain
+visible in plots and reports. No portfolio or physical-measure model is introduced
+by these reporting options.
+
+
+### Reading the volatility workflow
+
+After the four numbered volatility stages, `run.py` prints one entry point:
+`processed/<COB>/<processing-id>/volatility_review/<id>/report.html`.
+It separates rejected input groups from failures on actual fitted surfaces,
+identifies the exact Monte Carlo check needing review, preserves capture-timing
+warnings, and links every original stage report. `summary.json` contains the
+settings and full statuses; `progress.log` retains the detailed stage messages.
+Historical portfolio statistics/simulation remain separate.
+
+The stage reports, JSON instructions and source comments explain the numerical
+methods, acceptance checks and assumptions. The optional local `docs/` folder is
+excluded from Git and is not required to run the library. When a local methodology
+guide exists, the overview links it; otherwise that optional link is omitted.
+Some optimizer search bounds, initialization rules and numerical safeguards remain
+implementation choices in Python rather than configurable JSON policies.
+The overview is presentation only: no quote is removed or tolerance relaxed to
+reduce terminal noise. Existing stage outputs and source archives are preserved.
+
+
+Simulation start dates are derived from the selected archive COB plus one calendar day. Historical MC uses `forecast_start: "cob_plus_one"`; fixed dates are rejected. The initial date is retained on weekends/holidays and the first return ends on the next exchange session. The forecast end remains configurable. Risk-neutral MC requires its saved surface observation date to match COB+1 in the calibration valuation timezone and keeps the actual intraday timestamp. A mismatched surface is unavailable rather than shifted to a different valuation date. All assessed option and forward MC checks must pass; there is no percentage quorum.

@@ -19,12 +19,14 @@
     "validation": "Compare w_T/g with independent normalized-call finite differences at two step sizes. Score = absolute variance difference / (absolute_variance_tolerance + relative_tolerance * maximum absolute compared variance). Every agreement/convergence score must be <= 1. These tolerances are numerical policies, not market-price acceptance thresholds.",
     "units": "Time uses the surface ACT/365F reference; k=log(K/F(T)). Volatility is annualized decimal, variance is annualized decimal squared. Only a negative w_T within the inherited roundoff tolerance may be set to zero and counted explicitly.",
     "outputs": "Immutable local_volatility report, grids, pricing summaries and all quote errors under this processed run. Results retain inherited date/timing warnings. full_simulation_ready remains false: this stage does not implement Monte Carlo.",
-    "pricing": "Complete raw-SVI node prices, preserving approved strips. Short end scales first completed total variance by T/T1, reaching the first smile exactly. Wing OTM power mixtures match premium and slope, have positive density and analytically ordered outer tails; core/transition calendar ordering is audited numerically. Local variance comes from the completed prices. Raw-SVI call interpolation is required; unsupported models or infeasible nested joins are blocked. Strict evaluator permissions are unchanged. No extrapolation after last expiry.",
+    "pricing": "Complete raw-SVI node prices, preserving approved strips. Short end scales first completed total variance by T/T1, anchoring the unsmoothed first smile. The explicit time smoothing below is then applied, subject to unchanged price-fit checks. Wing OTM power mixtures match premium and slope, have positive density and analytically ordered outer tails; core/transition calendar ordering is audited numerically. Local variance comes from the completed prices. Raw-SVI call interpolation is required; unsupported models or infeasible nested joins are blocked. Strict evaluator permissions are unchanged. No extrapolation after last expiry.",
     "pricing_validation": "Price budget = absolute_price_forward_fraction*D*F + relative_price_tolerance*abs(surface target). Both discretization and expanded-grid differences must fit numerical_budget_fraction of that budget. Surface and boundary-policy differences each must fit the full budget; IV errors must satisfy maximum_iv_error (decimal). Every supported quote and all expiries must be assessed. Market comparison uses upstream quality limits and original F,D,tau via stable-IV transport. Numerical budgets are prototype policies, not market standards.",
     "plots": "Self-contained interactive 3D HTML plots show supported patches only, preserving maturity gaps and unbounded original volatility scale. No CDN or external browser requests.",
     "boundary_calibration": "wing_tail_fraction in (0,1) sets a common slow exponent from observed boundary slopes; the remaining exponents/weights are derived to match price/slope and maintain tail ordering. Alternative fraction changes the assumed tails while preserving calibration. short_end_power_alternative in (1,2] changes time allocation while preserving the first-expiry endpoint. boundary_audit_points controls the numerical strike audit, augmented by joins and SVI curvature samples. Legacy wing_transition_width/interior_time_fraction apply only to legacy flat-variance policies.",
     "pricing_numerics": "Calibrated completion uses an exponentially fitted log-strike stencil with harmonic cell-averaged local variance, using three-point Gaussian quadrature split at density joins and their exponential scales. Coarse/refined/wider-grid comparisons still use the unchanged acceptance budgets. Legacy completion uses the original central stencil.",
-    "date_spot_mapping": "The integrated state interface uses aware timestamps and positive underlying levels in the surface quote currency. Time zero is the saved option observation, never COB midnight. k=log(S/F(t)); ACT/365F elapsed seconds; saved F,D nodes are reused. Strict domain is the default. Explicit opt-in enables existing calibrated boundary policies, with per-state flags. Base pricing.log_grid_bounds are hard query stops, not path clipping. No time extrapolation, ETF proxy, FX conversion or Monte Carlo. Missing/failed pricing gates block preparation."
+    "date_spot_mapping": "The integrated state interface uses aware timestamps and positive underlying levels in the surface quote currency. Time zero is the saved option observation, never COB midnight. k=log(S/F(t)); ACT/365F elapsed seconds; saved F,D nodes are reused. Strict domain is the default. Explicit opt-in enables existing calibrated boundary policies, with per-state flags. Base pricing.log_grid_bounds are hard query stops, not path clipping. No time extrapolation, ETF proxy, FX conversion or Monte Carlo. Missing/failed pricing gates block preparation.",
+    "completion_stabilization": "A positive first_wing_tail_weight seeds the common asymptotic exponent at the first expiry. Later weights are the smallest satisfying exact global calendar ordering, evaluated at the endpoints and the single possible stationary minimum of each tail-price difference. This avoids promoting all prior fast-tail mass into a slow tail. Price and slope remain matched at every wing join. time_smoothing_fraction times the smallest expiry gap sets a positive uniform average of completed prices over monotone mapped times. The window vanishes at zero/final expiry and preserves calendar monotonicity and strike convexity. Quadrature splits at expiries; time_smoothing_time_points resolves each width and scales with solver refinement. No volatility caps or weakened acceptance limits. Intermediate node prices can move slightly; unchanged PDE, price and IV budgets must pass. Opted-in state/MC lookups use exactly the PDE completion, even inside strips. The strict upstream evaluator stays unchanged.",
+    "computational_domain": "The base and wider log-moneyness boxes are numerical domains, not additional observed support. Keep spatial spacing when widening: space_points-1 scales with width. Both refined-grid and wider-grid checks must still pass. Invalid states or exits are rejected without clipping."
   },
   "pricing": {
     "enabled": true,
@@ -33,14 +35,14 @@
     "knot_policy": "right_interval",
     "forward_policy": "log_linear_reference_nodes",
     "log_grid_bounds": [
-      -3.0,
-      2.0
-    ],
-    "wider_log_grid_bounds": [
-      -4.0,
+      -6.0,
       3.0
     ],
-    "space_points": 3201,
+    "wider_log_grid_bounds": [
+      -7.0,
+      4.0
+    ],
+    "space_points": 5761,
     "steps_per_year": 365,
     "refinement": 2,
     "wing_transition_width": 0.2,
@@ -52,6 +54,10 @@
     "wing_tail_fraction": 0.5,
     "wing_tail_fraction_alternative": 0.65,
     "short_end_power_alternative": 1.2,
-    "boundary_audit_points": 14001
+    "boundary_audit_points": 14001,
+    "first_wing_tail_weight": 0.5,
+    "time_smoothing_fraction": 0.01,
+    "time_smoothing_quadrature": 12,
+    "time_smoothing_time_points": 4
   }
 }
