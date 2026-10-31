@@ -25,6 +25,7 @@ MODELING_FILE = CONFIG_DIR / "modeling.json"
 MONTE_CARLO_FILE = CONFIG_DIR / "monte_carlo.json"
 CALIBRATION_FILE = CONFIG_DIR / "calibration" / "option_calibration.json"
 SURFACE_FILE = CONFIG_DIR / "calibration" / "surface.json"
+LOCAL_VOL_FILE = CONFIG_DIR / "calibration" / "local_volatility.json"
 OIS_FILE = CONFIG_DIR / "ois.json"  # Fixed OIS par quotes reused for every COB; no API.
 
 # Credentials/operational setup remain in Python; never commit actual keys.
@@ -168,7 +169,8 @@ def _process_inventory(inventory):
         print("FX history is missing: reporting-currency analysis is not ready.")
     print(f"Cleaned/merged data and report: {destination}")
     calibration = _calibrate_available(destination)
-    _surface_available(calibration)
+    surface = _surface_available(calibration)
+    _local_vol_available(surface)
     print("Computing historical statistics and stress comparisons for configured holdings.")
     statistics = analyze_processed(result, MODELING_FILE)
     statistics.source_folder = destination.resolve()
@@ -190,7 +192,7 @@ def _process_inventory(inventory):
     for notice in simulation.summary["warnings"]:
         print("Monte Carlo: " + notice)
     print(f"Monte Carlo report and results: {simulation_folder}")
-    print("Raw archive unchanged. Surface diagnostics are separate; no Dupire or local-volatility simulation is run.")
+    print("Raw archive unchanged. Bounded local-volatility conversion is separate from historical Monte Carlo; no local-volatility simulation is run.")
     return result
 
 
@@ -265,8 +267,40 @@ def _surface_available(calibration):
         print("Exact bid/ask coverage remains a diagnostic. RMSE, arbitrage and stability checks still apply.")
     print(f"Surface tables, plots and diagnostics: {target}")
     print(f"Open the browser-readable surface report: {target / 'report.html'}")
-    print("Intraday timing assumptions remain explicit. No Dupire calculation or new simulation.")
+    print("Surface fitting complete. Intraday timing assumptions remain explicit; local-volatility conversion is assessed next.")
     return surface
+
+
+def _local_vol_available(surface):
+    """Convert only this execution's eligible surface, without new retrieval.
+
+    Missing/blocked cohorts are reported by the conversion result. Numerical
+    validation never changes the surface fit or widens its permission. This
+    stage does not invoke the existing historical Monte Carlo workflow.
+    """
+    if surface is None:
+        print("Local-volatility conversion skipped: surface unavailable.")
+        return None
+    print("Converting eligible saved surfaces to local volatility (bounded domains only).")
+    try:
+        from src.local_volatility import convert_surface
+        result = convert_surface(surface, LOCAL_VOL_FILE, progress=print)
+        target = result.save()
+    except (OSError, ValueError, ImportError) as exc:
+        print(f"Local-volatility conversion unavailable: {exc}. Continuing historical analysis.")
+        return None
+    for cohort in result.tables['cohorts']:
+        print(f"Local volatility {cohort.get('underlying')}: {cohort['status']}; "
+              f"{cohort.get('validation_passes', 0)}/{cohort.get('requested_points', 0)} numerical checks pass; "
+              f"{cohort.get('reason') or 'supported interior grid only'}")
+    print(f"Local-volatility report: {target / 'report.html'}")
+    for assessment in result.tables['pricing_summary']:
+        print(f"Local-volatility PDE pricing {assessment.get('underlying')}: {assessment['status']}; {assessment.get('reason') or 'see explicit boundary assumptions and checks in report'}")
+    for mapping in result.tables['state_mapping']:
+        print(f"Local-volatility date/spot interface {mapping.get('underlying')}: {mapping['status']}; "
+              f"{mapping.get('reason') or mapping.get('reference_timestamp')}.")
+    print("Strict domain remains unchanged. Explicit boundary opt-in is required; no local-volatility Monte Carlo.")
+    return result
 
 
 def choose_mode():

@@ -90,7 +90,7 @@ class SurfaceReportTests(unittest.TestCase):
         target=self.result.save();self.assertEqual(target,self.result.save())
         self.assertTrue((target/'coverage_checks.csv').exists())
         self.assertEqual(set(self.result.manifest['identity']['code_hashes']),
-                         {'volatility_surface.py','surface_model.py','surface_checks.py','surface_reporting.py'})
+                         {'volatility_surface.py','surface_model.py','surface_checks.py','surface_reporting.py','surface_view.py'})
 
     def test_report_uses_recorded_permission_never_infers_approval(self):
         result=deepcopy(self.result);cohort=result.tables['cohort_status'][0]

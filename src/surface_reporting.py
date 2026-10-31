@@ -31,8 +31,8 @@ def render_report(result):
     lines=['# Implied-volatility surface — decision', '',
         f'Archive COB: **{result.manifest.get("archive_cob","not available")}**. Analysis: `{result.run_id}`.', '',
         '## Outcome', '',
-        'An eligible result permits inputs for a future bounded prototype Dupire conversion. '
-        'No local volatility has been calculated or validated; full Monte Carlo use is not approved.', '']
+        'An eligible result supplies inputs for the separate bounded Dupire stage. '
+        'This report assesses the implied surface only; consult the downstream local_volatility report for conversion and pricing results. Full Monte Carlo use is not approved.', '']
     cohorts=result.tables['cohort_status']
     if not cohorts:lines += ['Blocked: '+str(result.manifest['summary'].get('skip_reason','no_option_data')), '']
     for cohort in cohorts:
@@ -85,7 +85,7 @@ def render_report(result):
              f'{r["practical_coverage_fraction"]:.1%}' if r.get('practical_coverage_fraction') is not None else 'Not applicable',
              f'{r["inside_spread_fraction"]:.1%}' if r.get('inside_spread_fraction') is not None else 'Not applicable',r['market_fit_pass']) for r in metrics])
         if cfg['plots']:
-            lines += [f'Charts: [IV surface]({gid}_surface.png), [expiry smiles]({gid}_smiles.png), '
+            lines += [f'Interactive chart: [3D implied-volatility surface]({gid}_3d.html).', '', f'Charts: [IV surface]({gid}_surface.png), [expiry smiles]({gid}_smiles.png), '
                       f'[fit diagnostics]({gid}_diagnostics.png).', '']
     lines += ['## Policy and evidence', '',
         f'Price RMSE limit: **{q["maximum_scaled_price_rmse"]:g}**. '

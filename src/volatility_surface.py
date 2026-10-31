@@ -446,6 +446,7 @@ class SurfaceResult:
         if plots:
             for gid in self.models:
                 for kind in ('smiles','surface','diagnostics'):expected[gid+'_'+kind]=gid+'_'+kind+'.png'
+                expected[gid+'_interactive']=gid+'_3d.html'
         def complete_or_recoverable():
             if not target.exists():return False
             if not target.is_dir():raise ValueError('surface_output_is_not_directory')
@@ -479,6 +480,8 @@ class SurfaceResult:
             if plots:
                 from .surface_reporting import plot_surfaces
                 plot_surfaces(self,stage)
+                from .surface_view import write_implied_view
+                for gid in self.models:write_implied_view(self,gid,stage/(gid+'_3d.html'))
             files={name:dict(file=filename,sha256=_hash((stage/filename).read_bytes())) for name,filename in expected.items()}
             # Another run may have completed while this one rendered charts.
             if complete_or_recoverable():return target
@@ -618,17 +621,19 @@ def fit_calibrated(calibration,config_file,progress=None):
             'market_fit_policy':metrics[0]['coverage_policy'],
             'failed_market_fit_expiries':[m['expiration'] for m in metrics if not m['market_fit_pass']],
             'failed_checks':([] if numerical else ['numerical_arbitrage_or_derivatives'])+([] if price_pass else ['market_price_accuracy'])+([] if stable=='passed' else ['stability_'+stable]),
-            'reason':'intraday_or_close_approximation; no_extrapolation_policy; Dupire_not_implemented'})
+            'reason':'intraday_or_close_approximation; no_extrapolation_policy; local_volatility_assessed_in_separate_stage'})
     # The final decision is computed for every cohort, including unavailable
     # inputs. It does not trigger a downstream calculation or erase evidence.
     for cohort in tables['cohort_status']:
         decision=assess_local_vol_eligibility(cohort,models.get(cohort['group_id']),tables,cfg)
         cohort['local_vol_eligibility']=decision
         cohort['dupire_input_eligible']=decision['allowed']
+        # This flag is scoped to this stage, not the whole library.
         cohort['local_volatility_implemented']=False
+        cohort['result_scope']='implied_surface_only'
     source_files=[Path(__file__),Path(__file__).with_name('surface_model.py'),
-                  Path(__file__).with_name('surface_checks.py'),Path(__file__).with_name('surface_reporting.py')]
-    identity=dict(engine_version=8,config=cfg,calibration_identity=calibration.manifest['identity'],
+                  Path(__file__).with_name('surface_checks.py'),Path(__file__).with_name('surface_reporting.py'),Path(__file__).with_name('surface_view.py')]
+    identity=dict(engine_version=9,config=cfg,calibration_identity=calibration.manifest['identity'],
         calibration_content_hash=_hash(_bytes(dict(manifest=calibration.manifest,tables=calibration.tables))),
         source_folder=str(calibration.folder.resolve()),code_hashes={p.name:_hash(p.read_bytes()) for p in source_files},
         dependencies={name:version(name) for name in ('numpy','scipy','matplotlib')},python=sys.version.split()[0])

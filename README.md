@@ -7,9 +7,9 @@ Inputs live in `config/`; operational setup and credential environment-variable 
 Run `run.py` with the project interpreter. It asks you to choose:
 
 - **1 - Process saved archive:** enter a saved COB. Inventory, clean and merge the
-  local data without API connections or a history-start prompt, attempt available option calibration and surface fitting, then generate statistics and the configured historical Monte Carlo scenarios.
+  local data without API connections or a history-start prompt, attempt available option calibration, surface fitting and local-volatility validation, then generate statistics and the configured historical Monte Carlo scenarios.
 - **2 - Download + process:** enter COB and history start. Retrieve/reuse a compatible
-  archive, then automatically inventory, clean, merge, attempt available option calibration and surface fitting, analyse and simulate it.
+  archive, then automatically inventory, clean, merge, attempt available option calibration, surface fitting and local-volatility validation, analyse and simulate it.
 
 Both choices use the same processing pipeline. The aliases `process`,
 `inventory` and `download` work too. The standalone library function
@@ -59,7 +59,7 @@ use return_statistics[kind].
 
 Portfolio statistics represent a hypothetical buy-and-hold backtest: apply the
 current initial weights once at the first common observed price date; reinvested
-sleeve weights then drift. They are not daily-rebalanced 50/50 returns. Adjusted
+sleeve weights then drift. They are not daily-rebalanced returns. Adjusted
 series already include distribution adjustments; dividend cash is not added again.
 Price-only portfolios remain labelled price_return.
 
@@ -652,3 +652,130 @@ configurations omitting this flag retain their prior extended diagnostics;
 those omitting eligibility cannot authorize the next module. Historical routes
 never fabricate bid/ask evidence. The maturity-jump and derivative review bands
 remain labelled prototype policies, not universal financial standards.
+
+## Bounded local-volatility conversion
+
+After surface fitting, `run.py` passes that exact result to
+`src/local_volatility.py`. `config/calibration/local_volatility.json` controls
+interior sampling and numerical tolerances, never the source folder, ticker,
+valuation date or domain permissions. Both live and historical cohorts inherit
+their original eligibility, date/convention assumptions and timing warnings.
+
+The evaluator computes annualized local variance `w_T / g` at fixed
+`k = log(K/F(0,T))`, using the existing surface derivatives. It never refits,
+smooths, extrapolates, interpolates a new forward curve or caps high volatility.
+Exact maturity knots and unsupported wings remain unavailable. Only negative
+`w_T` within the upstream numerical roundoff tolerance may become zero, and
+every such adjustment is counted. Density and negative-derivative tolerances
+are inherited from the surface, not duplicated in the new JSON.
+
+Independent normalized-call finite differences compute
+`2*c_T/(c_kk-c_k)` at a coarse and a halved step. Both estimates must agree with
+the analytic variance and with each other within the configured numerical
+score. Validation is sampled interior evidence, not global certification.
+`LocalVolResult.evaluators` contains only cohorts passing every requested point;
+`evaluate(years, k)` uses the original fitted model and returns an explicit
+available/unavailable record. The exported grid is not an interpolation engine.
+
+Outputs are separate immutable `local_volatility/<analysis-id>` folders under
+the current processed run: a compact `report.html`, supported domains, local
+volatility grid, numerical validation, reconstruction inputs and a checksummed
+manifest. Incomplete publications are preserved on retry. Completed outputs
+are verified and reused without writes. Volatility columns are annualized
+decimals; the chart uses percent. No live provider or market-data calls occur.
+
+The strict evaluator still implements conversion only on approved intervals.
+A separate boundary wrapper and forward-PDE check now run automatically from
+that same local-volatility stage when `pricing.enabled` is true. The original
+surface and domain permission are never modified. Local-volatility Monte Carlo
+is not implemented; the existing historical Monte Carlo remains unchanged.
+
+### Deterministic option repricing and boundary assumptions
+
+`src/local_vol_pricing.py` solves the normalized forward strike PDE, with
+`c=C/(D*F)` and `k=log(K/F)`: `c_T=0.5*local_variance*(c_kk-c_k)`.
+It evolves the call payoff `(1-exp(k))+` to every expiry, pricing all strikes
+in one solve per scenario. Put prices follow put-call parity. There are no
+random draws. Log-linear reference forwards/discount factors reproduce the
+saved nodes, with `F(0)=spot`, `D(0)=1`; no curve extrapolation is permitted.
+
+The JSON records every numerical policy and assumption:
+
+- `src/local_vol_boundary.py` calibrates the short end exactly to the first
+  completed smile: `w(T,k)=(T/T1)*w(T1,k)`. Dupire derives the local variance
+  of this surface; it is not the old frozen first-interval coefficient.
+- Wing OTM prices are positive power mixtures matching premium and slope at
+  fitted-node joins. Nested joins contain all approved strips, without going
+  outside the original node fits. Slow exponents come from boundary slopes;
+  mixture weights/high exponents enforce outer-tail calendar ordering.
+- Node cores and transition strips receive numerical density/digital/calendar
+  audits. Outer-tail ordering follows analytically from the construction.
+  Failed audits, unsupported interpolation models, or infeasible nested joins
+  block pricing rather than silently extrapolate or modify fitted parameters.
+- The completion currently requires raw-SVI linear normalized-call interpolation.
+  Other fitted model types remain available to the strict evaluator, but need
+  their own consistent completion before selecting this pricing policy.
+- At expiry knots use the right interval (terminal left limit), with exact
+  time-grid breaks. Do not extrapolate after final expiry or bridge time gaps.
+- Refined spatial/time grids and a wider computational domain remain required.
+- Alternative tail fraction and short-end time power also reproduce the same
+  first smile. Sensitivity compares calibrated completions, not an uncalibrated
+  alternative. Fractions/power/audit resolution are explicit JSON inputs.
+- C1 wing joins can have density jumps. Unobserved far-wing local variance can
+  be very large just after maturity knots. This is a pricing experiment, not
+  approval of remote tails or future Monte Carlo time stepping.
+
+The previous flat-variance policies remain selectable together for reproducible
+comparisons. Their `wing_transition_width` and `interior_time_fraction` settings
+are unused by the new calibrated policies. The market-supported domain and all
+price/IV acceptance thresholds remain unchanged.
+
+The calibrated solver uses an exponentially fitted log-strike stencil with a
+harmonic cell average of local variance, splitting quadrature at density jumps.
+This resolves sharp joins without adjusting target prices. Legacy policies retain
+central differences. Both use Crank-Nicolson time stepping,
+with implicit half-step damping at each interval start. Full-surface reproduction,
+numerical convergence, boundary sensitivity and market fit are separate gates.
+Price tolerance is `absolute_price_forward_fraction*D*F +
+relative_price_tolerance*abs(target_price)`. Grid checks use the configured
+fraction of this budget. Every supported quote must pass the numerical and
+reproduction checks; every expiry must be represented. IV error has its own
+limit. No quote is clipped into bounds to manufacture a pass.
+
+Reference-date target prices are separate from market-quote comparisons. The
+latter transport PDE-implied volatility back to each original `F,D,tau`, using
+the existing stable-IV timing approximation. Historical prices get RMSE checks,
+never invented spreads; live quotes reuse the upstream practical-coverage rules.
+Quotes outside the adjacent supported expiry strips are recorded as excluded.
+A `review_required` result means the current assumptions or resolution have not
+validated a complete model; it does not invalidate the interior Dupire formula.
+
+The local report includes `pricing_summary.csv`, `pricing_expiries.csv`,
+`pricing_reference_nodes.csv`, `boundary_calibration.csv`, `boundary_audit.csv`
+and every quote in `option_repricing.csv`.
+`full_simulation_ready` remains false, including when the pricing checks pass.
+
+### Interactive surfaces
+
+`src/surface_view.py` generates self-contained, interactive 3D HTML files linked
+from both reports when `plots=true`. Drag to rotate, scroll to zoom, toggle
+wireframe/observations and hover for values. Separate meshes preserve maturity
+gaps; short-end and wing extensions are not painted as observed support. Both
+charts show annualized volatility in percent with the full uncapped range.
+The implied-volatility chart overlays observed IVs. No CDN, network connection
+or additional package is required. Completed outputs remain immutable and
+checksummed; these additions create new derived output identities.
+
+
+The local-volatility result also exposes `state_evaluators[group_id]` after
+successful deterministic pricing checks. `evaluate(timestamp, underlying)`
+uses a timezone-aware instant, ACT/365F time from the saved option observation,
+and the calibrated forward to compute log-moneyness. Strict support is the
+default; `allow_boundary_assumptions=True` explicitly enables the configured
+short-end/wing/knot completion and returns per-state assumption flags. States
+outside the base PDE bounds and instants past the last expiry are rejected,
+never clipped. `validate_window(start, end)` validates exact instants and lists
+intermediate expiry knots; it does not simulate. See `state_mapping.csv`,
+`state_mapping_checks.csv` and the mapping section of `report.html`. This API
+is for the surface underlying in its quote currency; no ETF or FX translation
+is performed. Full simulation readiness remains false.
