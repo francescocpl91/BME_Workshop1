@@ -10,6 +10,7 @@ class MarketDataProvider(ABC):
     api_url = ""
     kind = "price"
     key_env: str | None = None
+    timeout = 20  # Seconds per HTTP attempt.
 
     def __init__(self, settings: dict[str, str], client: HttpClient | None = None):
         self.settings = settings
@@ -17,7 +18,7 @@ class MarketDataProvider(ABC):
         interval = float(settings.get(f"{self.name.upper()}_MIN_INTERVAL", "0"))
         if not 0 <= interval <= 60:
             raise ValueError("Provider minimum interval must be between 0 and 60 seconds.")
-        self.client = client or HttpClient(min_interval=interval)
+        self.client = client or HttpClient(min_interval=interval, timeout=self.timeout)
 
     def check_access(self):
         if self.key_env and not self.key:

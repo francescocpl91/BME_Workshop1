@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "reporting_currency": "EUR",
+  "weight_basis": "reporting_currency_market_value",
+  "nav": null,
+  "target_allocation": {
+    "equity": 0.5,
+    "sovereign_fixed_income": 0.5
+  },
+  "holdings": [
+    {
+      "request_id": "SPY",
+      "bucket": "equity",
+      "weight": 0.5
+    },
+    {
+      "request_id": "IEF",
+      "bucket": "sovereign_fixed_income",
+      "weight": 0.5
+    }
+  ],
+  "reference_data": [
+    "SPX",
+    "EUR10Y",
+    "ESTR",
+    "EURUSD"
+  ],
+  "instructions": {
+    "allocation": "50% SPY equity ETF and 50% IEF 7-10 Year US Treasury ETF. Weights are fractions of portfolio value in EUR.",
+    "weights": "Use decimal fractions (0.20 means 20%) of market value in reporting currency. Complete holding weights must match target_allocation and sum to 1. No automatic normalization. This first schema is long-only.",
+    "nav": "Optional portfolio market value in EUR. Required later, together with prices, FX and multipliers, to turn weights into quantities. No quantities are calculated now.",
+    "options": "Options are contract reference data only, not portfolio holdings. Contract-code discovery does not download prices or calibrate a volatility surface.",
+    "fx": "EURUSD is quoted in USD per EUR: EUR value = USD value / EURUSD. Reporting currency does not change native quote currencies.",
+    "scope": "SPX and SPX options are reference inputs for a future model of SPY movements, not portfolio holdings. Cleaning records this relationship without calibrating or simulating it.",
+    "demo": "Demo portfolio for run.py option 3: the same holdings, with reference data limited to series available from Yahoo and ECB without keys."
+  }
+}

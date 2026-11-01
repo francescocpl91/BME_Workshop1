@@ -412,6 +412,10 @@ class CleaningIntegrationTests(unittest.TestCase):
             processed=process_archive(f.archive,cleaning,portfolio_file=file)
         after={p:(p.read_bytes(),p.stat().st_mtime_ns) for p in f.archive.rglob("*") if p.is_file()}
         self.assertEqual(before,after)
+        reports=list((f.root/"processed").rglob("portfolio/report.md"))
+        self.assertEqual(len(reports),1)
+        self.assertIn("## Risk warnings",reports[0].read_text(encoding="utf-8"))
+        self.assertTrue((reports[0].parent/"plots"/"wealth.png").is_file())
         self.assertIsNotNone(inv.observations)
         self.assertNotIn("observations",inv.to_dict())
         self.assertEqual(processed.summary["options"]["iv_candidates"],0)

@@ -730,6 +730,10 @@ def _option_coverage(requests):
     return sorted(groups.values(), key=lambda g: (g["provider"], g["underlying"], g["expiration"]))
 
 
+class ArchiveNotFound(ValueError):
+    """The requested COB has not been downloaded; expected on a first run."""
+
+
 def inspect_archive(folder, *, progress: Callable[[str], None] | None = None, max_workers=4, include_observations=False):
     """Read all recorded requests in a completed COB archive; never request data.
 
@@ -749,7 +753,7 @@ def inspect_archive(folder, *, progress: Callable[[str], None] | None = None, ma
         raise ValueError("max_workers must be an integer between 1 and 8.")
     folder = Path(folder).resolve()
     if not folder.is_dir():
-        raise ValueError(f"No saved archive at {folder}. Inventory mode never downloads data.")
+        raise ArchiveNotFound(f"No saved archive at {folder}. Inventory mode never downloads data.")
     if (folder / ".running").exists():
         raise ValueError("The archive is being written. Wait for retrieval to finish.")
     try:

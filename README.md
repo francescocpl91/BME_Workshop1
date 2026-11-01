@@ -1,21 +1,119 @@
 # PythonToolBox_Taller1Master - Market data
 
+A Python toolkit that downloads market data from several APIs, standardizes and cleans it,
+analyses an investment portfolio, simulates it with Monte Carlo and produces Markdown reports and
+charts. Data ingestion is decoupled from analysis: see the [architecture diagrams](docs/architecture.md).
+
+| Capability | Where |
+|---|---|
+| Stocks, indices and macro/rates series from Yahoo, Alpha Vantage, MarketData, Massive, FRED, ECB and IBKR | `src/providers/`, `config/*.json` |
+| Identical internal objects whatever the API (`PriceSeries`, `ObservationSeries`), N series per run | `src/models.py`, `src/downloader.py` |
+| Cleaning, calendar alignment and validation | `src/preprocessing.py`, `src/data_cleaning.py` |
+| Portfolio statistics, Monte Carlo, `report()` and `plots_report()` | `src/portfolio_model.py`, `src/statistics.py`, `src/monte_carlo.py` |
+
+## Quick start
+
+**Prerequisites:** Python 3.11 or later, Git and an internet connection. Tested on Windows with
+Python 3.13. No API key or broker account is needed for the demo.
+
+1. Clone the repository and enter its folder:
+
+        git clone https://github.com/francescocpl91/BME_Workshop1.git
+        cd BME_Workshop1
+
+2. Create and activate a virtual environment:
+
+        python -m venv .venv
+        .venv\Scripts\activate        # Windows
+        source .venv/bin/activate     # macOS or Linux
+
+3. Install the project and its dependencies:
+
+        python -m pip install -e .
+
+4. Run the demo. It uses the 50% SPY / 50% IEF portfolio, Yahoo and ECB data from 2005 through yesterday:
+
+        python run.py demo
+
+5. Open the results. The last console lines give the folder, `processed/<COB>/<processing-id>/`:
+   - `portfolio/report.md` and `portfolio/plots/`: portfolio report and charts, including `monte_carlo.png`.
+   - `statistics/` and `monte_carlo/`: complete tables, reports and charts of each stage.
+
+   If a provider failed, for example because of a network problem, run the same command again: the demo
+   only requests what failed. Without EUR/USD data, results are clearly labelled in USD.
+
+6. Continue in Python, using that same folder:
+
+        from src import Portfolio
+
+        portfolio = Portfolio.from_saved("processed/<COB>/<processing-id>",
+                                         "config/modeling.json", "config/monte_carlo.json")
+        portfolio.monte_carlo(paths=5000, horizon_sessions=252, seed=7)
+        portfolio.plot_monte_carlo()
+        print(portfolio.report())
+
+Run the tests with `python -m unittest discover -s tests`. They use fake responses and need no connection.
+
+### Optional credentials
+
+The demo needs none of these. Option 2 of `run.py` uses every configured provider and records any
+that are unavailable without stopping, so its console output includes one error line per failed request.
+
+| Provider | Requirement |
+|---|---|
+| Yahoo, ECB | None |
+| FRED (US10Y and SOFR series) | Environment variable `FRED_API_KEY` |
+| Alpha Vantage | Environment variable `ALPHA_VANTAGE_API_KEY` |
+| MarketData | Environment variable `MARKETDATA_API_TOKEN` |
+| Massive | Environment variable `MASSIVE_API_KEY` |
+| IBKR | An open TWS session; `IBKR_PORT` selects its port. Without it, its 4,000+ configured requests fail one by one |
+
+To use your own instruments, edit the provider files in `config/` and the holdings and weights in
+`config/portfolio.json`. Named stress windows need downloaded history that covers them: for option 2,
+choose a history start before 2008 to include the configured GFC window.
+
 Inputs live in `config/*.json`; operational setup and credential environment-variable names live in `run.py`. Library modules are directly under `src/`.
 
 ## Choose a workflow
 
-Run `run.py` with the project interpreter. It asks you to choose:
+Run `run.py` with the project interpreter. It asks you to choose (or use `python run.py demo`):
 
 - **1 - Process saved archive:** enter a saved COB. Inventory, clean and merge the
   local data without API connections or a history-start prompt, then generate statistics and the configured historical Monte Carlo scenarios.
 - **2 - Download + process:** enter COB and history start. Retrieve/reuse a compatible
   archive, then automatically inventory, clean, merge, analyse and simulate it.
 
-Both choices use the same processing pipeline. The aliases `process`,
+- **3 - Demo:** no prompts. Download from Yahoo and ECB only, keep the archive apart in
+  `data/demo_dumps/`, then run the same pipeline with `config/demo/portfolio.json`.
+
+All choices use the same processing pipeline. The aliases `process`,
 `inventory` and `download` work too. The standalone library function
 `inspect_archive()` remains inventory-only; `download_cob()` remains retrieval-only.
 The entry point joins these stages, with no additional date prompt.
-Missing/incomplete archives or an active `.running` lock are refused.
+Missing/incomplete archives or an active `.running` lock are refused. A saved archive must exist before
+choosing option 1, so a fresh clone starts with option 2 or 3.
+
+## Input validation: why inputs are restricted
+
+We analysed whether the program should accept any input containing a price time series, and decided
+**it should not**. A date and a price column are not enough to compute a correct result, and a wrong
+result that looks valid is worse than a clear refusal. The reasons and the checks that apply them:
+
+| Risk if any series were accepted | Restriction | Where |
+|---|---|---|
+| A misspelled setting silently changes the experiment | Unknown or missing JSON fields are rejected | `src/monte_carlo.py`, `src/portfolio.py` |
+| Corrupt data distorts every statistic | Positive closes, consistent OHLC, non-negative volume, no conflicting duplicate dates | `normalize()` in `src/models.py` |
+| A yield or macro level is treated as an investable price | `PriceSeries` and `ObservationSeries` stay separate; rates and FX cannot be holdings | `src/models.py`, `src/portfolio.py` |
+| Returns in different currencies or conventions are added together | One currency and one compatible return basis, otherwise the portfolio is reported as unavailable | `_portfolio_series()` in `src/statistics.py` |
+| Gaps or holidays create false returns | Only consecutive exchange sessions form a return; nothing is forward-filled | `src/data_cleaning.py`, `src/monte_carlo.py` |
+| Allocations are silently changed | Long-only weights must add up to one; no normalization or redistribution | `load_portfolio()` in `src/portfolio.py` |
+| Saved data changed after cleaning | Saved runs are verified by checksum and row count before use | `load_saved_processing()` in `src/monte_carlo.py` |
+
+The cost is less flexibility: an arbitrary CSV cannot be loaded directly, and short leveraged weights are
+not supported. We accept that cost because new data still has a defined way in, a new provider class
+that delivers the same standard objects (see [Extending the toolkit](docs/architecture.md#extending-the-toolkit)),
+so it passes the same checks. Missing history is reported as unavailable rather than raising an error, so
+valid results for other holdings or stages remain usable.
 
 ## Historical statistics
 
@@ -27,7 +125,9 @@ Monte Carlo stage below runs afterwards. No option pricing is performed.
 
 src/statistics.py exposes AssetStatistics (automatic sample statistics) and
 PortfolioStatistics (report(), plots_report(), save()). These analytical objects
-wrap cleaned observations; they do not replace the retrieval PriceSeries.
+wrap cleaned observations; they do not replace the retrieval PriceSeries. A
+PriceSeries also computes mean_return and std_return of its daily simple returns
+automatically on creation, using adj_close when available and otherwise close.
 
 Set statistics.return_types to ["simple", "log"] (the supplied default), or
 select either convention alone. One calculation engine produces both analyses:
@@ -409,7 +509,8 @@ only, because named stress windows describe history.
 decide which risk warnings appear. Available sections are `overview`, `performance`, `correlations`,
 `simulation`, `diagnostics` and `risk_warnings`.
 
-`run.py` keeps its existing workflow and full exports.
+`run.py` uses this same object after cleaning. Besides the full statistics and Monte Carlo exports,
+it writes the default report and plots to `processed/<COB>/<processing-id>/portfolio/`.
 
 ## Cleaning and merging
 

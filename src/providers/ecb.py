@@ -9,6 +9,9 @@ from ..models import ObservationSeries, RetrievalError
 
 
 class ECBProvider(MarketDataProvider):
+    # The first request for a long daily history can take over 30 seconds; the
+    # ECB then answers the same query at once, so a short limit keeps failing.
+    timeout = 90
     name = "ecb"
     api_url = "https://data-api.ecb.europa.eu/service/data"
     kind = "observation"

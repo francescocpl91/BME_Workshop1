@@ -1,13 +1,16 @@
 """Process a saved archive, or download/reuse data and then process it.
 
-python run.py       : choose local processing or download, then enter the required dates
+python run.py       : choose local processing, download or demo, then enter any required dates
+python run.py demo  : first run: download from Yahoo and ECB, no keys or date prompts
 python -i run.py    : execute and keep result available in a Python prompt
 """
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
-from src import MarketDataDownloader, inspect_archive, process_inventory, analyze_processed, simulate_processed
+from src import MarketDataDownloader, inspect_archive, process_inventory, Portfolio
 from src.cob import parse_cob, parse_history_start, london_today
+from src.preprocessing import ArchiveNotFound
 
 ROOT = Path(__file__).resolve().parent
 
@@ -54,6 +57,14 @@ SETTINGS = {
 
 # Preserve native provider responses. Inventory reports are saved separately.
 RAW_DUMP_DIR = ROOT / "tests" / "data_dumps"
+
+# The demo uses only providers that need no key or broker session. Its archive is
+# kept apart: a COB archive with different inputs must not replace a full one.
+# History starts before the 2008 stress window configured for Monte Carlo.
+DEMO_CONFIG_FILES = [CONFIG_DIR / "yahoo.json", CONFIG_DIR / "ecb.json"]
+DEMO_PORTFOLIO_FILE = CONFIG_DIR / "demo" / "portfolio.json"
+DEMO_DUMP_DIR = ROOT / "data" / "demo_dumps"
+DEMO_HISTORY_START = "01/01/2005"
 
 def download_main(cob_text=None, history_start_text=None, *, retry_failed=False):
     today = london_today()
@@ -120,6 +131,23 @@ def download_main(cob_text=None, history_start_text=None, *, retry_failed=False)
     return result
 
 
+def demo_main():
+    """Keyless first run: download with fixed choices, then the same local pipeline."""
+    cob = london_today() - timedelta(days=1)
+    history_start = parse_history_start(DEMO_HISTORY_START, cob)
+    print("\nDEMO: Yahoo and ECB data, no API keys, broker session or date prompts")
+    print("=" * 58)
+    print(f"COB: {cob:%d/%m/%Y} | History start: {history_start:%d/%m/%Y}")
+    downloader = MarketDataDownloader.from_json(DEMO_CONFIG_FILES, settings=SETTINGS,
+        cob_date=cob, history_start=history_start, progress=print)
+    result = downloader.download_cob(cob, DEMO_DUMP_DIR,
+        portfolio_file=DEMO_PORTFOLIO_FILE, ois_file=OIS_FILE, retry_failed=True)
+    print(result.summary[["ticker", "provider", "status", "retrieval_method"]].to_string(index=False))
+    print(f"{'Reused' if result.reused else 'Saved'} COB archive: {result.folder}")
+    _inventory_archive(result.folder, DEMO_PORTFOLIO_FILE)
+    return result
+
+
 def inventory_main(cob_text=None):
     """Inspect local data without constructing a downloader or checking API keys."""
     print("\nPORTFOLIO SIMULATOR")
@@ -140,7 +168,7 @@ def inventory_main(cob_text=None):
     return _inventory_archive(RAW_DUMP_DIR / cob.isoformat())
 
 
-def _inventory_archive(folder):
+def _inventory_archive(folder, portfolio_file=None):
     """Run the same local inspection after a download or as a standalone step."""
     inventory = inspect_archive(folder, progress=print, include_observations=True)
     json_path, report_path = inventory.save(INVENTORY_DIR / inventory.cob)
@@ -150,12 +178,12 @@ def _inventory_archive(folder):
     print("Provider failures, partial data and later option capture dates are listed separately.")
     print(f"Readable report: {report_path}")
     print(f"Detailed inventory: {json_path}")
-    _process_inventory(inventory)
+    _process_inventory(inventory, portfolio_file)
     return inventory
 
 
-def _process_inventory(inventory):
-    result = process_inventory(inventory, CLEANING_FILE, portfolio_file=PORTFOLIO_FILE, progress=print)
+def _process_inventory(inventory, portfolio_file=None):
+    result = process_inventory(inventory, CLEANING_FILE, portfolio_file=portfolio_file or PORTFOLIO_FILE, progress=print)
     destination = result.save(PROCESSED_DIR / inventory.cob / result.run_id)
     weights = ", ".join(f"{h['request_id']} {h['weight']:.0%}" for h in result.summary["portfolio"]["holdings"])
     print(f"Processing portfolio: {weights}")
@@ -166,7 +194,10 @@ def _process_inventory(inventory):
         print("FX history is missing: reporting-currency analysis is not ready.")
     print(f"Cleaned/merged data and report: {destination}")
     print("Computing historical statistics and stress comparisons for configured holdings.")
-    statistics = analyze_processed(result, MODELING_FILE)
+    # Creating the Portfolio computes its statistics; the later simulation,
+    # report and plots are methods of this same object.
+    portfolio = Portfolio(result, MODELING_FILE, MONTE_CARLO_FILE)
+    statistics = portfolio.statistics
     statistics.source_folder = destination.resolve()
     statistics_folder = statistics.save(destination / "statistics" / statistics.run_id)
     print(f"Statistics portfolio status: {statistics.summary['portfolio_status']}")
@@ -177,15 +208,19 @@ def _process_inventory(inventory):
     # Monte Carlo consumes cleaned holdings/references directly, not the
     # descriptive statistics tables. Its own JSON controls calibration and
     # scenarios; this offline stage makes no further provider requests.
-    simulation = simulate_processed(result, MONTE_CARLO_FILE)
-    # Remember the cleaned source to protect it during export. Save in a
-    # separate simulation-ID folder tracking inputs, settings and source code.
-    simulation.source_folder = destination.resolve()
+    # The Portfolio passes on the cleaned source to protect it during export.
+    # Save in a separate simulation-ID folder tracking inputs, settings and code.
+    simulation = portfolio.monte_carlo()
     simulation_folder = simulation.save(destination / "monte_carlo" / simulation.run_id)
     print(f"Monte Carlo status: {simulation.summary['status']}")
     for notice in simulation.summary["warnings"]:
         print("Monte Carlo: " + notice)
     print(f"Monte Carlo report and results: {simulation_folder}")
+    portfolio_folder = destination / "portfolio"
+    portfolio_folder.mkdir(exist_ok=True)
+    (portfolio_folder / "report.md").write_text(portfolio.report(), encoding="utf-8")
+    portfolio.plots_report(portfolio_folder / "plots")
+    print(f"Portfolio report and plots: {portfolio_folder}")
     print("Raw archive unchanged. Option/local-volatility calibration is not run.")
     return result
 
@@ -195,13 +230,14 @@ def choose_mode():
     print("\nPORTFOLIO SIMULATOR - Choose a workflow")
     print("  1. Process saved archive: inventory, clean, merge and analyse (no API requests).")
     print("  2. Download + process: retrieve/reuse, inventory, clean, merge and analyse.")
+    print("  3. Demo: first run with Yahoo and ECB only; no keys, broker or date prompts.")
     choices = {"1": "inventory", "inventory": "inventory", "process": "inventory",
-               "2": "download", "download": "download"}
+               "2": "download", "download": "download", "3": "demo", "demo": "demo"}
     while True:
-        choice = input("Choose mode (1 = process saved archive, 2 = download + process): ").strip().lower()
+        choice = input("Choose mode (1 = process saved archive, 2 = download + process, 3 = demo): ").strip().lower()
         if choice in choices:
             return choices[choice]
-        print("Please enter 1 (inventory) or 2 (download).")
+        print("Please enter 1 (inventory), 2 (download) or 3 (demo).")
 
 
 def main(cob_text=None, history_start_text=None, *, mode=None, retry_failed=False):
@@ -213,8 +249,15 @@ def main(cob_text=None, history_start_text=None, *, mode=None, retry_failed=Fals
         return inventory_main(cob_text)
     if selected == "download":
         return download_main(cob_text, history_start_text, retry_failed=retry_failed)
-    raise ValueError("Mode must be 'inventory' or 'download'.")
+    if selected == "demo":
+        if cob_text is not None or history_start_text is not None or retry_failed:
+            raise ValueError("The demo uses fixed dates; date/retry parameters require mode='download'.")
+        return demo_main()
+    raise ValueError("Mode must be 'inventory', 'download' or 'demo'.")
 
 
 if __name__ == "__main__":
-    result = main()
+    try:
+        result = main(mode=sys.argv[1] if len(sys.argv) > 1 else None)
+    except ArchiveNotFound as exc:
+        sys.exit(f"\n{exc}\nDownload it first with option 2, or run the keyless demo: python run.py demo")

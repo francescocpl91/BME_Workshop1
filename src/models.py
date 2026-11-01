@@ -78,7 +78,31 @@ class RetrievedSeries:
 
 @dataclass
 class PriceSeries(RetrievedSeries):
-    """Daily market-price observations, not automatically total returns."""
+    """Daily market-price observations, not automatically total returns.
+
+    Creating a series computes the mean and sample standard deviation of its
+    daily simple returns. Undefined values stay None, never zero.
+    """
+    mean_return: float | None = field(init=False, default=None)
+    std_return: float | None = field(init=False, default=None)
+
+    def __post_init__(self):
+        self.update_statistics()
+
+    def update_statistics(self):
+        """Recalculate after data changes. A return never bridges a missing price."""
+        self.mean_return = self.std_return = None
+        # Adjusted prices include distributions, so they describe investor returns.
+        columns = [c for c in ("adj_close", "close") if c in self.data and self.data[c].notna().any()]
+        if not columns:
+            return
+        frame = self.data.sort_values("date") if "date" in self.data else self.data
+        prices = pd.to_numeric(frame[columns[0]], errors="coerce")
+        returns = (prices/prices.shift()-1).replace([float("inf"), -float("inf")], float("nan")).dropna()
+        if len(returns) >= 1:
+            self.mean_return = float(returns.mean())
+        if len(returns) >= 2:
+            self.std_return = float(returns.std(ddof=1))
 
 
 @dataclass
@@ -143,4 +167,6 @@ def normalize(result: RetrievedSeries, window: DateWindow, kind: str) -> Retriev
     if last == date.today():
         result.warnings.append("Today's observation may be provisional or an incomplete daily candle.")
     result.data = df
+    if isinstance(result, PriceSeries):
+        result.update_statistics()
     return result
