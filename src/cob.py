@@ -19,6 +19,25 @@ def london_today():
     return datetime.now(ZoneInfo('Europe/London')).date()
 
 
+def forecast_start_for_cob(value):
+    """Return exactly archive COB + one calendar day, without reading a clock.
+
+    Terminal input is validated separately by parse_cob. Modeling uses the
+    selected archive's ISO date, so offline reruns never depend on today's date
+    or a stale configuration date. A weekend/holiday is not rolled forward.
+    """
+    try:
+        if type(value) is date:
+            day = value
+        elif isinstance(value, str) and re.fullmatch(r'\d{4}-\d{2}-\d{2}', value):
+            day = date.fromisoformat(value)
+        else:
+            raise ValueError('invalid date')
+        return (day + timedelta(days=1)).isoformat()
+    except (ValueError, OverflowError):
+        raise ValueError('simulation_requires_valid_archive_cob') from None
+
+
 def parse_cob(value, *, today=None):
     today = today or london_today()
     if type(value) is date: cob = value

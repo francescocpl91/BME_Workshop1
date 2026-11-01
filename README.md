@@ -141,12 +141,14 @@ history or missing conversion factors produce an unavailable report; invalid
 configuration or corrupted saved inputs raise explicit errors.
 
 The initial settings are 10,000 paths per scenario, normalized wealth 100 on
-**9 October 2026**, ending **17 December 2027**, using XNYS sessions. The first
-date is the initial level; the first simulated return ends on the next session.
-These are normalized investment scenarios, not observed prices on 9 October.
-The start must be a session strictly after the archive COB. An end falling on a
-holiday/weekend uses the last prior session with a warning. Dates remain explicit
-JSON choices; no option maturity or instrument symbol controls the horizon.
+**the day after the archive COB** (`forecast_start: "cob_plus_one"`), ending
+**17 December 2027**, using XNYS sessions. The first date is the initial level;
+the first simulated return ends on the next session, including when the start
+falls on a weekend or holiday. These are normalized investment scenarios, not
+observed prices on that date. An explicit ISO start is still accepted; it must be
+a session strictly after the archive COB. An end falling on a holiday/weekend uses
+the last prior session with a warning. No option maturity or instrument symbol
+controls the horizon.
 
 Calibration uses the latest ten calendar years through COB, or an explicit
 calibration.start override. Each holding's daily log mean and the joint sample
@@ -366,6 +368,48 @@ To simulate an existing cleaned run without rerunning earlier stages:
 The reader verifies input hashes and row counts. simulate_processed accepts the
 in-memory ProcessedArchive instead. With fewer paths, reduce sample_paths too
 if necessary; it cannot exceed paths.
+
+## Portfolio object
+
+`Portfolio` (`src/portfolio_model.py`) is the single entry point for one investment
+portfolio. Creating it computes the historical statistics automatically; simulation,
+report and plots are then methods of the same object. It works with the cleaned result
+of `run.py` and makes no API requests.
+
+    from src import Portfolio
+
+    folder = "processed/2026-10-31/<processing-id>"
+    portfolio = Portfolio.from_saved(folder, "config/modeling.json", "config/monte_carlo.json")
+
+    # Whole portfolio, with this run's parameters instead of the JSON values.
+    simulation = portfolio.monte_carlo(paths=5000, horizon_sessions=252, seed=7)
+    portfolio.plot_monte_carlo()                     # Trajectories and distribution on screen.
+
+    # One holding, under explicit return and volatility assumptions.
+    portfolio.monte_carlo(instrument="SPY", paths=5000, horizon_sessions=252,
+                          assumptions={"SPY": {"annual_return": 0.06, "annual_volatility": 0.25}})
+
+    print(portfolio.report(sections=("overview", "simulation", "risk_warnings"), volatility_limit=0.15))
+    portfolio.plots_report("portfolio_plots")        # Writes PNG files.
+
+`monte_carlo()` accepts `paths`, `horizon_sessions` or `forecast_end`, `seed`, `models`,
+`sample_paths`, `instrument`, `assumptions` and `volatility_multiplier`. Omitted values come from
+`config/monte_carlo.json` and pass the same validation. A whole-portfolio run is kept in
+`portfolio.simulation` for the report and plots; a single-holding run is only returned, and
+that result has its own `plot()`.
+
+`annual_return` is compound annual growth in the holding's own currency; `annual_volatility` is
+the annualized standard deviation of its log returns. Rescaling keeps historical correlations and
+tail shape. `volatility_multiplier` scales the holdings without an explicit volatility, for example
+1.5 for a higher-volatility scenario. FX factors keep their history. Assumptions run the baseline
+only, because named stress windows describe history.
+
+`report()` returns Markdown and accepts `sections`, `return_type`, `model`, `confidence`,
+`volatility_limit`, `drawdown_limit`, `loss_probability_limit` and `correlation_limit`. The limits
+decide which risk warnings appear. Available sections are `overview`, `performance`, `correlations`,
+`simulation`, `diagnostics` and `risk_warnings`.
+
+`run.py` keeps its existing workflow and full exports.
 
 ## Cleaning and merging
 

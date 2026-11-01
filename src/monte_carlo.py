@@ -38,6 +38,7 @@ import hashlib
 import json
 import math
 import re
+import warnings
 
 import exchange_calendars as xcals
 import numpy as np
@@ -46,6 +47,7 @@ from scipy.optimize import minimize_scalar
 from scipy.special import betainc, gammaln
 from scipy.stats import f as f_distribution
 
+from .cob import forecast_start_for_cob
 from .statistics import _read_json, _day, _prepare, _basis_kind
 from .storage import write_json
 from .mc_diagnostics import (daily_distribution, wealth_diagnostics, diagnostic_figures,
@@ -61,8 +63,12 @@ class FXUnavailable(SimulationUnavailable):
     """Missing/unusable conversion factors permit an explicit currency fallback."""
 
 
-def load_monte_carlo_config(path):
-    """Strict configuration: reject unknown settings rather than ignoring them."""
+def load_monte_carlo_config(path,overrides=None):
+    """Strict configuration: reject unknown settings rather than ignoring them.
+
+    overrides replaces top-level JSON values before validation, so a value set
+    from Python passes exactly the same checks as one written in the file.
+    """
     # Read the JSON with the shared reader. Validate before calibration so a
     # misspelled field cannot silently change the financial experiment.
     cfg = _read_json(path)
@@ -75,6 +81,10 @@ def load_monte_carlo_config(path):
     optional = {"diagnostics", "stress_calibrations"}
     if not isinstance(cfg,dict) or not keys <= set(cfg) or set(cfg)-keys-optional:
         raise ValueError("Missing or unknown Monte Carlo configuration settings.")
+    if overrides:
+        if set(overrides)-keys-optional:
+            raise ValueError("Unknown Monte Carlo override settings.")
+        cfg.update(deepcopy(overrides))
     if type(cfg["schema_version"]) is not int or cfg["schema_version"] != 2:
         raise ValueError("Monte Carlo schema_version must be 2 (fitted df and probability-based cutoffs).")
     for k in ("enabled","plots"):
@@ -89,7 +99,10 @@ def load_monte_carlo_config(path):
         raise ValueError("Choose distinct gaussian/student_t_truncated models.")
     # Check date order now. Actual exchange sessions and separation from the
     # archive COB are checked later, when those inputs are available.
-    if _day(cfg["forecast_start"]) >= _day(cfg["forecast_end"]):
+    # cob_plus_one has no date until an archive is known; only its end is checked.
+    if cfg["forecast_start"] == "cob_plus_one":
+        _day(cfg["forecast_end"])
+    elif _day(cfg["forecast_start"]) >= _day(cfg["forecast_end"]):
         raise ValueError("Forecast end must follow start.")
     # At least two paths permit sample standard deviations. The integer seed
     # controls repeatable random draws. sample_paths controls exports only.
@@ -208,6 +221,67 @@ def _sessions(calendar,start,end):
     last = (pd.Timestamp(end)+pd.Timedelta(days=14)).strftime("%Y-%m-%d")
     cal = xcals.get_calendar(calendar,start=first,end=last)
     return cal.sessions_in_range(start,end).strftime("%Y-%m-%d").tolist()
+
+
+def forecast_end_for_horizon(cob,cfg,horizon_sessions):
+    """Forecast date reached after this many simulated exchange-session returns."""
+    if type(horizon_sessions) is not int or horizon_sessions < 1:
+        raise ValueError("horizon_sessions must be a positive integer.")
+    start = forecast_start_for_cob(cob) if cfg["forecast_start"] == "cob_plus_one" else _day(cfg["forecast_start"])
+    # Two calendar days per session plus a margin always spans the sessions needed.
+    last = (pd.Timestamp(start)+pd.Timedelta(days=2*horizon_sessions+30)).strftime("%Y-%m-%d")
+    return [d for d in _sessions(cfg["calendar"],start,last) if d > start][horizon_sessions-1]
+
+
+def _checked_assumptions(assumptions,factors):
+    """Validate user return/volatility assumptions against the simulated holdings."""
+    holdings = assumptions["holdings"]
+    multiplier = assumptions["volatility_multiplier"]
+    periods = assumptions["periods_per_year"]
+    if type(multiplier) not in (int,float) or not math.isfinite(multiplier) or multiplier <= 0:
+        raise ValueError("volatility_multiplier must be finite and positive.")
+    if type(periods) is not int or periods <= 0:
+        raise ValueError("periods_per_year must be a positive integer.")
+    unknown = {"asset::"+key for key in holdings}-set(factors)
+    if unknown:
+        raise ValueError("Assumptions name instruments outside this simulation: "+", ".join(sorted(unknown)))
+    for key,values in holdings.items():
+        if not isinstance(values,dict) or not values or set(values)-{"annual_return","annual_volatility"}:
+            raise ValueError(key+": use annual_return and/or annual_volatility assumptions.")
+        for name,value in values.items():
+            if type(value) not in (int,float) or not math.isfinite(value):
+                raise ValueError(key+": "+name+" must be a finite number.")
+        if values.get("annual_return",0) <= -1 or values.get("annual_volatility",1) <= 0:
+            raise ValueError(key+": annual_return must exceed -1 and annual_volatility must be positive.")
+    return holdings,multiplier,periods
+
+
+def _apply_assumptions(observed,factors,assumptions):
+    """Return rescaled history plus the simulated daily log mean of every factor.
+
+    Each asset's returns are stretched around their own mean. This sets its
+    volatility while keeping correlations and the fitted Student-t tail shape.
+    annual_return is compound growth: daily log mean = log(1+return)/periods.
+    FX factors keep their history, so a converted holding's final volatility
+    can differ from an assumption stated in the holding's own currency.
+    """
+    holdings,multiplier,periods = _checked_assumptions(assumptions,factors)
+    x = observed.copy()
+    means = observed.mean(axis=0)
+    deviations = observed.std(axis=0,ddof=1)
+    for i,factor in enumerate(factors):
+        if not factor.startswith("asset::"):
+            continue
+        values = holdings.get(factor[len("asset::"):],{})
+        if "annual_return" in values:
+            means[i] = math.log1p(values["annual_return"])/periods
+        scale = multiplier
+        if "annual_volatility" in values:
+            if deviations[i] <= 0:
+                raise ValueError(factor+": a constant history cannot be rescaled to a volatility.")
+            scale = values["annual_volatility"]/math.sqrt(periods)/deviations[i]
+        x[:,i] = observed[:,i].mean()+(observed[:,i]-observed[:,i].mean())*scale
+    return x,means
 
 
 def _root_covariance(covariance):
@@ -732,6 +806,62 @@ class MonteCarloResult:
         write_json(safe(destination/"manifest.json"),manifest)
         return destination
 
+    def plot(self,instrument_id="portfolio",model=None,trajectories=20,destination=None,show=True):
+        """Draw simulated trajectories, percentile bands and the terminal distribution.
+
+        instrument_id selects the portfolio or one holding; model defaults to the
+        first baseline scenario. Trajectories come from the exported sample_paths.
+        destination optionally saves a PNG. show opens a window; False only builds
+        the figure. Returns the Matplotlib figure for further use.
+        """
+        if self.summary["status"] != "complete":
+            raise ValueError("No simulated paths: Monte Carlo status is "+self.summary["status"]+".")
+        model = model or next(iter(self.summary["models"]))
+        if model not in self.summary["models"]:
+            raise ValueError("Unknown Monte Carlo model: "+str(model))
+        if type(trajectories) is not int or trajectories < 0:
+            raise ValueError("trajectories must be a nonnegative integer.")
+        selected = {name:table.loc[(table["model"] == model) & (table["instrument_id"] == instrument_id)]
+                    for name,table in self.tables.items() if name in ("bands","sample_paths","terminal_values")}
+        if selected["bands"].empty:
+            raise ValueError("Unknown simulated instrument: "+str(instrument_id))
+        import matplotlib
+        from matplotlib import pyplot as plt
+        can_show = show
+        # save() selects the headless Agg backend for the whole process. Switch
+        # before creating the figure, because switching closes open figures.
+        if show and matplotlib.get_backend().lower() == "agg":
+            try:
+                plt.switch_backend("TkAgg")
+            except (ImportError,RuntimeError):
+                can_show = False
+                warnings.warn("No interactive display is available; save the figure with destination=.")
+        fig,axes = plt.subplots(1,2,figsize=(12,4.5),constrained_layout=True)
+        bands,terminal = selected["bands"],selected["terminal_values"]["terminal_value"]
+        dates = pd.to_datetime(bands["date"])
+        samples = selected["sample_paths"]
+        for path in sorted(samples["path"].unique())[:trajectories]:
+            rows = samples.loc[samples["path"] == path]
+            axes[0].plot(pd.to_datetime(rows["date"]),rows["value"],color="grey",alpha=.35,linewidth=.7)
+        axes[0].fill_between(dates,bands["p05"],bands["p95"],alpha=.2,label="5th–95th percentile")
+        axes[0].plot(dates,bands["p50"],label="Median")
+        axes[0].set(title="Simulated trajectories",ylabel=f"Normalized value ({bands['currency'].iloc[0]})")
+        axes[0].legend()
+        axes[1].hist(terminal,bins=60,density=True,alpha=.6)
+        axes[1].axvline(self.settings["initial_value"],color="black",linestyle="--",label="Initial value")
+        axes[1].set(title="Terminal distribution",xlabel="Normalized wealth",ylabel="Density")
+        axes[1].legend()
+        fig.suptitle(f"{instrument_id} | {model} | {bands['date'].iloc[0]} to {bands['date'].iloc[-1]}")
+        if destination is not None:
+            path = self._destination(destination)
+            if path.is_symlink():
+                raise ValueError("Refusing symlink simulation output.")
+            path.parent.mkdir(parents=True,exist_ok=True)
+            fig.savefig(path,dpi=130)
+        if can_show:
+            plt.show()
+        return fig
+
 
 def _portfolio_wealth(holding_values,weights,initial_value):
     """Stable equivalent forms of the fully invested weighted wealth sum.
@@ -815,15 +945,21 @@ def _run_scenario(model,mean,covariance,root,transform,weights,dates,cfg,student
     return wealth,sample_mean,sample_cov
 
 
-def simulate_processed(processed,config_file):
+def simulate_processed(processed,config_file,overrides=None,assumptions=None):
     """Run baseline and independent named stress calibrations from the same archive.
 
 A stress can retain baseline LOG drift while replacing covariance and fitted
 Student-t tails. Each stress uses the same holdings, currency and forecast.
 Missing stress history is reported without discarding a successful baseline.
+
+overrides replaces configuration values for this run only. assumptions replaces
+historical return/volatility with user views and runs the baseline alone: a
+stress window describes history, which those views have deliberately replaced.
 """
-    cfg = load_monte_carlo_config(config_file)
-    result = _simulate_core(processed,cfg)
+    cfg = load_monte_carlo_config(config_file,overrides)
+    if assumptions is not None:
+        cfg["stress_calibrations"] = []
+    result = _simulate_core(processed,cfg,assumptions=assumptions)
     if result.summary["status"] != "complete":
         return result
     # Capture baseline drifts before concatenating stress tables. A stress
@@ -860,13 +996,19 @@ Missing stress history is reported without discarding a successful baseline.
     return result
 
 
-def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_currency=None):
+def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_currency=None,assumptions=None):
     """Calibrate and simulate; invalid inputs never trigger API requests.
 
     A missing-data condition returns a result with status=unavailable and a
     reason, so run.py can retain successful statistics and a reviewable report.
     Invalid configuration or corrupted inputs still raise an explicit error.
     """
+    # Fix the automatic start on a private copy: reports and run identity show
+    # the actual date, and every calibration of this run shares that same date.
+    cfg = deepcopy(cfg)
+    automatic_start = cfg["forecast_start"] == "cob_plus_one"
+    if automatic_start:
+        cfg["forecast_start"] = forecast_start_for_cob(_day(processed.cob))
     # Copy only relevant cleaned inputs. Raw provider payloads, option quotes
     # and OIS curves are not used by these historical-measure models.
     source_tables = {k:processed.tables[k].copy(deep=True) for k in ("selected_prices","selected_references")
@@ -875,7 +1017,7 @@ def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_cur
     # Source hashes include COMMENTS: documentation edits change future run IDs
     # even with identical mathematics. Previously saved reports are untouched.
     identity = dict(processing_id=processed.run_id,cob=_day(processed.cob),settings=cfg,
-                    portfolio=deepcopy(processed.summary["portfolio"]),risk_window=risk_window,drift_override=drift_override,
+                    portfolio=deepcopy(processed.summary["portfolio"]),risk_window=risk_window,drift_override=drift_override,assumptions=assumptions,
                     inputs={k:hashlib.sha256(v.to_csv(index=False).encode()).hexdigest()
                             for k,v in source_tables.items()},
                     code={p.name:hashlib.sha256(p.read_bytes()).hexdigest()
@@ -896,9 +1038,15 @@ def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_cur
     try:
         if cfg["forecast_start"] <= _day(processed.cob):
             raise SimulationUnavailable("Forecast start must be after archive COB; update the configured dates.")
-        # Initial date must be a session after COB. Non-session forecast end uses
+        if cfg["forecast_end"] <= cfg["forecast_start"]:
+            raise SimulationUnavailable("Forecast end must follow the forecast start; update the configured dates.")
+        # An explicit initial date must be a session after COB. An automatic date
+        # may fall on a weekend or holiday: it remains the initial level, and the
+        # first return ends on the next session. A non-session forecast end uses
         # the last preceding session, with a warning recorded below.
         dates = _sessions(cfg["calendar"],cfg["forecast_start"],cfg["forecast_end"])
+        if automatic_start:
+            dates = [cfg["forecast_start"]]+[d for d in dates if d > cfg["forecast_start"]]
         if len(dates) < 2 or dates[0] != cfg["forecast_start"]:
             raise SimulationUnavailable("Forecast start must be an exchange session with a later forecast session.")
         portfolio,holdings,native,sessions,requested_start = _holding_inputs(processed,cfg,risk_window)
@@ -919,9 +1067,14 @@ def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_cur
         return result
     # One row per matched daily interval, one column per asset/FX factor.
     # ALL covariance entries use the same common sample, not pairwise subsets.
-    x = joined.to_numpy(dtype=float)
-    if not np.isfinite(x).all():
+    observed = joined.to_numpy(dtype=float)
+    if not np.isfinite(observed).all():
         raise ValueError("Nonfinite calibration log returns.")
+    x = observed
+    assumed_mean = None
+    if assumptions is not None:
+        x,assumed_mean = _apply_assumptions(observed,joined.columns.tolist(),assumptions)
+        summary["warnings"].append("User return/volatility assumptions replace historical values; results are scenarios, not estimates.")
     # Column averages of LOG returns estimate daily log drift. Preserve this
     # window mean even when stress uses a baseline drift override: tail fitting
     # must center stress observations on their own mean.
@@ -931,6 +1084,9 @@ def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_cur
         if set(drift_override) != set(joined.columns):
             raise ValueError("Stress and baseline factors differ; cannot transfer drift.")
         mean = np.array([drift_override[k]["mean_daily_log"] for k in joined.columns])
+    if assumed_mean is not None:
+        mean = assumed_mean
+    drift_source = "user_assumptions" if assumptions is not None else "baseline" if drift_override is not None else "same_window"
     # Columns are factors (rowvar=False); sample covariance divides by M-1
     # (ddof=1). atleast_2d preserves matrix shape for a single factor.
     covariance = np.atleast_2d(np.cov(x,rowvar=False,ddof=1))
@@ -957,7 +1113,7 @@ def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_cur
                    weight_rounding_reconciled=configured_total != 1.,
                    fx_factors=fx,forecast_dates=dates,steps=len(dates)-1,
                    calibration=dict(requested_start=requested_start,requested_end=risk_window["end"] if risk_window else _day(processed.cob),
-                                    drift_source="baseline" if drift_override is not None else "same_window",first_start=joined.index[0][0],
+                                    drift_source=drift_source,first_start=joined.index[0][0],
                                     last_end=joined.index[-1][1],observations=len(joined),
                                     dropped_holding_intervals_for_fx=len(native)-len(joined)),
                    models={},warnings=summary["warnings"])
@@ -976,7 +1132,8 @@ def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_cur
     # is daily std/sqrt(M), assuming independent observations; it is NOT the
     # terminal-wealth Monte Carlo standard error calculated later.
     calibration_rows = [dict(factor=k,mean_daily_log=float(mean[i]),sample_mean_daily_log=float(sample_mean[i]),
-                             drift_source="baseline" if drift_override is not None else "same_window",
+                             drift_source=("user_assumptions" if "annual_return" in (assumptions or {"holdings":{}})["holdings"].get(k[len("asset::"):],{})
+                                           else "baseline" if drift_override is not None else "same_window"),
                              std_daily_log=float(math.sqrt(covariance[i,i])),
                              mean_estimation_standard_error=(drift_override[k]["mean_estimation_standard_error"] if drift_override is not None
                                                             else float(math.sqrt(covariance[i,i]/len(joined)))),
@@ -1033,7 +1190,7 @@ def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_cur
         # Compare historical holding distributions in the SAME currency as paths.
         # Use their own window moments for z-scores; do not fabricate a historical
         # portfolio series for the daily distribution comparison.
-        historical = x @ transform.T
+        historical = observed @ transform.T
         for i,holding in enumerate(holdings):
             info,hist = daily_distribution(historical[:,i],float(historical[:,i].mean()),
                                           float(historical[:,i].std(ddof=1)),diag["sigma_thresholds"],diag["histogram_bins"])
@@ -1145,6 +1302,15 @@ def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_cur
 
 def simulate_saved_processing(folder,config_file):
     """Read only hash-verified cleaned inputs; no downloader or statistics rerun."""
+    # Reconstruct the cleaned-input object, then call the same entry point as
+    # run.py. Remember source_folder to protect it during subsequent export.
+    result = simulate_processed(load_saved_processing(folder),config_file)
+    result.source_folder = Path(folder).resolve()
+    return result
+
+
+def load_saved_processing(folder):
+    """Rebuild a ProcessedArchive from a saved run after verifying every used table."""
     from .data_cleaning import ProcessedArchive
     folder = Path(folder).resolve()
     # For saved input, verify completion and each used table. Folder existence
@@ -1173,9 +1339,4 @@ def simulate_saved_processing(folder,config_file):
         if len(table) != entry["rows"]:
             raise ValueError("Cleaned input row-count mismatch: "+name)
         tables[name] = table
-    # Reconstruct the cleaned-input object, then call the same entry point as
-    # run.py. Remember source_folder to protect it during subsequent export.
-    result = simulate_processed(ProcessedArchive(Path(manifest["archive"]),manifest["cob"],manifest["run_id"],tables,manifest),
-                                config_file)
-    result.source_folder = folder
-    return result
+    return ProcessedArchive(Path(manifest["archive"]),manifest["cob"],manifest["run_id"],tables,manifest)
