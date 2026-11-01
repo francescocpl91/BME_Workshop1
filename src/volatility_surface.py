@@ -18,6 +18,7 @@ import io
 import json
 import math
 import sys
+import time
 from tempfile import TemporaryDirectory
 import uuid
 
@@ -41,6 +42,24 @@ def _bytes(value):
 
 def _hash(value):
     return hashlib.sha256(value).hexdigest()
+
+
+def _rename_directory(source, destination):
+    """Retry transient Windows file locks, never replace an existing directory.
+
+    Publication, preservation of old partial work and rollback all use the
+    same bounded retry. Persistent access failures remain visible; no ACLs are
+    changed and no files are deleted to force a successful publication.
+    """
+    for attempt in range(7):
+        if destination.exists():
+            raise FileExistsError(f'Directory already exists: {destination}')
+        try:
+            return source.rename(destination)
+        except PermissionError:
+            if attempt == 6 or destination.exists():
+                raise
+            time.sleep(min(.05 * 2 ** attempt, 1.0))
 
 
 def load_surface_config(path):
@@ -502,11 +521,11 @@ class SurfaceResult:
             if backup is not None:manifest['recovered_incomplete_output']=backup.name
             write_json(stage/'manifest.json',manifest)
             self._verify_saved(stage,expected)
-            if backup is not None:target.rename(backup)
+            if backup is not None:_rename_directory(target,backup)
             try:
-                stage.rename(target)
+                _rename_directory(stage,target)
             except OSError:
-                if backup is not None and not target.exists():backup.rename(target)
+                if backup is not None and not target.exists():_rename_directory(backup,target)
                 if target.exists() and (target/'manifest.json').exists():
                     return self._verify_saved(target,expected)
                 raise

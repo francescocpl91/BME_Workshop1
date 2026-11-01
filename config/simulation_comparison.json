@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "enabled": true,
+  "primary_return_type": "simple",
+  "reference_model": "gaussian",
+  "confidence_levels": [
+    0.95,
+    0.99
+  ],
+  "sampling_confidence": 0.95,
+  "allow_approximate_terminal_horizon": true,
+  "maximum_relative_horizon_difference": 0.005,
+  "material_loss_probability_difference": 0.02,
+  "minimum_expected_tail_paths": 50,
+  "maximum_chart_points": 1500,
+  "surface_display_points": 2500,
+  "instructions": {
+    "scope": "Offline academic project synthesis. Read only this execution's explicitly supplied saved results. Do not download, recalibrate, simulate, change allocations or overwrite source outputs.",
+    "returns": "Use simple daily returns for the main historical summary; the detailed statistics report retains both simple and log returns. Historical daily statistics and forecast-horizon losses are different quantities.",
+    "comparison": "Compare full portfolios when currency, holdings, weights, investment convention, calibration observations and intended forecast dates agree. Available physical local-volatility results participate in the main analysis while their saved validation status remains visible. Stress and tail sensitivities stay separate.",
+    "clock": "The optional 0.5% relative horizon tolerance permits an explicitly approximate terminal comparison between exchange-session time and ACT/365F. It never makes daily path metrics or drawdowns directly comparable.",
+    "materiality": "A two-percentage-point difference in loss probability is a descriptive review threshold, not a hypothesis test or evidence that one model is correct.",
+    "uncertainty": "Mean intervals use the Monte Carlo standard error. Loss-probability intervals use Wilson intervals for independent simulated paths. Neither accounts for parameter estimation, missing data or model risk.",
+    "figures": "Chart point limits affect display only. All saved terminal observations contribute to metrics. Surface figures show supported grid points, not an endorsement of extrapolated wings.",
+    "simulation_plots": "Show saved portfolio paths with full-population bands, mean/median growth, empirical terminal density and logarithmic tails. Sample paths are a deterministic display subset, never used to estimate bands or tail probabilities. No path pairing or common-grid return inference across engines."
+  },
+  "simulation_plots": {
+    "sample_paths": 20,
+    "histogram_bins": 70,
+    "fan_quantiles": [
+      0.05,
+      0.95
+    ],
+    "tail_display_fraction": 0.1,
+    "loss_thresholds": [
+      0.05,
+      0.1,
+      0.2,
+      0.3,
+      0.5
+    ],
+    "smiles_per_figure": 6
+  }
+}

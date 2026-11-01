@@ -228,7 +228,9 @@ class LocalVolTests(unittest.TestCase):
         with patch('src.volatility_workflow.save_overview',return_value=Path('.')),patch.object(run,'process_inventory',return_value=processed),patch.object(run,'_calibrate_available'), \
              patch.object(run,'_surface_available',return_value=self.surface),patch.object(run,'_local_vol_available',side_effect=local), \
              patch.object(run,'analyze_processed',side_effect=statistics),patch.object(run,'simulate_processed',side_effect=simulation),redirect_stdout(StringIO()):
-            run._process_inventory(SimpleNamespace(cob='2031-02-02'))
+            # This test isolates stage ordering; final-report behavior has separate fixtures.
+            with patch.object(run, '_final_analysis'):
+                run._process_inventory(SimpleNamespace(cob='2031-02-02'))
         self.assertEqual(order,['local','statistics','historical_mc'])
 
 

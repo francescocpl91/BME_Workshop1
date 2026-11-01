@@ -24,6 +24,7 @@ CLEANING_FILE = CONFIG_DIR / "cleaning.json"
 MODELING_FILE = CONFIG_DIR / "modeling.json"
 MONTE_CARLO_FILE = CONFIG_DIR / "monte_carlo.json"
 REAL_WORLD_FILE = CONFIG_DIR / "local_vol_real_world.json"
+COMPARISON_FILE = CONFIG_DIR / "simulation_comparison.json"
 CALIBRATION_FILE = CONFIG_DIR / "calibration" / "option_calibration.json"
 SURFACE_FILE = CONFIG_DIR / "calibration" / "surface.json"
 LOCAL_VOL_FILE = CONFIG_DIR / "calibration" / "local_volatility.json"
@@ -147,7 +148,13 @@ def inventory_main(cob_text=None):
 
 def _inventory_archive(folder):
     """Run the same local inspection after a download or as a standalone step."""
-    inventory = inspect_archive(folder, progress=print, include_observations=True)
+    try:
+        inventory = inspect_archive(folder, progress=print, include_observations=True)
+    except (OSError, ValueError) as exc:
+        # Even an unreadable/missing archive can produce an honest final status
+        # report, without pretending that a portfolio was successfully analyzed.
+        _final_analysis(Path(folder).name, {}, {"processing": str(exc)})
+        raise
     json_path, report_path = inventory.save(INVENTORY_DIR / inventory.cob)
     print(f"\nInspected {len(inventory.requests):,} saved requests.")
     print(f"Reader errors: {inventory.metadata['requests_with_reader_errors']}")
@@ -159,9 +166,38 @@ def _inventory_archive(folder):
     return inventory
 
 
+def _final_analysis(cob, stage_folders, issues):
+    """Summarize this execution only, without downloads or model reruns."""
+    try:
+        import json
+        from src.simulation_comparison import build_analysis
+        portfolio = json.loads(PORTFOLIO_FILE.read_text(encoding="utf-8"))
+        analysis = build_analysis(str(cob), stage_folders, COMPARISON_FILE,
+                                  issues=issues, requested_portfolio=portfolio)
+        if analysis is not None:
+            target = analysis.save(INVENTORY_DIR)
+            print(f"Final academic analysis (start here): {target / 'report.html'}")
+    except (OSError, ValueError, ImportError) as exc:
+        print(f"Final report could not be saved: {exc}. Original stage outputs are unchanged.")
+
+
 def _process_inventory(inventory):
+    # Preserve partial results even when a later stage fails. Unexpected
+    # programming errors still propagate; they are not relabelled as no data.
+    stages, issues = {}, {}
+    try:
+        return _process_inventory_stages(inventory, stages, issues)
+    except Exception as exc:
+        issues["processing"] = f"Workflow stopped ({type(exc).__name__}): {exc}"
+        raise
+    finally:
+        _final_analysis(inventory.cob, stages, issues)
+
+
+def _process_inventory_stages(inventory, stages, issues):
     result = process_inventory(inventory, CLEANING_FILE, portfolio_file=PORTFOLIO_FILE, progress=print)
     destination = result.save(PROCESSED_DIR / inventory.cob / result.run_id)
+    stages["processing"] = destination
     weights = ", ".join(f"{h['request_id']} {h['weight']:.0%}" for h in result.summary["portfolio"]["holdings"])
     print(f"Processing portfolio: {weights}")
     print(f"Aligned holding returns: {result.summary['readiness']['aligned_return_observations']:,}")
@@ -177,9 +213,17 @@ def _process_inventory(inventory):
     with capture_console() as console:
         print("\nVOLATILITY STUDY (saved data; risk-neutral underlying validation)")
         calibration = _calibrate_available(destination)
+        if calibration is not None:
+            stages["option_calibration"] = destination / "option_calibration" / calibration.run_id
         surface = _surface_available(calibration)
+        if surface is not None:
+            stages["volatility_surface"] = destination / "volatility_surface" / surface.run_id
         local_vol = _local_vol_available(surface)
+        if local_vol is not None:
+            stages["local_volatility"] = destination / "local_volatility" / local_vol.run_id
         local_mc = _local_vol_mc_available(local_vol, surface)
+        if local_mc is not None:
+            stages["local_vol_mc"] = destination / "local_vol_mc" / local_mc.run_id
     try:
         overview = save_overview(destination, (calibration, surface, local_vol, local_mc), console.getvalue())
         print(f"Volatility overview (start here): {overview / 'report.html'}")
@@ -190,30 +234,42 @@ def _process_inventory(inventory):
         print(f"Volatility overview could not be saved: {exc}")
         print("Original stage reports remain in the processed folder. Continuing historical analysis.")
     print("Computing historical statistics and stress comparisons for configured holdings.")
-    statistics = analyze_processed(result, MODELING_FILE)
-    statistics.source_folder = destination.resolve()
-    statistics_folder = statistics.save(destination / "statistics" / statistics.run_id)
-    print(f"Statistics portfolio status: {statistics.summary['portfolio_status']}")
-    for notice in statistics.summary["warnings"]:
-        print("Statistics: " + notice)
-    print(f"Historical statistics, tables and plots: {statistics_folder}")
+    try:
+        statistics = analyze_processed(result, MODELING_FILE)
+        statistics.source_folder = destination.resolve()
+        statistics_folder = statistics.save(destination / "statistics" / statistics.run_id)
+        print(f"Statistics portfolio status: {statistics.summary['portfolio_status']}")
+        for notice in statistics.summary["warnings"]:
+            print("Statistics: " + notice)
+        print(f"Historical statistics, tables and plots: {statistics_folder}")
+        stages["statistics"] = destination / "statistics" / statistics.run_id
+    except (OSError, ValueError, ImportError) as exc:
+        issues["statistics"] = str(exc)
+        print(f"statistics could not complete: {exc}. Continuing independent analysis.")
     print("Running configured historical Monte Carlo scenarios (offline).")
     # Monte Carlo consumes cleaned holdings/references directly, not the
     # descriptive statistics tables. Its own JSON controls calibration and
     # scenarios; this offline stage makes no further provider requests.
-    simulation = simulate_processed(result, MONTE_CARLO_FILE)
-    # Remember the cleaned source to protect it during export. Save in a
-    # separate simulation-ID folder tracking inputs, settings and source code.
-    simulation.source_folder = destination.resolve()
-    simulation_folder = simulation.save(destination / "monte_carlo" / simulation.run_id)
-    print(f"Monte Carlo status: {simulation.summary['status']}")
-    forecast = simulation.summary.get('identity', {}).get('settings', {})
-    if forecast.get('forecast_start'):
-        print(f"Historical MC start (COB + 1): {forecast['forecast_start']}; end: {forecast['forecast_end']}")
-    for notice in simulation.summary["warnings"]:
-        print("Monte Carlo: " + notice)
-    print(f"Monte Carlo report and results: {simulation_folder}")
-    _real_world_available(result, local_vol, surface, local_mc, destination)
+    try:
+        simulation = simulate_processed(result, MONTE_CARLO_FILE)
+        # Remember the cleaned source to protect it during export. Save in a
+        # separate simulation-ID folder tracking inputs, settings and source code.
+        simulation.source_folder = destination.resolve()
+        simulation_folder = simulation.save(destination / "monte_carlo" / simulation.run_id)
+        print(f"Monte Carlo status: {simulation.summary['status']}")
+        forecast = simulation.summary.get('identity', {}).get('settings', {})
+        if forecast.get('forecast_start'):
+            print(f"Historical MC start (COB + 1): {forecast['forecast_start']}; end: {forecast['forecast_end']}")
+        for notice in simulation.summary["warnings"]:
+            print("Monte Carlo: " + notice)
+        print(f"Monte Carlo report and results: {simulation_folder}")
+        stages["monte_carlo"] = destination / "monte_carlo" / simulation.run_id
+    except (OSError, ValueError, ImportError) as exc:
+        issues["monte_carlo"] = str(exc)
+        print(f"monte_carlo could not complete: {exc}. Continuing independent analysis.")
+    physical = _real_world_available(result, local_vol, surface, local_mc, destination)
+    if physical is not None:
+        stages["local_vol_real_world"] = destination / "local_vol_real_world" / physical.run_id
     print("Raw archive unchanged. Risk-neutral option validation is separate from the existing historical portfolio simulations.")
     return result
 
@@ -223,8 +279,8 @@ def _real_world_available(processed, local_vol, surface, validation, destination
 
     Historical MC and statistics have already completed independently. No new
     downloader, surface fit or guessed processed-directory path is involved.
-    Missing inputs produce one concise message; the comparison module is a
-    later stage and is not implemented here.
+    Missing inputs produce one concise message. The final comparison reads the
+    saved result and retains diagnostic status and clock limitations.
     """
     if any(value is None for value in (local_vol, surface, validation)):
         print("Physical local-volatility portfolio unavailable: calibration/validation inputs missing.")

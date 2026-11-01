@@ -314,7 +314,9 @@ class SurfaceWorkflowTests(unittest.TestCase):
              patch.object(run,'_surface_available',side_effect=surface), \
              patch.object(run,'analyze_processed',side_effect=statistics), \
              patch.object(run,'simulate_processed',side_effect=simulation),redirect_stdout(StringIO()):
-            run._process_inventory(SimpleNamespace(cob='2026-10-19'))
+            # This test isolates stage ordering; final-report behavior has separate fixtures.
+            with patch.object(run, '_final_analysis'):
+                run._process_inventory(SimpleNamespace(cob='2026-10-19'))
         self.assertEqual(order,['surface','statistics','mc'])
 
 

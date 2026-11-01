@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 import hashlib,json,unittest
 
-from src.volatility_surface import SurfaceResult
+from src.volatility_surface import SurfaceResult, _rename_directory
 from src.storage import write_json
 from test_svi_surface import settings
 
@@ -59,6 +59,42 @@ class RecoveryTests(unittest.TestCase):
             with self.assertRaises(OSError):self.result.save()
         self.assertEqual((self.target/'partial.csv').read_text(),'keep me')
         self.assertEqual(self.result.save(),self.target)
+
+    def test_transient_preservation_and_publication_locks_retry(self):
+        self.target.mkdir(parents=True);(self.target/'partial.csv').write_text('keep me')
+        original=Path.rename;attempts={}
+        def locked(path,target):
+            key=path.name;attempts[key]=attempts.get(key,0)+1
+            if attempts[key] <= 2:raise PermissionError('temporary scanner lock')
+            return original(path,target)
+        with patch.object(Path,'rename',locked),patch('src.volatility_surface.time.sleep'):
+            self.assertEqual(self.result.save(),self.target)
+        self.assertEqual(attempts['unit'],3);self.assertEqual(attempts['output'],3)
+        saved=json.loads((self.target/'manifest.json').read_text())
+        self.assertEqual((self.target.parent/saved['recovered_incomplete_output']/'partial.csv').read_text(),'keep me')
+
+    def test_persistent_publication_lock_restores_partial_with_retry(self):
+        self.target.mkdir(parents=True);(self.target/'partial.csv').write_text('keep me')
+        original=Path.rename;attempts={}
+        def locked(path,target):
+            key='restore' if path.name.startswith('.i-') else path.name
+            attempts[key]=attempts.get(key,0)+1
+            if key=='output' or (key=='restore' and attempts[key]<=2):raise PermissionError('locked')
+            return original(path,target)
+        with patch.object(Path,'rename',locked),patch('src.volatility_surface.time.sleep'):
+            with self.assertRaises(PermissionError):self.result.save()
+        self.assertEqual(attempts['output'],7);self.assertEqual(attempts['restore'],3)
+        self.assertEqual((self.target/'partial.csv').read_text(),'keep me')
+
+    def test_retry_never_overwrites_destination_created_during_lock(self):
+        source=self.root/'source';destination=self.root/'destination';source.mkdir()
+        def competing(path,target):
+            target.mkdir();(target/'other').write_text('keep me')
+            raise PermissionError('destination occupied')
+        with patch.object(Path,'rename',competing),patch('src.volatility_surface.time.sleep') as sleep:
+            with self.assertRaises(PermissionError):_rename_directory(source,destination)
+            sleep.assert_not_called()
+        self.assertTrue(source.exists());self.assertEqual((destination/'other').read_text(),'keep me')
 
     def test_completed_corruption_is_not_overwritten_or_quarantined(self):
         self.result.save();(self.target/'parameters.json').write_text('{} tampered')

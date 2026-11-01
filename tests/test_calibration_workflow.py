@@ -251,7 +251,9 @@ class AutomaticCalibrationTests(unittest.TestCase):
              patch.object(run,'simulate_processed',side_effect=mc), \
              patch('src.option_calibration.calibrate_processed',side_effect=unavailable), \
              patch('socket.socket.connect',side_effect=AssertionError('No network')),redirect_stdout(StringIO()) as output:
-            run._process_inventory(SimpleNamespace(cob='2026-10-19'))
+            # This test isolates stage ordering; final-report behavior has separate fixtures.
+            with patch.object(run, '_final_analysis'):
+                run._process_inventory(SimpleNamespace(cob='2026-10-19'))
         self.assertEqual(order,['calibration','statistics','mc'])
         self.assertIn('Option calibration unavailable',output.getvalue())
 
@@ -412,7 +414,9 @@ class CalibrationConfigurationTests(unittest.TestCase):
                  patch('src.option_calibration.load_processed_inputs', side_effect=AssertionError('No data reads')), \
                  patch('socket.socket.connect', side_effect=AssertionError('No network')), \
                  redirect_stdout(StringIO()) as output:
-                run._process_inventory(SimpleNamespace(cob='2026-10-19'))
+                # This test isolates stage ordering; final-report behavior has separate fixtures.
+                with patch.object(run, '_final_analysis'):
+                    run._process_inventory(SimpleNamespace(cob='2026-10-19'))
             self.assertEqual(order, ['statistics', 'mc'])
             self.assertIn('Option calibration unavailable', output.getvalue())
 

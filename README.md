@@ -985,7 +985,7 @@ precision-only exception permits diagnostic physical output if price fit, PDE,
 convergence and forward gates all passed. Other failures block the hybrid model.
 Fine/coarse terminal mean convergence is tested separately. Neither test proves
 physical tail realism. Short-end/wing exposure is reported, with no volatility
-cap or dropped paths. No comparison/interpretation module is introduced yet.
+cap or dropped paths. The final analysis module preserves these limitations.
 
 
 Physical-MC review notes:
@@ -1001,6 +1001,71 @@ Physical-MC review notes:
   session-count/annualization-periods. The configured XNYS calendar excludes
   US holidays; 252 is an annualization convention, not an actual yearly count.
   Separate historical Gaussian/Student-t and physical-local-vol outputs are
-  not yet directly time-aligned. A future comparison must reconcile initial
-  and terminal instants and observation dates. Changing 365 to 252 inside the
+  not directly time-aligned. The final report permits a labelled approximate
+  terminal comparison within its configured horizon tolerance; it does not
+  compare differently sampled drawdowns or daily losses. Changing 365 to 252 inside the
   calibrated local-vol evaluator alone would change its option-pricing model.
+
+
+### Final academic analysis
+
+At the end of `run.py`, `src/simulation_comparison.py` reads the explicitly supplied
+saved outputs of this execution. It does not search old result folders, download,
+fit or simulate again. `config/simulation_comparison.json` controls descriptive
+reporting choices, tail confidence levels, sampling intervals and the optional
+terminal-horizon tolerance. It does not change any upstream financial model.
+
+Open the printed `reports/<COB>/final_analysis/<analysis-id>/report.html` link.
+The Method and dates section explains Gaussian diffusion/SDE dynamics, the
+discrete truncated Student-t extension and the physical local-volatility SDE.
+Equations are embedded as typeset SVG with plain-language alternative text;
+they need neither a network connection nor an external JavaScript renderer.
+It reads the executable settings saved with each result, never today's edited
+model JSON. Requested and actual forecast/calibration dates, matched return
+counts, lookback or explicit-start policy, calendar, seed, paths and stress
+windows are shown separately. Missing metadata remains unreported rather than
+being inferred from configuration intent. This context is also exported in
+`summary.json`; descriptive statistics can use a longer history than MC fitting.
+The HTML embeds its figures and combines historical coverage/statistics,
+correlations, rolling volatility and drawdown with terminal simulation outcomes,
+loss probabilities, VaR/ES, available implied/local-volatility plots and concise
+risk-neutral validation evidence. Detailed upstream reports remain linked.
+The main forecast section includes comparable historical Gaussian, Student-t
+and physical local-volatility portfolio results. It shows recorded sample paths,
+full-population forecast bands, mean/median growth, terminal densities and
+separate downside/upside tail probabilities. Sample paths are for illustration;
+they do not determine the forecast bands or terminal risk measures. Each engine
+retains its recorded dates. Matching path numbers are not paired shocks.
+`simulation_plots` controls display counts, fan quantiles, bins, tail display
+range and loss thresholds. Historical fan quantiles must exist in saved outputs;
+the report never estimates them from the display sample. Available observed
+and fitted IV smiles are shown for every expiry alongside surface diagnostics.
+
+Machine-readable `summary.json`, `comparison.csv`, `availability.csv`,
+`forecast_bands.csv`, `loss_thresholds.csv`, PNG figures
+and a checksummed manifest accompany it. Existing source outputs are unchanged.
+
+Missing options/local volatility do not block historical reporting. Partial or
+empty runs produce explicit availability information rather than invented zero
+risk. Unexpected workflow errors still propagate after the final-report attempt.
+If a supplied surface or validation artifact fails integrity checks, dependent
+results are excluded transitively. This differs from deliberately omitting
+optional stages for a standalone historical or physical report.
+Expected statistics/history errors are recorded while independent stages continue.
+Diagnostic physical scenarios appear in the main analysis when comparable,
+retaining their original validation qualification. Risk-neutral underlying results
+are never included as physical portfolio forecasts.
+
+Currency, allocation, investment convention, historical calibration observations
+and intended forecast dates must agree before comparing physical and historical
+terminal outcomes. A configurable 0.5% relative clock tolerance allows a labelled
+approximate terminal comparison, not a common daily observation grid. No ranking
+of cross-engine drawdown or worst daily loss is produced. Stress and Student-t
+tail sensitivities are labelled separately. Mean and loss-probability intervals
+measure simulation sampling uncertainty only, not parameter or model risk.
+
+For an offline report-only replay, call `build_analysis(cob, stage_folders,
+config_file)` and then `result.save(reports_root)`. The folder mapping uses the
+stage names in `simulation_comparison.STAGES`, includes `processing` when
+available, and points to exact completed artifact directories from one run.
+There is no hardcoded COB, instrument, portfolio allocation or input directory.

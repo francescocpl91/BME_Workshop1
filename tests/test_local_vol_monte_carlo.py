@@ -240,7 +240,7 @@ class MonteCarloTests(unittest.TestCase):
         processed.save.return_value=Path('.')
         stats=Mock(run_id='stats',summary={'portfolio_status':'unavailable','warnings':[]})
         historic=Mock(run_id='mc',summary={'status':'unavailable','warnings':[]})
-        surface=object();local=object();order=[]
+        surface=SimpleNamespace(run_id='surface');local=SimpleNamespace(run_id='local');order=[]
         def validation(l,s):
             self.assertIs(l,local);self.assertIs(s,surface);order.append('validation')
         def statistics(*args):order.append('statistics');return stats
@@ -253,7 +253,9 @@ class MonteCarloTests(unittest.TestCase):
              patch.object(run,'analyze_processed',side_effect=statistics), \
              patch.object(run,'simulate_processed',side_effect=simulation), \
              contextlib.redirect_stdout(io.StringIO()):
-            run._process_inventory(SimpleNamespace(cob='2031-02-02'))
+            # This test isolates stage ordering; final-report behavior has separate fixtures.
+            with patch.object(run, '_final_analysis'):
+                run._process_inventory(SimpleNamespace(cob='2031-02-02'))
         self.assertEqual(order,['validation','statistics','historical'])
 
 
