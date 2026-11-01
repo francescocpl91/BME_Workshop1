@@ -258,7 +258,13 @@ def validate_grid(model, grid_policy):
 
 # Raw SVI: independent constrained smiles and normalized-call interpolation
 def raw_svi(k, parameters):
-    """Total variance and two analytic strike derivatives for one raw slice."""
+    """One expiry: w(k)=a+b*[rho*(k-m)+sqrt((k-m)^2+sigma^2)].
+
+    k=log(K/F) is dimensionless forward moneyness; w=IV^2*T is total variance.
+    a controls level, b the wing slope scale, rho asymmetry, m displacement,
+    sigma curvature width. This sigma is an SVI shape parameter, NOT IV or
+    simulated local volatility. Return w, dw/dk and d2w/dk2 analytically.
+    """
     a,b,rho,m,sigma = parameters
     k=np.asarray(k,float)
     u=k-m; root=np.sqrt(u*u+sigma*sigma)
@@ -441,6 +447,11 @@ class SviSurface:
             mask=interval==j;kk=k[mask];tt=t[mask]
             first=slice_values(kk,self.parameters[j]);second=slice_values(kk,self.parameters[j+1])
             alpha=(tt-self.times[j])/(self.times[j+1]-self.times[j])
+            # c=C/(D*F) is a normalized call, x=K/F=exp(k). Blend PRICES
+            # at fixed k, not SVI parameters or IV. Invert Black below for
+            # w and then IV=sqrt(w/t). c_t is constant inside an interval
+            # but changes at its boundaries; this explains maturity jumps
+            # in w_t and local variance even though prices stay continuous.
             c=(1-alpha)*first[3]+alpha*second[3]
             ck=(1-alpha)*first[4]+alpha*second[4]
             ckk=(1-alpha)*first[5]+alpha*second[5]
@@ -453,6 +464,10 @@ class SviSurface:
             w=np.where(alpha==0,first[0],np.where(alpha==1,second[0],w))
             _,pk,pw,pkk,pkw,pww=black_partials(kk,w)
             if np.any(pw<1e-14):raise ValueError('ill_conditioned_surface_inversion')
+            # Implicitly differentiate c(k,t)=Black(k,w(k,t)). pw is partial
+            # Black/partial w; ck is the FULL smile derivative. Solve the
+            # chain rule for w_k,w_kk. Tiny pw would amplify noise, which is
+            # why the preceding guard rejects an ill-conditioned inversion.
             wk=(ck-pk)/pw
             wkk=(ckk-pkk-2*pkw*wk-pww*wk*wk)/pw
             # At node-only strikes outside the neighboring data range, a time
@@ -498,6 +513,10 @@ def fit_raw_svi(points,policy):
         calendar_grid=(np.linspace(max(lo,lows[-1]),min(hi,highs[-1]),opt['constraint_points']) if params else None)
         if params and calendar_grid[0]>=calendar_grid[-1]:return None,records,[]
 
+        # Each expiry owns five parameters, fitted earliest to latest.
+        # Optimizer x=[log(min w),log(b),rho,m,log(sigma)] ensures positive
+        # variance via decoding. Additional density/digital/calendar
+        # inequalities are imposed separately and audited after optimization.
         def residual(x):
             iv=np.sqrt(raw_svi(k,_decode_svi(x))[0]/t)
             predicted=black_prices(arrays['forward'],arrays['strike'],arrays['time_to_expiry'],arrays['discount_factor'],iv,calls)
@@ -518,6 +537,11 @@ def fit_raw_svi(points,policy):
         accepted=[]
         for start,rho in enumerate(policy['initial_rhos']):
             seed=[np.log(max(theta*.6,1e-8)),np.log(.1),rho,.03*start,np.log(.06+.04*start)]
+            # SciPy soft-L1 least_squares supplies a robust starting fit;
+            # SLSQP below enforces inequalities if it is infeasible. This is
+            # not a QuantLib calibration. Deterministic multiple starts reduce
+            # local-optimum sensitivity; only independently audited candidates
+            # can win. Better residuals never override an arbitrage failure.
             initial=least_squares(residual,np.clip(seed,np.array(bounds[0])+1e-8,np.array(bounds[1])-1e-8),
                 bounds=bounds,loss='soft_l1',max_nfev=policy['maximum_evaluations'])
             x=initial.x;converged=bool(initial.success);message=str(initial.message);refinements=0

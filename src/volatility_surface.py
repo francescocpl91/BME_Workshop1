@@ -252,6 +252,11 @@ def _prepare_group(rows,calibration,cfg,group_id):
     if not definition or definition.get('as_of_date')!=day:
         for p in points:lookup[p['record_id']]['reason']='missing_reference_curve'
         return [],selection,[],{**info,'status':'unavailable','reason':'missing_reference_curve'}
+    # Saved live quotes arrived asynchronously. The opted-in intraday
+    # approximation retains their original pricing inputs for fit residuals
+    # and constructs one reference spot/carry for later dynamics. It does NOT
+    # reconstruct synchronized exchange quotes. Timing/dispersion gates limit,
+    # but cannot eliminate, that uncertainty. Live/historical cohorts stay apart.
     curve=DiscountCurve(**definition)
     references=[]; normalized=[]
     for expiry in sorted({p['expiration'] for p in points}):

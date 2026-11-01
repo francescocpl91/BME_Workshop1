@@ -938,3 +938,69 @@ reduce terminal noise. Existing stage outputs and source archives are preserved.
 
 
 Simulation start dates are derived from the selected archive COB plus one calendar day. Historical MC uses `forecast_start: "cob_plus_one"`; fixed dates are rejected. The initial date is retained on weekends/holidays and the first return ends on the next exchange session. The forecast end remains configurable. Risk-neutral MC requires its saved surface observation date to match COB+1 in the calibration valuation timezone and keeps the actual intraday timestamp. A mismatched surface is unavailable rather than shifted to a different valuation date. All assessed option and forward MC checks must pass; there is no percentage quorum.
+
+
+### Physical-drift local-volatility portfolio scenario
+
+`run.py` now attempts a separate offline physical/hybrid simulation after the
+existing historical simulation. `src/local_vol_real_world.py` reuses historical
+input alignment, FX handling and portfolio arithmetic from `src/mc_common.py`.
+The existing `src/monte_carlo.py` retains Gaussian, Student-t and stress engines;
+`src/local_vol_monte_carlo.py` retains risk-neutral underlying validation.
+
+Configure model-specific choices in `config/local_vol_real_world.json`. Holdings,
+weights and `option_reference` mappings come from the selected cleaning result.
+Paths, seed, calibration window, forecast end and risk quantiles come from
+`config/monte_carlo.json`. There is no hardcoded ticker mapping or input folder.
+The new config explicitly selects the proxy method by saved return convention.
+The prototype assumes unleveraged one-for-one exposure without tracking noise;
+it does not infer leveraged, currency-hedged or unrelated-product mappings.
+
+Historical daily log moments are annualized onto ACT/365F calendar time. The
+price-SDE drift is annual log mean plus half historical annual variance. Each
+step subtracts half the CURRENT variance. Correlation stays historical; equity
+covariance changes with local volatility. Total-return equity wealth `G` maps to
+the option underlying with `Iproxy=I0*G*B`, `B=D*F/I0`; dividends are not added to
+adjusted returns again. Other holdings and FX evolve jointly using historical
+volatility. Buy-and-hold weights apply once after currency conversion.
+
+The actual surface timestamp must be on COB+1. End date is inherited from the
+historical MC config, with `end_time` and `end_timezone` defining the exact
+terminal instant. It must fit every mapped surface; no time extrapolation or
+silent horizon shortening occurs. All factors evolve through weekends in this
+module, unlike session-based historical MC. The same-grid Gaussian control
+helps distinguish that clock convention from local-volatility effects.
+
+Results are written under `processed/<COB>/<processing-id>/local_vol_real_world/`.
+Start with `report.html`; `paths.npz` contains all paths at recorded coarse grid
+endpoints. `native_log_growth` is indexed `[time,path,factor]`. Reporting-currency
+holding wealth is `initial_value*exp(native_log_growth @ conversion_matrix.T)`;
+apply `weights` once to aggregate it. The saved proxy indices and
+`proxy_level_per_unit_growth` reconstruct the latent underlying paths from the
+native holding growth. Drawdowns use all fine steps. `summary.json`, CSV tables,
+and checksummed manifests record the assumptions and provenance.
+
+Existing risk-neutral validation gates are unchanged. The explicitly enabled
+precision-only exception permits diagnostic physical output if price fit, PDE,
+convergence and forward gates all passed. Other failures block the hybrid model.
+Fine/coarse terminal mean convergence is tested separately. Neither test proves
+physical tail realism. Short-end/wing exposure is reported, with no volatility
+cap or dropped paths. No comparison/interpretation module is introduced yet.
+
+
+Physical-MC review notes:
+- Saved-result identity hashes all Python source files in src/, including
+  transitive numerical helpers. A code or comment edit can create a new result
+  folder; previously saved results are not overwritten.
+- Saved cohort identifiers are read as text, retaining leading zeros and
+  identifiers such as NA. Saved numerical values use round-trip float precision
+  so replay does not perturb the historical calibration. Invalid IANA timezones produce a configuration
+  message through the normal run.py handler.
+- clock_comparison in the physical report/summary records actual ACT/365F
+  elapsed time, the configured exchange's subsequent session count, and
+  session-count/annualization-periods. The configured XNYS calendar excludes
+  US holidays; 252 is an annualization convention, not an actual yearly count.
+  Separate historical Gaussian/Student-t and physical-local-vol outputs are
+  not yet directly time-aligned. A future comparison must reconcile initial
+  and terminal instants and observation dates. Changing 365 to 252 inside the
+  calibrated local-vol evaluator alone would change its option-pricing model.

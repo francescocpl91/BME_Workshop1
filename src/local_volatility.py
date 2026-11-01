@@ -116,6 +116,12 @@ class LocalVolEvaluator:
             # Only roundoff inside the inherited tolerance may become zero.
             # Record it explicitly: this is not a cap/floor for bad surfaces.
             rounded = wt < 0
+            # Forward-coordinate Dupire: v_local=w_t/g, differentiated at
+            # FIXED k=log(K/F), not fixed nominal strike. g includes the strike
+            # slope/curvature corrections above. Small positive g can amplify
+            # local variance even when IV is moderate. Local vol is conditional
+            # instantaneous diffusion; IV is a constant Black parameter matching
+            # one option price. sqrt(v_local) need not equal sqrt(w/T).
             variance = _number(max(wt, 0.) / g)
             row.update(status='available', reason=None, implied_volatility=math.sqrt(w/years),
                        local_variance=variance, local_volatility=math.sqrt(variance),
@@ -156,6 +162,10 @@ def _utc_timestamp(value):
     return value.astimezone(timezone.utc)
 
 
+# Simulation adapter: real timestamp/index -> t=elapsed seconds/ACT365F and
+# k=log(index/F(0,t)). The strict evaluator permits only reviewed domains.
+# Explicit boundary completion additionally supplies ASSUMED short-end/wings,
+# with flags. An accepted completed-model point is not observed market support.
 class DateSpotLocalVol:
     """Calendar/underlying interface to a separately validated completion.
 

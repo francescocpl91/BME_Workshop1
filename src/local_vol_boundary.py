@@ -324,6 +324,11 @@ class CalibratedBoundaryLocalVol(BoundaryLocalVol):
             if 'first' not in self._cache:self._cache['first'] = self._first_variance(k)
             w1, wk1, wkk1 = self._cache['first']
             power = self.cfg['short_end_power_alternative'] if self.variant == 'short_end_alternative' else 1.
+            # Before T1, no observed smiles exist. Baseline w(t,k)=t/T1*w1(k)
+            # holds IMPLIED volatility fixed at each k. LOCAL volatility is
+            # not fixed: recompute w_t and the Dupire denominator. A steep
+            # wing may have small g even near zero, producing large variance.
+            # The alternative power is a sensitivity assumption, not data.
             ratio = t/self.times[0]; a = ratio**power
             derivative = power*ratio**(power-1)/self.times[0]
             # Algebraically expanded g avoids division by zero at t=0.
@@ -339,6 +344,9 @@ class CalibratedBoundaryLocalVol(BoundaryLocalVol):
             if np.any(change < -1e-10*np.maximum(first[0], second[0])) or np.any(density <= 0):
                 raise ValueError('invalid_completed_call_time_derivative_or_density')
             # Only signed floating-point roundoff may be zeroed, never prices.
+            # Price-coordinate Dupire is v=2*c_t/(c_kk-c_k). Complete
+            # PRICES first, then take this ratio so PDE and MC represent the
+            # same diffusion. Directly capping v would break that consistency.
             result = 2*np.maximum(change, 0)/(width*density)
         if not np.isfinite(result).all() or np.any(result < 0):raise ValueError('invalid_extended_variance')
         return result

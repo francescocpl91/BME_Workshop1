@@ -165,6 +165,9 @@ def _quote_statistics(q, xfine, xcoarse, z, cfg, brownian=None):
     strike_ratio = math.exp(k); sign = 1 if right == 'call' else -1
     beta = float(ndtr((-k+.5*iv*iv*t)/(iv*math.sqrt(t))))-(right == 'put')
     df = discount*f
+    # D*E[(S_T-K)+] = D*F*E[(X_T-K/F)+]. Prices come from simulated terminal
+    # states. Fitted IV only supplies a known-expectation control variate below
+    # to reduce sampling noise; it never replaces this local-vol payoff.
     raw_fine = df*np.maximum(sign*(xfine-strike_ratio), 0.)
     raw_coarse = df*np.maximum(sign*(xcoarse-strike_ratio), 0.)
     # Keep the old fixed-delta estimates as diagnostics and a backwards-
@@ -287,6 +290,10 @@ def simulate_cohort(adapter, quotes, cfg, seed, progress=None, recorder=None):
                     dw = np.r_[normal, -normal]*math.sqrt(h)
                     dw_total += dw
                     before = fine.copy()
+                    # Under Q, X=S/F(0,t) has dX/X=sigma*dW. We store log X,
+                    # hence -variance/2. No physical historical drift appears.
+                    # vf is LOCAL variance from the completed evaluator, not
+                    # implied volatility read from an option smile.
                     fine += -.5*vf*h+np.sqrt(vf)*dw
                     _audit_state(fine, adapter, t=float(b), dt=h, level='fine',
                                  previous=before, variance=vf, dw=dw)

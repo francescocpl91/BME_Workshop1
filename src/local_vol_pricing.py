@@ -191,6 +191,11 @@ def solve_calls(boundary,times,*,bounds,points,steps_per_year):
     if len(times)==0 or times[0]<=0 or not np.all(np.diff(times)>0):raise ValueError('invalid_pricing_maturities')
     grid=np.linspace(*bounds,points);h=grid[1]-grid[0]
     if not bounds[0]<0<bounds[1] or h>=1:raise ValueError('invalid_pde_mesh')
+    # Forward equation: c_t=0.5*v(t,k)*(c_kk-c_k),
+    # initial c(0,k)=max(1-exp(k),0). This evolves normalized option prices,
+    # not stock paths. Multiply by D*F to recover money prices at maturity.
+    # Repricing checks consistency with the completed diffusion; it does not
+    # establish that physical tail probabilities are realistic.
     values=np.maximum(1-np.exp(grid),0.)
     low=float(1-math.exp(bounds[0]));outputs={};start=0.
     def advance(values,t0,t1,theta):

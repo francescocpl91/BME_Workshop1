@@ -23,6 +23,7 @@ PORTFOLIO_FILE = CONFIG_DIR / "portfolio.json"
 CLEANING_FILE = CONFIG_DIR / "cleaning.json"
 MODELING_FILE = CONFIG_DIR / "modeling.json"
 MONTE_CARLO_FILE = CONFIG_DIR / "monte_carlo.json"
+REAL_WORLD_FILE = CONFIG_DIR / "local_vol_real_world.json"
 CALIBRATION_FILE = CONFIG_DIR / "calibration" / "option_calibration.json"
 SURFACE_FILE = CONFIG_DIR / "calibration" / "surface.json"
 LOCAL_VOL_FILE = CONFIG_DIR / "calibration" / "local_volatility.json"
@@ -212,7 +213,37 @@ def _process_inventory(inventory):
     for notice in simulation.summary["warnings"]:
         print("Monte Carlo: " + notice)
     print(f"Monte Carlo report and results: {simulation_folder}")
+    _real_world_available(result, local_vol, surface, local_mc, destination)
     print("Raw archive unchanged. Risk-neutral option validation is separate from the existing historical portfolio simulations.")
+    return result
+
+
+def _real_world_available(processed, local_vol, surface, validation, destination):
+    """Separate physical portfolio engine; use this run's objects and mapping.
+
+    Historical MC and statistics have already completed independently. No new
+    downloader, surface fit or guessed processed-directory path is involved.
+    Missing inputs produce one concise message; the comparison module is a
+    later stage and is not implemented here.
+    """
+    if any(value is None for value in (local_vol, surface, validation)):
+        print("Physical local-volatility portfolio unavailable: calibration/validation inputs missing.")
+        return None
+    print("Running physical-drift local-volatility portfolio simulation (offline).")
+    try:
+        from src.local_vol_real_world import simulate_processed as simulate_real_world
+        result = simulate_real_world(processed, local_vol, surface, validation,
+            MONTE_CARLO_FILE, REAL_WORLD_FILE, source_folder=destination, progress=print)
+        target = result.save()
+    except (OSError, ValueError, ImportError) as exc:
+        print(f"Physical local-volatility portfolio unavailable: {exc}")
+        return None
+    print(f"Physical local-volatility status: {result.summary['status']}")
+    if result.summary.get('reason'):
+        print("Physical local-volatility: " + result.summary['reason'])
+    for warning in result.summary['warnings']:
+        print("Physical local-volatility: " + warning)
+    print(f"Physical portfolio report: {target / 'report.html'}")
     return result
 
 

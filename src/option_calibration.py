@@ -528,6 +528,10 @@ def calculate_option(row, route, contract, curves, prices, cfg):
         tau = (expiry.astimezone(timezone.utc) - stamp.astimezone(timezone.utc)).total_seconds()/SECONDS_PER_YEAR
         if tau <= 0:
             raise ValueError('expired_option')
+        # The bootstrap stores D from its dated origin. An intraday option
+        # needs D(expiry)/D(observation), not a par swap quote used as a zero
+        # rate. tau is elapsed ACT/365F. The date gates above deliberately
+        # prevent today's curve being used to invert an old option price.
         discount = curve.interval_discount(_curve_time(stamp,curve,cfg['valuation_timezone']),
                                            _curve_time(expiry,curve,cfg['valuation_timezone']))
         result.update(time_to_expiry=tau,discount_factor=discount,curve_date=curve.as_of_date)
@@ -572,6 +576,9 @@ def calculate_option(row, route, contract, curves, prices, cfg):
                 dividend_pv = carry['dividend_pv']
             if dividend_pv is None:
                 raise ValueError('missing_date_matched_dividend_or_forward')
+            # Prepaid forward = S - PRESENT VALUE of forecast dividends.
+            # F=(S-PVdiv)/D grows that prepaid position to expiry. This is
+            # deterministic carry, not a forecast of the physical index mean.
             forward = equity_forward(spot,dividend_pv,discount)
             result['carry_source'] = carry['source'] if carry else 'IBKR modelGreeks.pvDividend'
             if carry is None:
@@ -579,6 +586,11 @@ def calculate_option(row, route, contract, curves, prices, cfg):
         result.update(forward=forward,dividend_pv=dividend_pv,
                       effective_dividend_yield=-math.log(forward*discount/spot)/tau)
         strike,right = result['strike'],contract['option_type']
+        # Invert EUROPEAN Black: D*[F*N(d1)-K*N(d2)] for calls (puts via
+        # parity), where d1=log(F/K)/(sigma*sqrt(tau))+sigma*sqrt(tau)/2.
+        # Solve for sigma; 0.20 means 20% ANNUALIZED IV. Live midpoints and
+        # valid historical closes use the same inversion. Broker IV below
+        # is only a diagnostic; its absence does not prevent our own inversion.
         iv = implied_volatility(price,forward,strike,tau,discount,right,maximum=cfg['solver']['maximum_volatility'])
         intrinsic = black_price(forward,strike,tau,discount,0,right)
         vega = black_vega(forward,strike,tau,discount,iv)
@@ -587,6 +599,8 @@ def calculate_option(row, route, contract, curves, prices, cfg):
                       total_implied_variance=iv*iv*tau,
                       repriced_option=black_price(forward,strike,tau,discount,iv,right))
         # Successful inversion alone does not imply reliable IV identification.
+        # Tiny Vega/time value makes IV highly sensitive to small price noise.
+        # Reject the ill-conditioned inverse even when a root was found.
         if price-intrinsic < cfg['solver']['minimum_time_value_fraction_of_spot']*spot or vega < cfg['solver']['minimum_vega_fraction_of_spot']*spot:
             raise ValueError('ill_conditioned_iv')
         for side in ('bid','ask'):
