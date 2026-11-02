@@ -282,7 +282,8 @@ class InventoryTests(unittest.TestCase):
 
     def test_inventory_mode_missing_archive_never_falls_back_to_download(self):
         import run
-        with patch.object(run,"RAW_DUMP_DIR",self.root/"missing"), \
+        with patch.object(run, "_final_analysis"), \
+             patch.object(run,"RAW_DUMP_DIR",self.root/"missing"), \
              patch.object(run.MarketDataDownloader,"from_json",side_effect=AssertionError("No downloader")), \
              redirect_stdout(StringIO()), self.assertRaises(ValueError):
             run.main("08/10/2026",mode="inventory")
@@ -420,7 +421,8 @@ class InventoryTests(unittest.TestCase):
         result = SimpleNamespace(folder=self.archive, reused=False, summary=pd.DataFrame(
             columns=["ticker", "provider", "status", "retrieval_method"]))
         output = StringIO()
-        with patch.object(run.MarketDataDownloader, "from_json") as factory, \
+        with patch.object(run, "_final_analysis"), \
+             patch.object(run.MarketDataDownloader, "from_json") as factory, \
              patch.object(run, "INVENTORY_DIR", self.root / "reports"), \
              redirect_stdout(output):
             factory.return_value.download_cob.return_value = result

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "enabled": true,
+  "paths": 10000,
+  "seed": 1729,
+  "steps_per_year": 365,
+  "refinement": 2,
+  "allow_boundary_assumptions": true,
+  "family_error_probability": 0.01,
+  "absolute_price_forward_fraction": 1e-05,
+  "relative_price_tolerance": 0.001,
+  "maximum_se_forward_fraction": 1e-05,
+  "maximum_se_relative_price": 0.02,
+  "forward_relative_tolerance": 0.001,
+  "instructions": {
+    "scope": "Offline risk-neutral validation of each eligible option underlying. No portfolio holdings, ETF proxy, FX simulation, downloads or surface recalibration. run.py supplies its current validated local-volatility result and surface.",
+    "paths": "Even total including antithetic paths; independent statistical units are paths/2 PAIRS. Deterministic seed is combined with the cohort identity. No paths are dropped, clipped or resampled. Routine setting is 10,000 paths. Large diagnostic budgets are optional; insufficient sampling precision remains review_required, not a reason to silently relax tolerances.",
+    "dynamics": "X=S/F(0,t), X(0)=1. Log Euler: log X += -0.5*v*dt + sqrt(v)*dW; v is annualized local variance at the current state. S=F*X; option payoffs are discounted with the saved D. Deterministic rates/dividends are already incorporated through F and D. ACT/365F calendar time, not trading-session time.",
+    "time_grid": "Start date is always archive COB + one calendar day, with no configurable fixed start. The calibrated observation instant must fall on that date in the upstream valuation timezone; otherwise the cohort is unavailable. Preserve the actual time on that day, never move the surface to midnight or reuse another dated curve. Finish at the final calibrated expiry. Split steps at each expiry and completion transition. Coarse steps are at most 1/steps_per_year years with refinement fine steps; shared Brownian increments give a paired convergence test.",
+    "variance": "Retain strict derivative/density checks on supported states. With boundary opt-in and time smoothing enabled, evaluate the same completed price-derived coefficient as PDE pricing at every state, including supported strips. Otherwise use original derivatives inside support and the validated completion elsewhere. No variance caps. Short-end, wing and time-smoothing assumptions remain explicit.",
+    "prices": "Assess all upstream supported quotes against saved PDE/fitted prices at the common reference time. control_variate selects legacy delta or coupled_black. Coupled Black uses the same Brownian endpoint, each quote fitted IV and an independently calculated analytic Black expectation, plus the residual delta stock control. Fixed control weights are not estimated on these paths. Raw and delta-only estimates remain diagnostics; acceptance uses the selected estimator. Intraday timing limitations remain.",
+    "acceptance": "For each price, |fine-target| <= deterministic budget + z*SE. Budget = absolute_price_forward_fraction*D*F + relative_price_tolerance*abs(target). Paired coarse/fine differences use their own paired SE. z uses a two-sided Bonferroni normal approximation at family_error_probability across price and forward tests. This is a finite-sample diagnostic, not an exact statistical guarantee. All assessed quotes and forwards must pass; no 80% coverage threshold is used here.",
+    "precision": "SE must also be <= maximum_se_forward_fraction*D*F + maximum_se_relative_price*abs(target), so arbitrarily noisy estimates cannot pass solely by having wide intervals. Forward E[X]=1 is checked on raw antithetic pair means, with forward_relative_tolerance plus z*SE.",
+    "result": "Only all assessed expiries, quotes, convergence, precision and forward checks passing yields validated_with_boundary_assumptions. Otherwise review_required or unavailable. This validation never enables portfolio simulation automatically. Existing upstream intraday and wing assumptions remain limitations. A bounded time-step comparison is evidence, not proof of continuous-time convergence.",
+    "reporting": "Plots, path bands and terminal CSVs are generated from each new simulation. Thin lines show sample_paths independently selected path IDs; bands use all paths. time_points targets evenly spaced observation times rounded to existing fine nodes; every expiry and time zero are added. save_all_paths writes every fine path at those observation times into a compressed NPZ with times/forwards/path IDs; rows=time, columns=path, S=exp(log_normalized_paths)*forward[:,None]. No simulation cache: each launch recalculates using the fixed seed. Identical result IDs verify/reuse the output folder after calculation. At most 20 million stored values per cohort; reduce time_points or disable full-path storage for larger experiments. Plotting does not alter the RNG, model or gates."
+  },
+  "control_variate": "coupled_black",
+  "reporting": {
+    "plots": true,
+    "sample_paths": 100,
+    "time_points": 250,
+    "save_all_paths": true
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "provider": "marketdata",
+  "enabled": true,
+  "requests": [
+    {
+      "id": "SPX",
+      "enabled": true,
+      "product": "index",
+      "operation": "price_history",
+      "ticker": "SPX",
+      "description": "S&P 500 price index; underlying of the configured SPX options",
+      "asset_class": "equity_index",
+      "currency": "USD",
+      "unit": "Index points",
+      "exchange": "CBOE",
+      "timeframe": {
+        "start": "HISTORY_START",
+        "end": "COB"
+      },
+      "frequency": "1d",
+      "input": {
+        "symbol": "SPX"
+      },
+      "parameters": {},
+      "notes": "Enabled for complete request accounting. The current adapter does not implement index history; the run saves unsupported_operation in status.json and continues with the other products/providers."
+    },
+    {
+      "id": "IEF",
+      "enabled": true,
+      "product": "etf",
+      "operation": "price_history",
+      "ticker": "IEF",
+      "description": "iShares 7-10 Year Treasury Bond ETF, US listing",
+      "asset_class": "sovereign_bond_etf",
+      "currency": "USD",
+      "unit": "USD per share",
+      "exchange": "NASDAQ",
+      "timeframe": {
+        "start": "HISTORY_START",
+        "end": "COB"
+      },
+      "frequency": "1d",
+      "input": {
+        "symbol": "IEF"
+      },
+      "parameters": {
+        "adjustsplits": true,
+        "adjustdividends": false
+      }
+    },
+    {
+      "id": "SPY",
+      "enabled": true,
+      "product": "etf",
+      "operation": "price_history",
+      "ticker": "SPY",
+      "description": "SPDR S&P 500 ETF Trust, US listing",
+      "asset_class": "equity_etf",
+      "currency": "USD",
+      "unit": "USD per share",
+      "exchange": "ARCA",
+      "timeframe": {
+        "start": "HISTORY_START",
+        "end": "COB"
+      },
+      "frequency": "1d",
+      "input": {
+        "symbol": "SPY"
+      },
+      "parameters": {
+        "adjustsplits": true,
+        "adjustdividends": false
+      }
+    }
+  ],
+  "product_guides": {
+    "index": {
+      "implemented": false,
+      "instructions": "Index requests may remain enabled for audit output. This adapter has no index-history implementation; status.json records unsupported_operation without issuing a stock request.",
+      "template": {
+        "id": "SPX",
+        "enabled": true,
+        "product": "index",
+        "operation": "price_history",
+        "ticker": "SPX",
+        "description": "S&P 500 price index; underlying of the configured SPX options",
+        "asset_class": "equity_index",
+        "currency": "USD",
+        "unit": "Index points",
+        "exchange": "CBOE",
+        "timeframe": {
+          "start": "HISTORY_START",
+          "end": "COB"
+        },
+        "frequency": "1d",
+        "input": {
+          "symbol": "SPX"
+        },
+        "parameters": {},
+        "notes": "Enabled for complete request accounting. The current adapter does not implement index history; the run saves unsupported_operation in status.json and continues with the other products/providers."
+      }
+    },
+    "etf": {
+      "implemented": true,
+      "instructions": "SPY is the US-listed S&P 500 equity ETF; IEF is the US-listed 7-10 Year Treasury Bond ETF. Use each listing's provider-native symbol and exchange. Adjust the history timeframe in requests.",
+      "template": {
+        "id": "IEF",
+        "enabled": false,
+        "product": "etf",
+        "operation": "price_history",
+        "ticker": "IEF",
+        "description": "iShares 7-10 Year Treasury Bond ETF, US listing",
+        "asset_class": "sovereign_bond_etf",
+        "currency": "USD",
+        "unit": "USD per share",
+        "exchange": "NASDAQ",
+        "timeframe": {
+          "start": "HISTORY_START",
+          "end": "COB"
+        },
+        "frequency": "1d",
+        "input": {
+          "symbol": "IEF"
+        },
+        "parameters": {
+          "adjustsplits": true,
+          "adjustdividends": false
+        }
+      }
+    }
+  }
+}

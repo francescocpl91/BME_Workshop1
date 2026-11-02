@@ -76,7 +76,7 @@ class ReviewRegressions(unittest.TestCase):
     def test_readme_direct_use_configuration_loads_offline(self):
         from src.json_config import load_provider_configs
         root=Path(__file__).resolve().parents[1]
-        text=(root/'README.md').read_text()
+        text=(root/'README.md').read_text(encoding='utf-8')
         snippet=text.split('Direct library use:')[1].split('```python')[1].split('```')[0]
         namespace={}
         original=MarketDataDownloader.from_json

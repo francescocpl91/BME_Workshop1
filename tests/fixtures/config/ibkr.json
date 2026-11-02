@@ -1,0 +1,784 @@
+{
+  "schema_version": 1,
+  "provider": "ibkr",
+  "enabled": true,
+  "requests": [
+    {
+      "id": "SPX",
+      "enabled": true,
+      "product": "index",
+      "operation": "price_history",
+      "ticker": "SPX",
+      "description": "S&P 500 price index; underlying of the configured SPX options",
+      "asset_class": "equity_index",
+      "currency": "USD",
+      "unit": "Index points",
+      "exchange": "CBOE",
+      "timeframe": {
+        "start": "HISTORY_START",
+        "end": "COB"
+      },
+      "frequency": "1d",
+      "input": {
+        "symbol": "SPX",
+        "secType": "IND",
+        "exchange": "CBOE",
+        "currency": "USD"
+      },
+      "parameters": {}
+    },
+    {
+      "id": "IEF",
+      "enabled": true,
+      "product": "etf",
+      "operation": "price_history",
+      "ticker": "IEF",
+      "description": "iShares 7-10 Year Treasury Bond ETF, US listing",
+      "asset_class": "sovereign_bond_etf",
+      "currency": "USD",
+      "unit": "USD per share",
+      "exchange": "NASDAQ",
+      "timeframe": {
+        "start": "HISTORY_START",
+        "end": "COB"
+      },
+      "frequency": "1d",
+      "input": {
+        "symbol": "IEF",
+        "secType": "STK",
+        "exchange": "SMART",
+        "primaryExchange": "NASDAQ",
+        "currency": "USD"
+      },
+      "parameters": {}
+    },
+    {
+      "id": "SPY",
+      "enabled": true,
+      "product": "etf",
+      "operation": "price_history",
+      "ticker": "SPY",
+      "description": "SPDR S&P 500 ETF Trust, US listing",
+      "asset_class": "equity_etf",
+      "currency": "USD",
+      "unit": "USD per share",
+      "exchange": "ARCA",
+      "timeframe": {
+        "start": "HISTORY_START",
+        "end": "COB"
+      },
+      "frequency": "1d",
+      "input": {
+        "symbol": "SPY",
+        "secType": "STK",
+        "exchange": "SMART",
+        "primaryExchange": "ARCA",
+        "currency": "USD"
+      },
+      "parameters": {}
+    },
+    {
+      "id": "SPX261016C00200000_HISTORY",
+      "enabled": true,
+      "product": "index_option",
+      "operation": "option_history",
+      "ticker": "SPX261016C00200000",
+      "description": "S&P 500 index European call; standard SPX AM settlement",
+      "asset_class": "equity_index_option",
+      "currency": "USD",
+      "unit": "index points (100 USD per point per contract)",
+      "exchange": "XCBO",
+      "contract": {
+        "underlying": "SPX",
+        "root": "SPX",
+        "expiration": "2026-10-16",
+        "strike": 200,
+        "option_type": "call",
+        "exercise_style": "european",
+        "settlement": "cash",
+        "settlement_time": "AM",
+        "multiplier": 100
+      },
+      "input": {
+        "symbol": "SPX",
+        "secType": "OPT",
+        "exchange": "CBOE",
+        "currency": "USD",
+        "tradingClass": "SPX",
+        "strike": 200,
+        "right": "C",
+        "multiplier": "100",
+        "localSymbol": "SPX   261016C00200000"
+      },
+      "frequency": "1min",
+      "parameters": {
+        "bar_size": "1 min",
+        "data_types": [
+          "TRADES",
+          "BID",
+          "ASK",
+          "MIDPOINT"
+        ],
+        "cutoff_time": "16:00:00",
+        "timezone": "America/New_York",
+        "use_rth": true
+      },
+      "timeframe": {
+        "start": "COB",
+        "end": "COB"
+      },
+      "notes": "COB yesterday: current live quotes/IV/Greeks. Older COB: historical intraday bars only. Actual capture date is saved separately."
+    },
+    {
+      "id": "SPX261016C00400000_HISTORY",
+      "enabled": true,
+      "product": "index_option",
+      "operation": "option_history",
+      "ticker": "SPX261016C00400000",
+      "description": "S&P 500 index European call; standard SPX AM settlement",
+      "asset_class": "equity_index_option",
+      "currency": "USD",
+      "unit": "index points (100 USD per point per contract)",
+      "exchange": "XCBO",
+      "contract": {
+        "underlying": "SPX",
+        "root": "SPX",
+        "expiration": "2026-10-16",
+        "strike": 400,
+        "option_type": "call",
+        "exercise_style": "european",
+        "settlement": "cash",
+        "settlement_time": "AM",
+        "multiplier": 100
+      },
+      "input": {
+        "symbol": "SPX",
+        "secType": "OPT",
+        "exchange": "CBOE",
+        "currency": "USD",
+        "tradingClass": "SPX",
+        "strike": 400,
+        "right": "C",
+        "multiplier": "100",
+        "localSymbol": "SPX   261016C00400000"
+      },
+      "frequency": "1min",
+      "parameters": {
+        "bar_size": "1 min",
+        "data_types": [
+          "TRADES",
+          "BID",
+          "ASK",
+          "MIDPOINT"
+        ],
+        "cutoff_time": "16:00:00",
+        "timezone": "America/New_York",
+        "use_rth": true
+      },
+      "timeframe": {
+        "start": "COB",
+        "end": "COB"
+      },
+      "notes": "COB yesterday: current live quotes/IV/Greeks. Older COB: historical intraday bars only. Actual capture date is saved separately."
+    },
+    {
+      "id": "SPX261016C00600000_HISTORY",
+      "enabled": true,
+      "product": "index_option",
+      "operation": "option_history",
+      "ticker": "SPX261016C00600000",
+      "description": "S&P 500 index European call; standard SPX AM settlement",
+      "asset_class": "equity_index_option",
+      "currency": "USD",
+      "unit": "index points (100 USD per point per contract)",
+      "exchange": "XCBO",
+      "contract": {
+        "underlying": "SPX",
+        "root": "SPX",
+        "expiration": "2026-10-16",
+        "strike": 600,
+        "option_type": "call",
+        "exercise_style": "european",
+        "settlement": "cash",
+        "settlement_time": "AM",
+        "multiplier": 100
+      },
+      "input": {
+        "symbol": "SPX",
+        "secType": "OPT",
+        "exchange": "CBOE",
+        "currency": "USD",
+        "tradingClass": "SPX",
+        "strike": 600,
+        "right": "C",
+        "multiplier": "100",
+        "localSymbol": "SPX   261016C00600000"
+      },
+      "frequency": "1min",
+      "parameters": {
+        "bar_size": "1 min",
+        "data_types": [
+          "TRADES",
+          "BID",
+          "ASK",
+          "MIDPOINT"
+        ],
+        "cutoff_time": "16:00:00",
+        "timezone": "America/New_York",
+        "use_rth": true
+      },
+      "timeframe": {
+        "start": "COB",
+        "end": "COB"
+      },
+      "notes": "COB yesterday: current live quotes/IV/Greeks. Older COB: historical intraday bars only. Actual capture date is saved separately."
+    },
+    {
+      "id": "SPX261016C00800000_HISTORY",
+      "enabled": true,
+      "product": "index_option",
+      "operation": "option_history",
+      "ticker": "SPX261016C00800000",
+      "description": "S&P 500 index European call; standard SPX AM settlement",
+      "asset_class": "equity_index_option",
+      "currency": "USD",
+      "unit": "index points (100 USD per point per contract)",
+      "exchange": "XCBO",
+      "contract": {
+        "underlying": "SPX",
+        "root": "SPX",
+        "expiration": "2026-10-16",
+        "strike": 800,
+        "option_type": "call",
+        "exercise_style": "european",
+        "settlement": "cash",
+        "settlement_time": "AM",
+        "multiplier": 100
+      },
+      "input": {
+        "symbol": "SPX",
+        "secType": "OPT",
+        "exchange": "CBOE",
+        "currency": "USD",
+        "tradingClass": "SPX",
+        "strike": 800,
+        "right": "C",
+        "multiplier": "100",
+        "localSymbol": "SPX   261016C00800000"
+      },
+      "frequency": "1min",
+      "parameters": {
+        "bar_size": "1 min",
+        "data_types": [
+          "TRADES",
+          "BID",
+          "ASK",
+          "MIDPOINT"
+        ],
+        "cutoff_time": "16:00:00",
+        "timezone": "America/New_York",
+        "use_rth": true
+      },
+      "timeframe": {
+        "start": "COB",
+        "end": "COB"
+      },
+      "notes": "COB yesterday: current live quotes/IV/Greeks. Older COB: historical intraday bars only. Actual capture date is saved separately."
+    },
+    {
+      "id": "SPX261016C01000000_HISTORY",
+      "enabled": true,
+      "product": "index_option",
+      "operation": "option_history",
+      "ticker": "SPX261016C01000000",
+      "description": "S&P 500 index European call; standard SPX AM settlement",
+      "asset_class": "equity_index_option",
+      "currency": "USD",
+      "unit": "index points (100 USD per point per contract)",
+      "exchange": "XCBO",
+      "contract": {
+        "underlying": "SPX",
+        "root": "SPX",
+        "expiration": "2026-10-16",
+        "strike": 1000,
+        "option_type": "call",
+        "exercise_style": "european",
+        "settlement": "cash",
+        "settlement_time": "AM",
+        "multiplier": 100
+      },
+      "input": {
+        "symbol": "SPX",
+        "secType": "OPT",
+        "exchange": "CBOE",
+        "currency": "USD",
+        "tradingClass": "SPX",
+        "strike": 1000,
+        "right": "C",
+        "multiplier": "100",
+        "localSymbol": "SPX   261016C01000000"
+      },
+      "frequency": "1min",
+      "parameters": {
+        "bar_size": "1 min",
+        "data_types": [
+          "TRADES",
+          "BID",
+          "ASK",
+          "MIDPOINT"
+        ],
+        "cutoff_time": "16:00:00",
+        "timezone": "America/New_York",
+        "use_rth": true
+      },
+      "timeframe": {
+        "start": "COB",
+        "end": "COB"
+      },
+      "notes": "COB yesterday: current live quotes/IV/Greeks. Older COB: historical intraday bars only. Actual capture date is saved separately."
+    },
+    {
+      "id": "SPX261016C01200000_HISTORY",
+      "enabled": true,
+      "product": "index_option",
+      "operation": "option_history",
+      "ticker": "SPX261016C01200000",
+      "description": "S&P 500 index European call; standard SPX AM settlement",
+      "asset_class": "equity_index_option",
+      "currency": "USD",
+      "unit": "index points (100 USD per point per contract)",
+      "exchange": "XCBO",
+      "contract": {
+        "underlying": "SPX",
+        "root": "SPX",
+        "expiration": "2026-10-16",
+        "strike": 1200,
+        "option_type": "call",
+        "exercise_style": "european",
+        "settlement": "cash",
+        "settlement_time": "AM",
+        "multiplier": 100
+      },
+      "input": {
+        "symbol": "SPX",
+        "secType": "OPT",
+        "exchange": "CBOE",
+        "currency": "USD",
+        "tradingClass": "SPX",
+        "strike": 1200,
+        "right": "C",
+        "multiplier": "100",
+        "localSymbol": "SPX   261016C01200000"
+      },
+      "frequency": "1min",
+      "parameters": {
+        "bar_size": "1 min",
+        "data_types": [
+          "TRADES",
+          "BID",
+          "ASK",
+          "MIDPOINT"
+        ],
+        "cutoff_time": "16:00:00",
+        "timezone": "America/New_York",
+        "use_rth": true
+      },
+      "timeframe": {
+        "start": "COB",
+        "end": "COB"
+      },
+      "notes": "COB yesterday: current live quotes/IV/Greeks. Older COB: historical intraday bars only. Actual capture date is saved separately."
+    },
+    {
+      "id": "SPX261016C01400000_HISTORY",
+      "enabled": true,
+      "product": "index_option",
+      "operation": "option_history",
+      "ticker": "SPX261016C01400000",
+      "description": "S&P 500 index European call; standard SPX AM settlement",
+      "asset_class": "equity_index_option",
+      "currency": "USD",
+      "unit": "index points (100 USD per point per contract)",
+      "exchange": "XCBO",
+      "contract": {
+        "underlying": "SPX",
+        "root": "SPX",
+        "expiration": "2026-10-16",
+        "strike": 1400,
+        "option_type": "call",
+        "exercise_style": "european",
+        "settlement": "cash",
+        "settlement_time": "AM",
+        "multiplier": 100
+      },
+      "input": {
+        "symbol": "SPX",
+        "secType": "OPT",
+        "exchange": "CBOE",
+        "currency": "USD",
+        "tradingClass": "SPX",
+        "strike": 1400,
+        "right": "C",
+        "multiplier": "100",
+        "localSymbol": "SPX   261016C01400000"
+      },
+      "frequency": "1min",
+      "parameters": {
+        "bar_size": "1 min",
+        "data_types": [
+          "TRADES",
+          "BID",
+          "ASK",
+          "MIDPOINT"
+        ],
+        "cutoff_time": "16:00:00",
+        "timezone": "America/New_York",
+        "use_rth": true
+      },
+      "timeframe": {
+        "start": "COB",
+        "end": "COB"
+      },
+      "notes": "COB yesterday: current live quotes/IV/Greeks. Older COB: historical intraday bars only. Actual capture date is saved separately."
+    },
+    {
+      "id": "SPX261218C00200000_HISTORY",
+      "enabled": true,
+      "product": "index_option",
+      "operation": "option_history",
+      "ticker": "SPX261218C00200000",
+      "description": "S&P 500 index European call; standard SPX AM settlement",
+      "asset_class": "equity_index_option",
+      "currency": "USD",
+      "unit": "index points (100 USD per point per contract)",
+      "exchange": "XCBO",
+      "contract": {
+        "underlying": "SPX",
+        "root": "SPX",
+        "expiration": "2026-12-18",
+        "strike": 200,
+        "option_type": "call",
+        "exercise_style": "european",
+        "settlement": "cash",
+        "settlement_time": "AM",
+        "multiplier": 100
+      },
+      "input": {
+        "symbol": "SPX",
+        "secType": "OPT",
+        "exchange": "CBOE",
+        "currency": "USD",
+        "tradingClass": "SPX",
+        "strike": 200,
+        "right": "C",
+        "multiplier": "100",
+        "localSymbol": "SPX   261218C00200000"
+      },
+      "frequency": "1min",
+      "parameters": {
+        "bar_size": "1 min",
+        "data_types": [
+          "TRADES",
+          "BID",
+          "ASK",
+          "MIDPOINT"
+        ],
+        "cutoff_time": "16:00:00",
+        "timezone": "America/New_York",
+        "use_rth": true
+      },
+      "timeframe": {
+        "start": "COB",
+        "end": "COB"
+      },
+      "notes": "COB yesterday: current live quotes/IV/Greeks. Older COB: historical intraday bars only. Actual capture date is saved separately."
+    },
+    {
+      "id": "SPX261218C00400000_HISTORY",
+      "enabled": true,
+      "product": "index_option",
+      "operation": "option_history",
+      "ticker": "SPX261218C00400000",
+      "description": "S&P 500 index European call; standard SPX AM settlement",
+      "asset_class": "equity_index_option",
+      "currency": "USD",
+      "unit": "index points (100 USD per point per contract)",
+      "exchange": "XCBO",
+      "contract": {
+        "underlying": "SPX",
+        "root": "SPX",
+        "expiration": "2026-12-18",
+        "strike": 400,
+        "option_type": "call",
+        "exercise_style": "european",
+        "settlement": "cash",
+        "settlement_time": "AM",
+        "multiplier": 100
+      },
+      "input": {
+        "symbol": "SPX",
+        "secType": "OPT",
+        "exchange": "CBOE",
+        "currency": "USD",
+        "tradingClass": "SPX",
+        "strike": 400,
+        "right": "C",
+        "multiplier": "100",
+        "localSymbol": "SPX   261218C00400000"
+      },
+      "frequency": "1min",
+      "parameters": {
+        "bar_size": "1 min",
+        "data_types": [
+          "TRADES",
+          "BID",
+          "ASK",
+          "MIDPOINT"
+        ],
+        "cutoff_time": "16:00:00",
+        "timezone": "America/New_York",
+        "use_rth": true
+      },
+      "timeframe": {
+        "start": "COB",
+        "end": "COB"
+      },
+      "notes": "COB yesterday: current live quotes/IV/Greeks. Older COB: historical intraday bars only. Actual capture date is saved separately."
+    },
+    {
+      "id": "SPX261218C00600000_HISTORY",
+      "enabled": true,
+      "product": "index_option",
+      "operation": "option_history",
+      "ticker": "SPX261218C00600000",
+      "description": "S&P 500 index European call; standard SPX AM settlement",
+      "asset_class": "equity_index_option",
+      "currency": "USD",
+      "unit": "index points (100 USD per point per contract)",
+      "exchange": "XCBO",
+      "contract": {
+        "underlying": "SPX",
+        "root": "SPX",
+        "expiration": "2026-12-18",
+        "strike": 600,
+        "option_type": "call",
+        "exercise_style": "european",
+        "settlement": "cash",
+        "settlement_time": "AM",
+        "multiplier": 100
+      },
+      "input": {
+        "symbol": "SPX",
+        "secType": "OPT",
+        "exchange": "CBOE",
+        "currency": "USD",
+        "tradingClass": "SPX",
+        "strike": 600,
+        "right": "C",
+        "multiplier": "100",
+        "localSymbol": "SPX   261218C00600000"
+      },
+      "frequency": "1min",
+      "parameters": {
+        "bar_size": "1 min",
+        "data_types": [
+          "TRADES",
+          "BID",
+          "ASK",
+          "MIDPOINT"
+        ],
+        "cutoff_time": "16:00:00",
+        "timezone": "America/New_York",
+        "use_rth": true
+      },
+      "timeframe": {
+        "start": "COB",
+        "end": "COB"
+      },
+      "notes": "COB yesterday: current live quotes/IV/Greeks. Older COB: historical intraday bars only. Actual capture date is saved separately."
+    },
+    {
+      "id": "SPX270617C00200000_HISTORY",
+      "enabled": true,
+      "product": "index_option",
+      "operation": "option_history",
+      "ticker": "SPX270617C00200000",
+      "description": "S&P 500 index European call; standard SPX AM settlement",
+      "asset_class": "equity_index_option",
+      "currency": "USD",
+      "unit": "index points (100 USD per point per contract)",
+      "exchange": "XCBO",
+      "contract": {
+        "underlying": "SPX",
+        "root": "SPX",
+        "expiration": "2027-06-17",
+        "strike": 200,
+        "option_type": "call",
+        "exercise_style": "european",
+        "settlement": "cash",
+        "settlement_time": "AM",
+        "multiplier": 100
+      },
+      "input": {
+        "symbol": "SPX",
+        "secType": "OPT",
+        "exchange": "CBOE",
+        "currency": "USD",
+        "tradingClass": "SPX",
+        "strike": 200,
+        "right": "C",
+        "multiplier": "100",
+        "localSymbol": "SPX   270617C00200000"
+      },
+      "frequency": "1min",
+      "parameters": {
+        "bar_size": "1 min",
+        "data_types": [
+          "TRADES",
+          "BID",
+          "ASK",
+          "MIDPOINT"
+        ],
+        "cutoff_time": "16:00:00",
+        "timezone": "America/New_York",
+        "use_rth": true
+      },
+      "timeframe": {
+        "start": "COB",
+        "end": "COB"
+      },
+      "notes": "COB yesterday: current live quotes/IV/Greeks. Older COB: historical intraday bars only. Actual capture date is saved separately."
+    },
+    {
+      "id": "SPX271217C00400000_HISTORY",
+      "enabled": true,
+      "product": "index_option",
+      "operation": "option_history",
+      "ticker": "SPX271217C00400000",
+      "description": "S&P 500 index European call; standard SPX AM settlement",
+      "asset_class": "equity_index_option",
+      "currency": "USD",
+      "unit": "index points (100 USD per point per contract)",
+      "exchange": "XCBO",
+      "contract": {
+        "underlying": "SPX",
+        "root": "SPX",
+        "expiration": "2027-12-17",
+        "strike": 400,
+        "option_type": "call",
+        "exercise_style": "european",
+        "settlement": "cash",
+        "settlement_time": "AM",
+        "multiplier": 100
+      },
+      "input": {
+        "symbol": "SPX",
+        "secType": "OPT",
+        "exchange": "CBOE",
+        "currency": "USD",
+        "tradingClass": "SPX",
+        "strike": 400,
+        "right": "C",
+        "multiplier": "100",
+        "localSymbol": "SPX   271217C00400000"
+      },
+      "frequency": "1min",
+      "parameters": {
+        "bar_size": "1 min",
+        "data_types": [
+          "TRADES",
+          "BID",
+          "ASK",
+          "MIDPOINT"
+        ],
+        "cutoff_time": "16:00:00",
+        "timezone": "America/New_York",
+        "use_rth": true
+      },
+      "timeframe": {
+        "start": "COB",
+        "end": "COB"
+      },
+      "notes": "COB yesterday: current live quotes/IV/Greeks. Older COB: historical intraday bars only. Actual capture date is saved separately."
+    }
+  ],
+  "product_guides": {
+    "index": {
+      "implemented": true,
+      "instructions": "SPX is the S&P 500 price index. Use the provider-native identifier and check enabled/notes in requests for current access. No SPY substitution.",
+      "template": {
+        "id": "SPX",
+        "enabled": false,
+        "product": "index",
+        "operation": "price_history",
+        "ticker": "SPX",
+        "description": "S&P 500 price index; underlying of the configured SPX options",
+        "asset_class": "equity_index",
+        "currency": "USD",
+        "unit": "Index points",
+        "exchange": "CBOE",
+        "timeframe": {
+          "start": "HISTORY_START",
+          "end": "COB"
+        },
+        "frequency": "1d",
+        "input": {
+          "symbol": "SPX",
+          "secType": "IND",
+          "exchange": "CBOE",
+          "currency": "USD"
+        },
+        "parameters": {}
+      }
+    },
+    "etf": {
+      "implemented": true,
+      "instructions": "SPY is the US-listed S&P 500 equity ETF; IEF is the US-listed 7-10 Year Treasury Bond ETF. Use each listing's provider-native symbol and exchange. Adjust the history timeframe in requests.",
+      "template": {
+        "id": "IEF",
+        "enabled": false,
+        "product": "etf",
+        "operation": "price_history",
+        "ticker": "IEF",
+        "description": "iShares 7-10 Year Treasury Bond ETF, US listing",
+        "asset_class": "sovereign_bond_etf",
+        "currency": "USD",
+        "unit": "USD per share",
+        "exchange": "NASDAQ",
+        "timeframe": {
+          "start": "HISTORY_START",
+          "end": "COB"
+        },
+        "frequency": "1d",
+        "input": {
+          "symbol": "IEF",
+          "secType": "STK",
+          "exchange": "SMART",
+          "primaryExchange": "NASDAQ",
+          "currency": "USD"
+        },
+        "parameters": {}
+      }
+    },
+    "index_option": {
+      "operation": "option_history",
+      "date_policy": "run.py selects current live snapshots for yesterday COB; historical bars for any earlier COB.",
+      "timeframe": {
+        "lookback": "max",
+        "end": "COB"
+      },
+      "parameters": {
+        "bar_size": "1 min",
+        "data_types": [
+          "TRADES",
+          "BID",
+          "ASK",
+          "MIDPOINT"
+        ],
+        "cutoff_time": "16:00:00",
+        "timezone": "America/New_York",
+        "use_rth": true
+      }
+    }
+  }
+}

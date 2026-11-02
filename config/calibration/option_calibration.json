@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "valuation_timezone": "America/New_York",
+  "curve_conventions": {
+    "USD": {
+      "status": "assumed",
+      "description": "Prototype SOFR convention assumptions approved by the user; not verified against BlueGamma.",
+      "spot_lag_business_days": 2,
+      "payment_lag_business_days": 2,
+      "fixed_payment_frequency": "Annual",
+      "day_count": "ACT/360",
+      "calendar": "overnight_index_calendar",
+      "business_day_convention": "ModifiedFollowing",
+      "payment_convention": "Following",
+      "end_of_month": false
+    },
+    "EUR": {
+      "status": "assumed",
+      "description": "Prototype ESTR convention assumptions approved by the user; not verified against BlueGamma.",
+      "spot_lag_business_days": 2,
+      "payment_lag_business_days": 2,
+      "fixed_payment_frequency": "Annual",
+      "day_count": "ACT/360",
+      "calendar": "overnight_index_calendar",
+      "business_day_convention": "ModifiedFollowing",
+      "payment_convention": "Following",
+      "end_of_month": false
+    }
+  },
+  "live": {
+    "maximum_model_age_seconds": 30,
+    "maximum_relative_spread": 0.1,
+    "capture_span_warning_minutes": 5,
+    "allow_broker_dividend_pv": true
+  },
+  "historical": {
+    "price_priority": [
+      "MIDPOINT",
+      "TRADES"
+    ],
+    "cutoff_local_time": "16:00:00",
+    "maximum_bar_age_minutes": 5,
+    "allow_daily_close_approximation": true,
+    "underlying_provider_priority": [
+      "yahoo",
+      "ibkr",
+      "marketdata",
+      "massive",
+      "alpha_vantage"
+    ]
+  },
+  "expiry": {
+    "timezone": "America/New_York",
+    "times_by_settlement": {
+      "AM": "09:30:00",
+      "PM": "16:00:00"
+    },
+    "instrument_overrides": {}
+  },
+  "solver": {
+    "maximum_volatility": 5.0,
+    "minimum_time_value_fraction_of_spot": 1e-06,
+    "minimum_vega_fraction_of_spot": 1e-05
+  },
+  "manual_carry_inputs": [],
+  "instructions": {
+    "scope": "Offline OIS, equity forwards and individual European-option IVs. run.py invokes calibration after cleaning, passing that run's processed folder. Insufficient inputs are reported and historical analysis continues. No additional downloads, surface fitting or Dupire.",
+    "dates": "Observation dates are derived from saved option records, independently of archive COB and today. Each curve and manual carry input must match exactly. This file cannot select or redirect the processed folder or valuation date.",
+    "ois": "Read the OIS observations saved in the processed archive, not today's editable config/ois.json. QuantLib bootstraps par quotes using the labelled assumptions. ACT/360 governs coupons; ACT/365F is the discount-curve and option time axis. The first log-linear discount segment is also the unobserved short-end assumption. No extrapolation beyond the curve is permitted.",
+    "live": "Use an eligible positive bid/ask pair and its paired model underlying, even if provider IV is absent. model_received_at_utc must precede the snapshot receipt by at most the configured age. SDK receipt is not a guarantee of exchange freshness. Different snapshot times remain separate observations, not a simultaneous surface. Only reported market_data_type=1 is accepted. Frozen, delayed-frozen, delayed and unknown types require a verified observation-time policy and are currently skipped.",
+    "historical": "Closing-session approximation only. Use the underlying price calendar to determine its actual close, including early closes. A configured cutoff before that close is rejected; a later cutoff is reduced to that close. Intraday option bar timestamps are starts: bar_size is required and the completed interval must end no later than the close, within maximum_bar_age_minutes. Date-only bars require explicit 1 day metadata and the approximation flag. Older processed tables missing metadata must be reprocessed locally, not redownloaded.",
+    "carry": "Live broker dividend PV may be reused with our OIS curve only as a labelled model approximation. Historical data requires a dated manual carry entry. An entry must contain underlying, currency, valuation_date, expiration, source, and exactly one of forward or dividend_pv. Dividend PV is in underlying price units. No historical future dividends are inferred from realized distributions.",
+    "expiry": "AM/PM expiry times are declared approximations, not certified SET publication times. instrument_overrides may replace timezone and times_by_settlement for a specific underlying. Contracts must be European and have positive remaining calendar time.",
+    "solver": "IV is an annualized decimal (0.20 means 20%). Price, strike, forward and dividend PV use the same underlying units. maximum_volatility is a root-search bound, not a cap applied to results. Time-value and vega filters identify ill-conditioned inversions.",
+    "outputs": "Outputs are a new fingerprinted child folder of the processed input. Original files are read-only. A matching existing result is verified and reused without overwriting; changed inputs create a distinct result. Available IVs are not certified calibration-ready surface observations.",
+    "identity": "Available resolved broker strike, right, symbol, currency, multiplier, legal expiry and OCC symbol must agree with the configured contract. AM last-trading dates are not substituted for legal expiration."
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "provider": "massive",
+  "enabled": true,
+  "requests": [
+    {
+      "id": "SPX",
+      "enabled": true,
+      "product": "index",
+      "operation": "price_history",
+      "ticker": "SPX",
+      "description": "S&P 500 price index; underlying of the configured SPX options",
+      "asset_class": "equity_index",
+      "currency": "USD",
+      "unit": "Index points",
+      "exchange": "CBOE",
+      "timeframe": {
+        "start": "HISTORY_START",
+        "end": "COB"
+      },
+      "frequency": "1d",
+      "input": {
+        "ticker": "I:SPX"
+      },
+      "parameters": {},
+      "notes": "Enabled for complete request accounting. A previous retrieval returned NOT_AUTHORIZED for SPX index prices. The index adapter is implemented; any current entitlement failure is saved in the archive."
+    },
+    {
+      "id": "IEF",
+      "enabled": true,
+      "product": "etf",
+      "operation": "price_history",
+      "ticker": "IEF",
+      "description": "iShares 7-10 Year Treasury Bond ETF, US listing",
+      "asset_class": "sovereign_bond_etf",
+      "currency": "USD",
+      "unit": "USD per share",
+      "exchange": "NASDAQ",
+      "timeframe": {
+        "start": "HISTORY_START",
+        "end": "COB"
+      },
+      "frequency": "1d",
+      "input": {
+        "ticker": "IEF"
+      },
+      "parameters": {
+        "adjusted": true
+      }
+    },
+    {
+      "id": "SPY",
+      "enabled": true,
+      "product": "etf",
+      "operation": "price_history",
+      "ticker": "SPY",
+      "description": "SPDR S&P 500 ETF Trust, US listing",
+      "asset_class": "equity_etf",
+      "currency": "USD",
+      "unit": "USD per share",
+      "exchange": "ARCA",
+      "timeframe": {
+        "start": "HISTORY_START",
+        "end": "COB"
+      },
+      "frequency": "1d",
+      "input": {
+        "ticker": "SPY"
+      },
+      "parameters": {
+        "adjusted": true
+      }
+    }
+  ],
+  "product_guides": {
+    "index": {
+      "implemented": true,
+      "instructions": "SPX is the S&P 500 price index. Use the provider-native identifier and check enabled/notes in requests for current access. No SPY substitution.",
+      "template": {
+        "id": "SPX",
+        "enabled": false,
+        "product": "index",
+        "operation": "price_history",
+        "ticker": "SPX",
+        "description": "S&P 500 price index; underlying of the configured SPX options",
+        "asset_class": "equity_index",
+        "currency": "USD",
+        "unit": "Index points",
+        "exchange": "CBOE",
+        "timeframe": {
+          "start": "HISTORY_START",
+          "end": "COB"
+        },
+        "frequency": "1d",
+        "input": {
+          "ticker": "I:SPX"
+        },
+        "parameters": {},
+        "notes": "Disabled after the 2026-10-08 test returned NOT_AUTHORIZED: the current plan is not entitled to SPX index prices. The index adapter is implemented; enable this request after entitlement is available. Option contract-reference discovery remains accessible."
+      }
+    },
+    "etf": {
+      "implemented": true,
+      "instructions": "SPY is the US-listed S&P 500 equity ETF; IEF is the US-listed 7-10 Year Treasury Bond ETF. Use each listing's provider-native symbol and exchange. Adjust the history timeframe in requests.",
+      "template": {
+        "id": "IEF",
+        "enabled": false,
+        "product": "etf",
+        "operation": "price_history",
+        "ticker": "IEF",
+        "description": "iShares 7-10 Year Treasury Bond ETF, US listing",
+        "asset_class": "sovereign_bond_etf",
+        "currency": "USD",
+        "unit": "USD per share",
+        "exchange": "NASDAQ",
+        "timeframe": {
+          "start": "HISTORY_START",
+          "end": "COB"
+        },
+        "frequency": "1d",
+        "input": {
+          "ticker": "IEF"
+        },
+        "parameters": {
+          "adjusted": true
+        }
+      }
+    }
+  }
+}

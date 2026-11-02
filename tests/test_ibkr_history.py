@@ -34,6 +34,17 @@ class HistoricalIB:
 
 
 class HistoricalTests(unittest.TestCase):
+    def setUp(self):
+        # Fixed option fixtures must not expire merely because wall-clock time
+        # advances. This test clock never changes the production adapter.
+        class FixtureDate(date):
+            @classmethod
+            def today(cls):
+                return cls(2026, 10, 8)
+        clock = patch('src.providers.ibkr_history.date', FixtureDate)
+        clock.start()
+        self.addCleanup(clock.stop)
+
     def test_one_connection_bounded_concurrency_and_explicit_historical_cutoff(self):
         config=fixture(3)
         for r in config['requests']:
@@ -66,7 +77,7 @@ class HistoricalTests(unittest.TestCase):
         from pathlib import Path
         import json,tempfile
         from src.json_config import load_provider_configs
-        doc=json.loads((Path(__file__).resolve().parents[1]/'config/ibkr.json').read_text())
+        doc=json.loads((Path(__file__).resolve().parent/'fixtures/config/ibkr.json').read_text())
         doc['requests']=[r for r in doc['requests'] if not r.get('contract')]
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'input.json';path.write_text(json.dumps(doc))
@@ -92,7 +103,7 @@ class HistoricalTests(unittest.TestCase):
         import json,tempfile
         from src.json_config import load_provider_configs
         from ib_insync import RequestError
-        doc=json.loads((Path(__file__).resolve().parents[1]/'config/ibkr.json').read_text())
+        doc=json.loads((Path(__file__).resolve().parent/'fixtures/config/ibkr.json').read_text())
         doc['requests']=[r for r in doc['requests'] if r['ticker']=='IEF']
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'input.json';path.write_text(json.dumps(doc))

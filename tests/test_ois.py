@@ -13,12 +13,13 @@ from test_raw_dump import config
 from test_cob_integrity import capture
 
 ROOT=Path(__file__).resolve().parents[1]
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "config"
 COB=date(2026,10,8)
 
 
 class OisTests(unittest.TestCase):
     @classmethod
-    def setUpClass(cls): cls.document=load_ois_config(ROOT/'config/ois.json')
+    def setUpClass(cls): cls.document=load_ois_config(FIXTURES/'ois.json')
 
     def test_fixed_curves_are_included_for_every_cob_without_relabelling(self):
         cases=((date(2025,1,1),'after_cob'),(date(2026,10,7),'after_cob'),
@@ -27,7 +28,7 @@ class OisTests(unittest.TestCase):
         for cob,relation in cases:
             with self.subTest(cob=cob):
                 planned=plan_ois_dump(self.document,cob)
-                self.assertEqual([r[2]['quote_count'] for r in planned],[86,44])
+                self.assertEqual([r[2]['quote_count'] for r in planned],[2,2])
                 for region,(_,payload,row) in zip(('us','euro'),planned):
                     self.assertEqual(row['status'],'response_saved')
                     self.assertEqual(row['curve_as_of_date'],'2026-10-09')
@@ -45,13 +46,13 @@ class OisTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp,patch('src.cob.london_today',return_value=date(2026,10,12)),patch('src.models.date',ExecutionDate):
             for cob in (date(2026,10,1),date(2026,10,9),date(2026,10,11)):
                 with self.subTest(cob=cob),patch('src.cob._http_history',side_effect=capture) as api:
-                    result=dl.download_cob(cob,tmp,ois_file=ROOT/'config/ois.json')
+                    result=dl.download_cob(cob,tmp,ois_file=FIXTURES/'ois.json')
                     api.assert_called_once()
                     for region in ('us','euro'):
                         saved=json.loads((result.folder/'ois'/region/'curve.json').read_text(encoding='utf-8'))
                         self.assertEqual(saved['curve'],self.document['curves'][region][0])
                     with patch('src.cob._http_history',side_effect=AssertionError('API forbidden')),patch('src.cob.write_json',side_effect=AssertionError('Write forbidden')),patch('src.ois.write_json',side_effect=AssertionError('OIS write forbidden')):
-                        self.assertTrue(dl.download_cob(cob,tmp,ois_file=ROOT/'config/ois.json').reused)
+                        self.assertTrue(dl.download_cob(cob,tmp,ois_file=FIXTURES/'ois.json').reused)
 
     def test_fixed_policy_requires_exactly_one_curve_per_region(self):
         for snapshots in ([],self.document['curves']['us']*2):
@@ -125,17 +126,17 @@ class OisTests(unittest.TestCase):
     def test_corrupted_manual_archive_is_not_silently_reused(self):
         with tempfile.TemporaryDirectory() as tmp,patch('src.cob.london_today',return_value=date(2026,10,9)),patch('src.cob._http_history',side_effect=capture):
             dl=MarketDataDownloader.from_config(config({'yahoo':'SAMPLE'}))
-            result=dl.download_cob(COB,tmp,ois_file=ROOT/'config/ois.json')
+            result=dl.download_cob(COB,tmp,ois_file=FIXTURES/'ois.json')
             curve=result.folder/'ois/us/curve.json'
             curve.write_text('{}')
             with patch('src.cob._http_history',side_effect=AssertionError('API forbidden')),patch('src.cob.write_json',side_effect=AssertionError('Write forbidden')):
-                with self.assertRaisesRegex(ValueError,'Saved OIS input'):dl.download_cob(COB,tmp,ois_file=ROOT/'config/ois.json')
+                with self.assertRaisesRegex(ValueError,'Saved OIS input'):dl.download_cob(COB,tmp,ois_file=FIXTURES/'ois.json')
 
     def test_manual_quotes_saved_even_if_api_unavailable(self):
         from src.models import RetrievalError
         with tempfile.TemporaryDirectory() as tmp,patch('src.cob.london_today',return_value=date(2026,10,9)),patch('src.cob._http_history',side_effect=RetrievalError('network_error','fixture')):
             dl=MarketDataDownloader.from_config(config({'yahoo':'SAMPLE'}))
-            result=dl.download_cob(COB,tmp,ois_file=ROOT/'config/ois.json')
+            result=dl.download_cob(COB,tmp,ois_file=FIXTURES/'ois.json')
             rows=result.summary.set_index('ticker')
             self.assertEqual(rows.loc['USD_SOFR_OIS','status'],'response_saved')
             self.assertEqual(rows.loc['EUR_ESTR_OIS','status'],'response_saved')

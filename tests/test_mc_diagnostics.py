@@ -6,6 +6,9 @@ import hashlib
 import json
 import socket
 import unittest
+import matplotlib
+# Offline figure tests own their backend; do not depend on test order or Tk.
+matplotlib.use("Agg")
 import numpy as np
 import pandas as pd
 from scipy.stats import skew, kurtosis
@@ -14,13 +17,14 @@ from src.monte_carlo import simulate_processed, load_monte_carlo_config, _sessio
 from src.mc_diagnostics import daily_distribution, wealth_diagnostics
 
 ROOT = Path(__file__).resolve().parents[1]
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "config"
 
 
 class DiagnosticTests(unittest.TestCase):
     def setUp(self):
         self.tmp = TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
-        self.cfg = json.loads((ROOT/"config/monte_carlo.json").read_text(encoding="utf-8"))
+        self.cfg = json.loads((FIXTURES/"monte_carlo.json").read_text(encoding="utf-8"))
         self.cfg.update(paths=200,plots=False,sample_paths=0,forecast_end="2026-11-10")
         self.cfg["calibration"].update(start="2026-07-01",minimum_observations=20)
         self.cfg["student_t"]["sensitivity_tail_probabilities"] = []
@@ -123,6 +127,22 @@ class DiagnosticTests(unittest.TestCase):
             self.assertEqual(result.summary["stress_calibrations"][0]["status"],"unavailable")
             self.assertEqual(set(result.summary["models"]),{"gaussian","student_t_truncated"})
             self.assertTrue(any("unavailable" in w for w in result.summary["warnings"]))
+
+    def test_short_baseline_window_does_not_replace_missing_stress_history(self):
+        self.stress("stress")
+        complete=self.run_model()
+        self.assertEqual(complete.summary["stress_calibrations"][0]["status"],"complete")
+        baseline=complete.tables["terminal_values"].query("calibration_set == 'baseline'").reset_index(drop=True)
+        # Restrict the archive itself, not merely the baseline lookback. The
+        # crisis can no longer be calibrated even though baseline still works.
+        prices=self.p.tables["selected_prices"]
+        trimmed=prices[prices.date >= "2026-07-01"].copy().reset_index(drop=True)
+        trimmed.loc[trimmed.groupby("instrument_id").head(1).index,"simple_return"]=np.nan
+        self.p.tables["selected_prices"]=trimmed
+        missing=self.run_model()
+        self.assertEqual(missing.summary["stress_calibrations"][0]["status"],"unavailable")
+        self.assertEqual(set(missing.tables["terminal_values"].calibration_set),{"baseline"})
+        pd.testing.assert_frame_equal(baseline,missing.tables["terminal_values"].reset_index(drop=True))
 
     def test_stress_cannot_silently_switch_simulation_currency(self):
         self.p.summary["portfolio"]["reporting_currency"] = "EUR"

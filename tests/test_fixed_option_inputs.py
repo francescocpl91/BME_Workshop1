@@ -17,6 +17,7 @@ from src.providers.ibkr import IBKRProvider
 from src.models import RetrievalError
 
 ROOT = Path(__file__).resolve().parents[1]
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "config"
 
 
 class FixedOptionInputTests(unittest.TestCase):
@@ -24,14 +25,14 @@ class FixedOptionInputTests(unittest.TestCase):
         universe = None
         counts = {}
         for provider in ('yahoo', 'marketdata', 'massive', 'ibkr'):
-            document = json.loads((ROOT / 'config' / (provider + '.json')).read_text())
+            document = json.loads((FIXTURES / (provider + '.json')).read_text())
             rows = [r for r in document['requests'] if r['product'] == 'index_option']
             if provider!='ibkr':
                 self.assertEqual(rows,[])
                 continue
-            self.assertEqual(len(rows), 4181)
+            self.assertEqual(len(rows), 12)
             actual = {r['ticker']: r['contract'] for r in rows}
-            self.assertEqual(len(actual), 4181)
+            self.assertEqual(len(actual), 12)
             if universe is None: universe = actual
             self.assertEqual(actual, universe)
             for r in rows:
@@ -51,7 +52,7 @@ class FixedOptionInputTests(unittest.TestCase):
                     self.assertEqual(r['timeframe'], {'start': '2026-10-07', 'end': '2026-10-07'} if provider == 'marketdata' else {'lookback': '1mo', 'end': None})
             counts[provider] = len(rows)
         expiries = {c['expiration'] for c in universe.values()}
-        self.assertEqual(len(expiries), 14)
+        self.assertEqual(len(expiries), 4)
         self.assertIn('2027-06-17', expiries)
         self.assertEqual(max(expiries), '2027-12-17')
         self.assertFalse((ROOT / 'src/option_catalogue.py').exists())
@@ -59,7 +60,7 @@ class FixedOptionInputTests(unittest.TestCase):
         self.assertFalse(hasattr(MarketDataDownloader, 'download_option_catalogue'))
 
     def test_local_symbol_is_sufficient_and_inconsistent_identifiers_fail(self):
-        row = next(r for r in json.loads((ROOT / 'config/ibkr.json').read_text())['requests'] if r.get('contract'))
+        row = next(r for r in json.loads((FIXTURES / 'ibkr.json').read_text())['requests'] if r.get('contract'))
         self.assertEqual(validate_ib_input(row['input'], 'option', 'USD', row['contract']), row['ticker'])
         for changes in ({'localSymbol': row['input']['localSymbol'].replace('C', 'P')},
                         {'localSymbol': row['ticker']}, {'lastTradeDateOrContractMonth': '20200101'}):

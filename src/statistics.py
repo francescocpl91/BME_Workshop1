@@ -240,7 +240,11 @@ def _sample_statistics(frame, cfg, return_type="simple"):
 
 @dataclass
 class AssetStatistics:
-    """Analytical wrapper over a cleaned holding, distinct from raw PriceSeries.
+    """Analytical price-series DataClass, distinct from raw retrieved PriceSeries.
+
+    Portfolio.assets exposes these existing objects after Portfolio.analyze().
+    Their metadata, price observations and automatic statistics satisfy the
+    analytical series contract without calculating returns on uncleaned data.
 
     Construction is the calculation trigger: dataclasses generates __init__,
     assigns frame/settings, and calls __post_init__ automatically. Callers do

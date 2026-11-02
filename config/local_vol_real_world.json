@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "enabled": true,
+  "annualization_periods": 252,
+  "steps_per_year": 365,
+  "refinement": 2,
+  "end_time": "09:30",
+  "end_timezone": "America/New_York",
+  "methods_by_return_basis": {
+    "split_and_dividend_adjusted_close": "total_return_proxy",
+    "gross_total_return_index_level": "total_return_proxy",
+    "net_total_return_index_level": "total_return_proxy",
+    "price_index_level": "direct_price"
+  },
+  "allow_boundary_assumptions": true,
+  "allow_precision_only_review": true,
+  "drift_convention": "historical_arithmetic",
+  "unmapped_holdings": "historical",
+  "save_observations": 80,
+  "maximum_path_steps": 50000000,
+  "convergence_relative_initial": 0.001,
+  "convergence_z": 3.0,
+  "instructions": {
+    "scope": "Offline physical-drift joint portfolio scenario. No retrieval, refitting, Student-t local-vol shocks, or cross-model interpretation. Existing historical MC remains separate.",
+    "mapping": "Use option_reference in the saved cleaning price_selection metadata. No duplicate ticker mapping here. Unmapped holdings use historical volatility. A mapped holding must have exactly one compatible validated surface and a configured return-basis method; otherwise the hybrid run is unavailable.",
+    "proxy": "The configured methods explicitly assume a one-for-one unleveraged exposure, without stochastic tracking error. total_return_proxy: Iproxy=I0*G*B, B=D*F/I0; G is native total-return wealth, not share price. direct_price: Iproxy=I0*G. Never infer leveraged or hedged ETF transformations. Dividends/fees already in adjusted history are not added/subtracted again.",
+    "drift": "mu=annualization_periods*mean_daily_log+0.5*historical_annual_variance. Freeze mu, then dlogG=(mu-0.5*current_variance)dt+current_sigma*dW. The option-calibrated diffusion under historical drift is a scenario assumption, not a measured physical distribution.",
+    "clock": "ACT/365F actual time from the observed surface instant on archive COB+1. All factors evolve through weekends. Annualization maps historical daily moments onto this calendar clock. End date comes from monte_carlo.json; end_time/end_timezone supply the exact instant and must not exceed any mapped surface. Defaults match the currently studied AM expiry, not a universal market convention.",
+    "precision": "allow_precision_only_review permits exploratory output ONLY when risk-neutral fit, PDE, convergence and forward checks all pass and precision is the sole failed gate. Existing thresholds and statuses are unchanged. Set false to require all risk-neutral checks to pass.",
+    "numerics": "Fine steps divide each coarse step by refinement, using coupled Brownian increments. Check terminal holding/portfolio mean differences against convergence_relative_initial*initial_value+convergence_z*paired_SE. This is a mean convergence diagnostic, not a full tail convergence certificate. No path clipping or dropping.",
+    "outputs": "Store all paths at coarse grid endpoints (including save_observations anchors and maturity knots). Native factor log growth, FX transform, weights and proxy factors permit reconstruction. Maximum drawdown uses every fine step. Numerical grid points can exceed save_observations. Weights, paths, seed, horizon and risk quantiles are inherited from the existing MC configuration and saved processing portfolio.",
+    "comparison": "252 annualizes historical session returns; it is not the actual session count of every year. ACT/365F remains the option/local-vol clock. Align start/end instants, portfolio, currency and observation dates before comparing. clock_comparison reports the different horizons. The same-clock Gaussian control isolates volatility dynamics. Never replace 365 by 252 in option time without transforming coefficients and revalidating pricing."
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "provider": "ecb",
+  "enabled": true,
+  "requests": [
+    {
+      "id": "EUR10Y",
+      "enabled": true,
+      "product": "yield",
+      "operation": "observations",
+      "ticker": "EUR10Y",
+      "description": "Euro-area AAA 10-year continuously compounded spot yield; not a bond price",
+      "asset_class": "interest_rate",
+      "currency": "EUR",
+      "unit": "Percent per annum",
+      "exchange": null,
+      "timeframe": {
+        "start": "HISTORY_START",
+        "end": "COB"
+      },
+      "frequency": "1d",
+      "input": {
+        "dataflow": "YC",
+        "series_key": "B.U2.EUR.4F.G_N_A.SV_C_YM.SR_10Y"
+      },
+      "parameters": {}
+    },
+    {
+      "id": "EURUSD",
+      "enabled": true,
+      "product": "fx",
+      "operation": "observations",
+      "ticker": "EURUSD",
+      "description": "ECB reference exchange rate, USD per EUR",
+      "asset_class": "fx",
+      "currency": "USD",
+      "unit": "USD per EUR",
+      "exchange": null,
+      "timeframe": {
+        "start": "HISTORY_START",
+        "end": "COB"
+      },
+      "frequency": "1d",
+      "input": {
+        "dataflow": "EXR",
+        "series_key": "D.USD.EUR.SP00.A"
+      },
+      "parameters": {}
+    },
+    {
+      "id": "ESTR",
+      "enabled": true,
+      "product": "overnight_rate",
+      "operation": "observations",
+      "ticker": "ESTR",
+      "description": "EUR euro short-term rate (ESTR); overnight fixing, not a term discount curve",
+      "asset_class": "interest_rate",
+      "currency": "EUR",
+      "unit": "Percent per annum",
+      "exchange": null,
+      "timeframe": {
+        "start": "HISTORY_START",
+        "end": "COB"
+      },
+      "frequency": "1d",
+      "input": {
+        "dataflow": "EST",
+        "series_key": "B.EU000A2X2A25.WT"
+      },
+      "parameters": {}
+    }
+  ],
+  "product_guides": {
+    "observations": {
+      "implemented": true,
+      "products": [
+        "yield",
+        "fx",
+        "macro"
+      ],
+      "instructions": "Use an economic-series identifier or dataset key, not a stock ticker. Set unit and frequency accurately; the provider response is authoritative.",
+      "template": {
+        "id": "EUR10Y",
+        "enabled": false,
+        "product": "yield",
+        "operation": "observations",
+        "ticker": "EUR10Y",
+        "description": "Euro-area AAA 10-year continuously compounded spot yield; not a bond price",
+        "asset_class": "interest_rate",
+        "currency": "EUR",
+        "unit": "Percent per annum",
+        "exchange": null,
+        "timeframe": {
+          "start": "HISTORY_START",
+          "end": "COB"
+        },
+        "frequency": "1d",
+        "input": {
+          "dataflow": "YC",
+          "series_key": "B.U2.EUR.4F.G_N_A.SV_C_YM.SR_10Y"
+        },
+        "parameters": {}
+      }
+    }
+  }
+}

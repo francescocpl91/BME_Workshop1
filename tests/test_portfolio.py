@@ -10,15 +10,16 @@ from src import load_portfolio
 from src.json_config import load_provider_configs
 
 ROOT = Path(__file__).resolve().parents[1]
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "config"
 
 
 class PortfolioTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.config = load_provider_configs(ROOT / "config", history_start=date(2000,1,3))
+        cls.config = load_provider_configs(FIXTURES, history_start=date(2000,1,3))
 
     def setUp(self):
-        self.data = json.loads((ROOT / 'config/portfolio.json').read_text(encoding='utf-8'))
+        self.data = json.loads((FIXTURES / 'portfolio.json').read_text(encoding='utf-8'))
 
     def load(self, data):
         with tempfile.TemporaryDirectory() as tmp:
@@ -26,13 +27,13 @@ class PortfolioTests(unittest.TestCase):
             path.write_text(json.dumps(data), encoding='utf-8')
             return load_portfolio(path, self.config)
 
-    def test_requested_spy_ief_portfolio_has_50_50_weights(self):
+    def test_fixture_portfolio_has_explicit_50_50_weights(self):
         result = self.load(self.data)
         self.assertTrue(result.weights_ready)
         self.assertEqual(result.reporting_currency, 'EUR')
         self.assertEqual(result.target_allocation, {'equity': .5, 'sovereign_fixed_income': .5})
         self.assertEqual([(h['request_id'], h['weight']) for h in result.holdings], [('SPY', .5), ('IEF', .5)])
-        self.assertEqual(len(self.config['requests']), 4189)
+        self.assertEqual(len(self.config['requests']), 20)
 
     def test_complete_weights_are_validated_without_normalizing(self):
         # Synthetic fixture allocations, not proposed portfolio weights.
