@@ -210,7 +210,7 @@ class LocalVolTests(unittest.TestCase):
     def test_run_stage_passes_current_surface_and_does_not_call_mc_or_downloader(self):
         import run
         self.config.write_text(json.dumps(self.cfg))
-        with patch.object(run,'LOCAL_VOL_FILE',self.config),patch.object(run,'simulate_processed',side_effect=AssertionError('no MC')), \
+        with patch.object(run,'LOCAL_VOL_FILE',self.config),patch('src.monte_carlo.simulate_processed',side_effect=AssertionError('no MC')), \
              patch('socket.socket.connect',side_effect=AssertionError('no downloads')),redirect_stdout(StringIO()):
             result=run._local_vol_available(self.surface)
         self.assertEqual(result.manifest['identity']['source_surface_id'],self.surface.run_id)
@@ -227,7 +227,7 @@ class LocalVolTests(unittest.TestCase):
         def simulation(*args):order.append('historical_mc');return mc
         with patch('src.volatility_workflow.save_overview',return_value=Path('.')),patch.object(run,'process_inventory',return_value=processed),patch.object(run,'_calibrate_available'), \
              patch.object(run,'_surface_available',return_value=self.surface),patch.object(run,'_local_vol_available',side_effect=local), \
-             patch.object(run,'analyze_processed',side_effect=statistics),patch.object(run,'simulate_processed',side_effect=simulation),redirect_stdout(StringIO()):
+             patch('src.statistics.analyze_processed',side_effect=statistics),patch('src.monte_carlo.simulate_processed',side_effect=simulation),redirect_stdout(StringIO()):
             # This test isolates stage ordering; final-report behavior has separate fixtures.
             with patch.object(run, '_final_analysis'):
                 run._process_inventory(SimpleNamespace(cob='2031-02-02'))

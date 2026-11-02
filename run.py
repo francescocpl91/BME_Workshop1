@@ -6,7 +6,7 @@ python -i run.py    : execute and keep result available in a Python prompt
 import os
 from datetime import timedelta
 from pathlib import Path
-from src import MarketDataDownloader, inspect_archive, process_inventory, analyze_processed, simulate_processed
+from src import MarketDataDownloader, inspect_archive, process_inventory, Portfolio
 from src.cob import parse_cob, parse_history_start, london_today
 
 ROOT = Path(__file__).resolve().parent
@@ -166,17 +166,23 @@ def _inventory_archive(folder):
     return inventory
 
 
-def _final_analysis(cob, stage_folders, issues):
+def _final_analysis(cob, stage_folders, issues, *, portfolio=None):
     """Summarize this execution only, without downloads or model reruns."""
     try:
         import json
         from src.simulation_comparison import build_analysis
-        portfolio = json.loads(PORTFOLIO_FILE.read_text(encoding="utf-8"))
-        analysis = build_analysis(str(cob), stage_folders, COMPARISON_FILE,
-                                  issues=issues, requested_portfolio=portfolio)
+        if portfolio is not None:
+            analysis = portfolio.build_final_analysis(stage_folders, COMPARISON_FILE, issues=issues)
+        else:
+            # A failure before construction still gets the existing independent
+            # availability report. No fabricated Portfolio is needed for errors.
+            requested = json.loads(PORTFOLIO_FILE.read_text(encoding="utf-8"))
+            analysis = build_analysis(str(cob), stage_folders, COMPARISON_FILE,
+                                      issues=issues, requested_portfolio=requested)
         if analysis is not None:
             target = analysis.save(INVENTORY_DIR)
             print(f"Final academic analysis (start here): {target / 'report.html'}")
+            print(f"Markdown version: {target / 'report.md'}")
     except (OSError, ValueError, ImportError) as exc:
         print(f"Final report could not be saved: {exc}. Original stage outputs are unchanged.")
 
@@ -184,20 +190,25 @@ def _final_analysis(cob, stage_folders, issues):
 def _process_inventory(inventory):
     # Preserve partial results even when a later stage fails. Unexpected
     # programming errors still propagate; they are not relabelled as no data.
-    stages, issues = {}, {}
+    stages, issues, context = {}, {}, {}
     try:
-        return _process_inventory_stages(inventory, stages, issues)
+        return _process_inventory_stages(inventory, stages, issues, context)
     except Exception as exc:
         issues["processing"] = f"Workflow stopped ({type(exc).__name__}): {exc}"
         raise
     finally:
-        _final_analysis(inventory.cob, stages, issues)
+        _final_analysis(inventory.cob, stages, issues, portfolio=context.get("portfolio"))
 
 
-def _process_inventory_stages(inventory, stages, issues):
+def _process_inventory_stages(inventory, stages, issues, context=None):
     result = process_inventory(inventory, CLEANING_FILE, portfolio_file=PORTFOLIO_FILE, progress=print)
     destination = result.save(PROCESSED_DIR / inventory.cob / result.run_id)
     stages["processing"] = destination
+    # This object delegates to the existing engines. Stage ordering and all
+    # optional calibration/risk-neutral gates remain in this workflow.
+    portfolio = Portfolio.from_processed(result, source_folder=destination)
+    if context is not None:
+        context["portfolio"] = portfolio
     weights = ", ".join(f"{h['request_id']} {h['weight']:.0%}" for h in result.summary["portfolio"]["holdings"])
     print(f"Processing portfolio: {weights}")
     print(f"Aligned holding returns: {result.summary['readiness']['aligned_return_observations']:,}")
@@ -235,7 +246,7 @@ def _process_inventory_stages(inventory, stages, issues):
         print("Original stage reports remain in the processed folder. Continuing historical analysis.")
     print("Computing historical statistics and stress comparisons for configured holdings.")
     try:
-        statistics = analyze_processed(result, MODELING_FILE)
+        statistics = portfolio.analyze(MODELING_FILE)
         statistics.source_folder = destination.resolve()
         statistics_folder = statistics.save(destination / "statistics" / statistics.run_id)
         print(f"Statistics portfolio status: {statistics.summary['portfolio_status']}")
@@ -251,7 +262,7 @@ def _process_inventory_stages(inventory, stages, issues):
     # descriptive statistics tables. Its own JSON controls calibration and
     # scenarios; this offline stage makes no further provider requests.
     try:
-        simulation = simulate_processed(result, MONTE_CARLO_FILE)
+        simulation = portfolio.simulate(MONTE_CARLO_FILE)
         # Remember the cleaned source to protect it during export. Save in a
         # separate simulation-ID folder tracking inputs, settings and source code.
         simulation.source_folder = destination.resolve()
@@ -267,14 +278,14 @@ def _process_inventory_stages(inventory, stages, issues):
     except (OSError, ValueError, ImportError) as exc:
         issues["monte_carlo"] = str(exc)
         print(f"monte_carlo could not complete: {exc}. Continuing independent analysis.")
-    physical = _real_world_available(result, local_vol, surface, local_mc, destination)
+    physical = _real_world_available(result, local_vol, surface, local_mc, destination, portfolio=portfolio)
     if physical is not None:
         stages["local_vol_real_world"] = destination / "local_vol_real_world" / physical.run_id
     print("Raw archive unchanged. Risk-neutral option validation is separate from the existing historical portfolio simulations.")
     return result
 
 
-def _real_world_available(processed, local_vol, surface, validation, destination):
+def _real_world_available(processed, local_vol, surface, validation, destination, *, portfolio=None):
     """Separate physical portfolio engine; use this run's objects and mapping.
 
     Historical MC and statistics have already completed independently. No new
@@ -287,9 +298,10 @@ def _real_world_available(processed, local_vol, surface, validation, destination
         return None
     print("Running physical-drift local-volatility portfolio simulation (offline).")
     try:
-        from src.local_vol_real_world import simulate_processed as simulate_real_world
-        result = simulate_real_world(processed, local_vol, surface, validation,
-            MONTE_CARLO_FILE, REAL_WORLD_FILE, source_folder=destination, progress=print)
+        portfolio = portfolio if portfolio is not None else Portfolio.from_processed(processed, source_folder=destination)
+        result = portfolio.simulate(REAL_WORLD_FILE, method="physical_local_vol",
+            historical_config=MONTE_CARLO_FILE, local_vol=local_vol, surface=surface,
+            validation=validation, progress=print)
         target = result.save()
     except (OSError, ValueError, ImportError) as exc:
         print(f"Physical local-volatility portfolio unavailable: {exc}")

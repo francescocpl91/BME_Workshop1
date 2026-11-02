@@ -128,6 +128,22 @@ class DiagnosticTests(unittest.TestCase):
             self.assertEqual(set(result.summary["models"]),{"gaussian","student_t_truncated"})
             self.assertTrue(any("unavailable" in w for w in result.summary["warnings"]))
 
+    def test_short_baseline_window_does_not_replace_missing_stress_history(self):
+        self.stress("stress")
+        complete=self.run_model()
+        self.assertEqual(complete.summary["stress_calibrations"][0]["status"],"complete")
+        baseline=complete.tables["terminal_values"].query("calibration_set == 'baseline'").reset_index(drop=True)
+        # Restrict the archive itself, not merely the baseline lookback. The
+        # crisis can no longer be calibrated even though baseline still works.
+        prices=self.p.tables["selected_prices"]
+        trimmed=prices[prices.date >= "2026-07-01"].copy().reset_index(drop=True)
+        trimmed.loc[trimmed.groupby("instrument_id").head(1).index,"simple_return"]=np.nan
+        self.p.tables["selected_prices"]=trimmed
+        missing=self.run_model()
+        self.assertEqual(missing.summary["stress_calibrations"][0]["status"],"unavailable")
+        self.assertEqual(set(missing.tables["terminal_values"].calibration_set),{"baseline"})
+        pd.testing.assert_frame_equal(baseline,missing.tables["terminal_values"].reset_index(drop=True))
+
     def test_stress_cannot_silently_switch_simulation_currency(self):
         self.p.summary["portfolio"]["reporting_currency"] = "EUR"
         # Only the baseline has FX data. Stress must stay EUR or be unavailable.

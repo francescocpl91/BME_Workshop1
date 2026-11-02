@@ -250,8 +250,8 @@ class MonteCarloTests(unittest.TestCase):
              patch.object(run,'_surface_available',return_value=surface), \
              patch.object(run,'_local_vol_available',return_value=local), \
              patch.object(run,'_local_vol_mc_available',side_effect=validation), \
-             patch.object(run,'analyze_processed',side_effect=statistics), \
-             patch.object(run,'simulate_processed',side_effect=simulation), \
+             patch('src.statistics.analyze_processed',side_effect=statistics), \
+             patch('src.monte_carlo.simulate_processed',side_effect=simulation), \
              contextlib.redirect_stdout(io.StringIO()):
             # This test isolates stage ordering; final-report behavior has separate fixtures.
             with patch.object(run, '_final_analysis'):

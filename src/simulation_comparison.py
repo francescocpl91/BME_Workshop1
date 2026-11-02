@@ -20,6 +20,8 @@ import io
 import json
 import math
 import os
+import re
+from html.parser import HTMLParser
 import tempfile
 import time
 import zipfile
@@ -349,6 +351,32 @@ class FinalAnalysis:
     loss_thresholds: pd.DataFrame = field(default_factory=pd.DataFrame)
     chart_notes: list = field(default_factory=list)
 
+    def report(self, *, sections=None, include_figures=True):
+        """Return Markdown from the same content as HTML, without model reruns.
+
+        Sections use HTML IDs: overview, modeling, forecast, vol, history,
+        sources. PNG links are relative to the final bundle; save() or
+        plots_report() publishes those files. Equations remain embedded SVGs.
+        """
+        if type(include_figures) is not bool:
+            raise ValueError("include_figures must be boolean")
+        # Validate selection before spending time rendering figures/equations.
+        _MarkdownReport({}, sections, include_figures)
+        if not self.figures:
+            if include_figures:
+                self.figures = _figures(self)
+            else:
+                # Hiding images must not hide numerical tables or warnings.
+                # Preparation reads saved results only and draws no figures.
+                _prepare_report_data(self)
+        return _markdown(self, _render(self), sections, include_figures)
+
+    def plots_report(self, reports_root):
+        """Publish/verify the existing bundle and return its saved PNG paths."""
+        folder = self.save(reports_root)
+        manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
+        return [folder / name for name in manifest["files"] if name.endswith(".png")]
+
     def save(self, reports_root):
         """Publish a new immutable report; never overwrite a source or old run."""
         root = Path(reports_root).resolve()
@@ -366,14 +394,15 @@ class FinalAnalysis:
             manifest = json.loads((target / "manifest.json").read_text(encoding="utf-8"))
             if manifest.get("identity") != self.identity or not manifest.get("complete"):
                 raise ValueError("Existing final report has a different identity")
-            if not {"report.html", "summary.json", "comparison.csv", "availability.csv", "forecast_bands.csv", "loss_thresholds.csv"}.issubset(manifest.get("files", {})):
+            if not {"report.html", "report.md", "summary.json", "comparison.csv", "availability.csv", "forecast_bands.csv", "loss_thresholds.csv"}.issubset(manifest.get("files", {})):
                 raise ValueError("Existing final report is incomplete")
             for name, checksum in manifest["files"].items():
                 file = (target / name).resolve()
                 if not file.is_relative_to(target.resolve()) or _hash(file) != checksum:
                     raise ValueError("Existing final report failed verification")
             return target
-        self.figures = _figures(self)
+        if not self.figures:
+            self.figures = _figures(self)
         # Build completely in a temporary sibling. An interrupted report can
         # never be mistaken for an already completed result on the next run.
         with tempfile.TemporaryDirectory(prefix=".final-", dir=parent) as temp:
@@ -392,7 +421,9 @@ class FinalAnalysis:
             (staging / "summary.json").write_bytes(_bytes(summary))
             for name, (_, content) in self.figures.items():
                 (staging / (name + ".png")).write_bytes(content)
-            (staging / "report.html").write_text(_render(self), encoding="utf-8")
+            page = _render(self)
+            (staging / "report.html").write_text(page, encoding="utf-8")
+            (staging / "report.md").write_text(_markdown(self, page), encoding="utf-8")
             # Check again at publication: a user may have edited or removed an
             # upstream artifact while figures were rendering. Do not publish
             # a report that combines pre-edit metadata with post-edit values.
@@ -599,8 +630,75 @@ def _png(fig):
 
 def _model_label(name):
     """Readable algorithm labels, never instrument-specific assumptions."""
+    if "__" in name:
+        period, model = name.split("__", 1)
+        return f"{period.replace('_', ' ')}: {_model_label(model)}"
     return {"gaussian": "Historical Gaussian", "student_t_truncated": "Historical Student-t",
             "physical_local_vol": "Physical local volatility"}.get(name, name.replace("_", " "))
+
+
+def _stress_groups(result):
+    """Compare each named stress with the same-run baseline, not with tail sweeps.
+
+    Primary model names come from the SAVED simulation configuration. A stress
+    prefix identifies a calibration window, not a new stochastic engine. Keep
+    optional physical scenarios only when their existing compatibility check
+    allows comparison. Nothing here reruns calibration or changes eligibility.
+    """
+    source = result.sources.get("monte_carlo")
+    if source is None or result.comparison.empty:
+        return {}
+    models = source.summary.get("identity", {}).get("settings", {}).get("models", [])
+    rows = result.comparison.to_dict("records")
+    reference = [r for r in rows if r["category"] in ("baseline", "physical")
+                 and r["comparability"] not in ("not_comparable", "standalone")]
+    groups = {}
+    for row in rows:
+        name = row["calibration_set"]
+        if (row["category"] == "stress" and row["scenario"] in
+                {f"{name}__{model}" for model in models}):
+            groups.setdefault(name, list(reference)).append(row)
+    return groups
+
+
+def _stress_context(result):
+    """Expose requested and actual stress coverage, including failed attempts.
+
+    The baseline lookback does not constrain a separately requested crisis
+    window. Its availability depends on the archive and the engine's matched-
+    interval minimum. Report actual dates so partial windows are not presented
+    as complete historical coverage. Never substitute baseline returns for a
+    missing stress calibration.
+    """
+    source = result.sources.get("monte_carlo")
+    if source is None:
+        return pd.DataFrame()
+    saved = source.summary
+    requested = saved.get("identity", {}).get("settings", {}).get("stress_calibrations", [])
+    attempts = saved.get("stress_calibrations", [])
+    requested = requested if isinstance(requested, list) else []
+    attempts = attempts if isinstance(attempts, list) else []
+    records = {r["name"]: r for r in requested if isinstance(r, dict) and isinstance(r.get("name"), str)}
+    for attempt in attempts:
+        if isinstance(attempt, dict) and isinstance(attempt.get("name"), str):
+            records[attempt["name"]] = {**records.get(attempt["name"], {}), **attempt}
+    for name in _stress_groups(result):
+        records.setdefault(name, {"name": name})
+    rows = []
+    for name, record in records.items():
+        calibration = record.get("calibration") or {}
+        calibration = calibration if isinstance(calibration, dict) else {}
+        warnings = record.get("warnings") or []
+        reason = "; ".join(str(w) for w in warnings) if isinstance(warnings, list) else str(warnings)
+        available = name in _stress_groups(result)
+        if not available:
+            reason = reason or "No saved primary stress outcomes; no stress forecast is inferred."
+        rows.append(dict(name=name, requested_start=record.get("start"), requested_end=record.get("end"),
+                         drift=record.get("drift"), calibration_status=record.get("status", "not recorded"),
+                         first_interval_start=calibration.get("first_start"), last_interval_end=calibration.get("last_end"),
+                         matched_intervals=calibration.get("observations"),
+                         comparison_status="available" if available else "unavailable", reason=reason))
+    return pd.DataFrame(rows)
 
 
 def _forecast_data(result, rows):
@@ -692,7 +790,7 @@ def _forecast_data(result, rows):
     return output
 
 
-def _mc_detail_figures(result, rows, index, create, figures):
+def _mc_detail_figures(result, rows, index, create, figures, forecasts, prefix="mc"):
     """Growth, full empirical density and tails for each comparable model group."""
     policy=result.cfg["simulation_plots"]
     names=[row["scenario"] for row in rows]
@@ -718,7 +816,7 @@ def _mc_detail_figures(result, rows, index, create, figures):
             ax.axvline(0,color="black",linestyle="--",linewidth=.7)
             ax.set_xlabel("Terminal portfolio return (%)");ax.set_ylabel("Probability density per percentage point")
             ax.legend(fontsize=9)
-    create(f"mc_density_{index}","Terminal return distributions (dotted lines: medians)",density)
+    create(f"{prefix}_density_{index}","Terminal return distributions (dotted lines: medians)",density)
     fig=Figure(figsize=(12,4.8),layout="constrained")
     axes=fig.subplots(1,2)
     left,right=np.quantile(combined,[policy["tail_display_fraction"],1-policy["tail_display_fraction"]])
@@ -734,13 +832,12 @@ def _mc_detail_figures(result, rows, index, create, figures):
     for ax,title,label in zip(axes,["Downside tail","Upside tail"],["P(return <= x)","P(return >= x)"]):
         ax.set_title(title);ax.set_xlabel("Terminal return x (%)");ax.set_ylabel(label)
         ax.grid(alpha=.2);ax.legend(fontsize=8)
-    figures[f"mc_tails_{index}"]=("Terminal tails on a logarithmic probability scale; all outcomes retained",_png(fig))
-    forecasts=_forecast_data(result,rows)
+    figures[f"{prefix}_tails_{index}"]=("Terminal tails on a logarithmic probability scale; all outcomes retained",_png(fig))
+    # Numerical preparation is shared with the text-only report. Select this
+    # comparable group without recalculating data or duplicating warnings.
+    forecasts = {name: forecasts[name] for name in names if name in forecasts}
     if not forecasts:
         return
-    frames=[x[0] for x in forecasts.values()]
-    if len(result.forecast_bands):frames.insert(0,result.forecast_bands)
-    result.forecast_bands=pd.concat(frames,ignore_index=True)
     fig=Figure(figsize=(12,4.8),layout="constrained");axes=fig.subplots(1,2)
     for i,name in enumerate(names):
         if name not in forecasts:continue
@@ -750,7 +847,7 @@ def _mc_detail_figures(result, rows, index, create, figures):
     for ax,title in zip(axes,["Expected portfolio wealth (mean)","Median portfolio wealth"]):
         ax.set_title(title);ax.set_ylabel("Wealth index (initial = 100)");ax.grid(alpha=.2);ax.legend(fontsize=8)
         ax.tick_params(axis="x",rotation=25)
-    figures[f"mc_growth_{index}"]=("Portfolio growth comparison at each engine's recorded dates",_png(fig))
+    figures[f"{prefix}_growth_{index}"]=("Portfolio growth comparison at each engine's recorded dates",_png(fig))
     fig=Figure(figsize=(12,3.7*len(forecasts)),layout="constrained");axes=np.atleast_1d(fig.subplots(len(forecasts),1,sharex=True,sharey=True))
     for ax,(name,(bands,sample)) in zip(axes,forecasts.items()):
         color=f"C{names.index(name)}"
@@ -763,7 +860,7 @@ def _mc_detail_figures(result, rows, index, create, figures):
         ax.set_title(f"{_model_label(name)}: {sample.shape[1]} saved sample paths")
         ax.set_ylabel("Wealth index");ax.grid(alpha=.15);ax.legend(fontsize=8,loc="upper left")
     axes[-1].tick_params(axis="x",rotation=25)
-    figures[f"mc_paths_{index}"]=("Portfolio Monte Carlo paths and population bands; matching path IDs are not paired shocks",_png(fig))
+    figures[f"{prefix}_paths_{index}"]=("Portfolio Monte Carlo paths and population bands; path IDs do not establish shock pairing across different engines",_png(fig))
 
 
 def _smile_figures(result, figures):
@@ -793,9 +890,14 @@ def _smile_figures(result, figures):
             figures[f"smiles_{cohort}_{page}"]=(f"Observed and fitted smiles, cohort {gid}: expiries {offset+1}-{offset+len(batch)} of {len(expiries)}",_png(fig))
 
 
-def _figures(result):
-    """Render from recorded data only. Downsampling changes display, not metrics."""
-    figures = {}
+def _prepare_report_data(result):
+    """Prepare tables and availability notes independently of image rendering.
+
+    Reset derived outputs on each preparation so report/save call order cannot
+    accumulate rows or warnings. Empty runs retain stable CSV schemas. Missing
+    trajectories leave verified terminal outcomes usable and explicitly flagged.
+    No simulations or provider calls occur here.
+    """
     result.chart_notes=[]
     result.forecast_bands=pd.DataFrame(columns=["scenario","timestamp","mean_index","median_index","lower_index","upper_index","lower_quantile","upper_quantile"])
     thresholds=[]
@@ -805,6 +907,23 @@ def _figures(result):
             count=int(np.count_nonzero(values < -loss))
             thresholds.append(dict(scenario=row["scenario"],loss_threshold=loss,loss_events=count,paths=len(values),probability=count/len(values)))
     result.loss_thresholds=pd.DataFrame(thresholds,columns=["scenario","loss_threshold","loss_events","paths","probability"])
+    # Include primary stress trajectories once; sensitivity sweeps remain in
+    # their separate terminal tables. This also works for text-only reports.
+    selected = {r["scenario"]: r for r in result.comparison.to_dict("records")
+                if r["category"] in ("baseline", "physical")}
+    for group in _stress_groups(result).values():
+        selected.update({r["scenario"]: r for r in group})
+    rows = list(selected.values())
+    forecasts = _forecast_data(result, rows)
+    if forecasts:
+        result.forecast_bands = pd.concat([item[0] for item in forecasts.values()], ignore_index=True)
+    return forecasts
+
+
+def _figures(result):
+    """Render from recorded data only. Downsampling changes display, not metrics."""
+    figures = {}
+    forecasts = _prepare_report_data(result)
     def create(key, title, draw):
         fig = Figure(figsize=(10, 5.3), layout="constrained")
         ax = fig.add_subplot(111)
@@ -864,7 +983,7 @@ def _figures(result):
             buckets.setdefault(bucket, []).append(row)
         for index, (bucket, rows) in enumerate(buckets.items()):
             if any(row["category"] in ("baseline","physical") for row in rows):
-                _mc_detail_figures(result, rows, index, create, figures)
+                _mc_detail_figures(result, rows, index, create, figures, forecasts)
             def ecdf(ax):
                 for row in rows:
                     values = np.sort(result.samples[row["scenario"]])
@@ -881,6 +1000,10 @@ def _figures(result):
                 ax.set_yticks(y, [r["scenario"] for r in rows]); ax.set_xlim(0,100)
                 ax.set_xlabel(f"Loss probability (%) with {result.cfg['sampling_confidence']:.0%} sampling interval")
             create(f"loss_probability_{index}", f"Probability of finishing below initial wealth: {bucket}", losses)
+    # Separate panels make conditional crisis assumptions explicit, while
+    # preserving the original baseline versus physical-model comparisons.
+    for index, (name, rows) in enumerate(_stress_groups(result).items()):
+        _mc_detail_figures(result, rows, index, create, figures, forecasts, prefix="stress_mc")
     for stage, table_name, zcol in (("volatility_surface", "surface_grid", "iv"),
                                     ("local_volatility", "local_vol_grid", "local_volatility")):
         src = result.sources.get(stage)
@@ -1002,7 +1125,10 @@ def _equation(tex, description):
     """
     buffer=io.BytesIO()
     math_to_image('$'+tex+'$',buffer,prop=FontProperties(size=18),format='svg')
-    encoded=base64.b64encode(buffer.getvalue()).decode('ascii')
+    # Rendering time is not financial provenance. Remove SVG's wall-clock
+    # metadata so repeated HTML/Markdown views contain identical equations.
+    svg = re.sub(rb'<dc:date>.*?</dc:date>', b'', buffer.getvalue())
+    encoded=base64.b64encode(svg).decode('ascii')
     return '<div class="equation"><img alt="'+html.escape(description,quote=True)+'" src="data:image/svg+xml;base64,'+encoded+'"/></div>'
 
 
@@ -1066,9 +1192,9 @@ def _render(result):
              f'<p>Requested reporting currency: <strong>{esc(result.portfolio.get("reporting_currency", "Unavailable"))}</strong>. Actual analysis/simulation currencies are shown below. Weights were not renormalized by this report.</p>',
              '<details><summary>Stage availability and exclusions</summary>', _table(pd.DataFrame(result.availability)), '</details></section>']
     parts.append(_modeling_section(result))
-    def figures(prefix):
+    def figures(prefix, exact=False):
         for key, (caption, content) in result.figures.items():
-            if key.startswith(prefix):
+            if (exact and key == prefix) or (not exact and key.startswith(prefix)):
                 parts.append(f'<figure><img alt="{esc(caption)}" src="data:image/png;base64,{base64.b64encode(content).decode()}"/><figcaption>{esc(caption)}</figcaption></figure>')
     stats = result.sources.get("statistics")
     history_start = len(parts)
@@ -1114,6 +1240,22 @@ def _render(result):
         parts.append('<h3>Probability of specified terminal losses</h3><p>A zero observed count means no such event occurred in this finite sample; it is not proof that the true probability is zero.</p>')
         parts.append(_table(display.reset_index(),percent=list(display.columns)))
     parts.append('<p>Mean MC standard error measures precision of the simulated mean, not the volatility of individual outcomes. All probability intervals are sampling-only; drift estimation, calibration uncertainty and model risk remain outside them.</p>')
+    stress_context = _stress_context(result)
+    if not stress_context.empty:
+        parts.append('<h3>Historical stress Monte Carlo comparisons</h3><p>The baseline lookback and each stress calibration window are independent JSON inputs. A shorter baseline lookback does not disable a crisis scenario if the saved archive still contains sufficient matched observations in that crisis window. Missing or insufficient history makes that stress calibration unavailable; baseline analysis continues. Actual interval coverage is reported below, without inventing missing dates.</p>')
+        parts.append(_table(stress_context))
+        parts.append('<p>These are conditional stress experiments over the same forecast horizon, not forecasts that another crisis will occur. Drift = stress uses the stress-period mean; drift = baseline retains the baseline mean and changes the risk calibration. Tail-cutoff sensitivity variants remain in the separate results above. Optional physical models retain their original eligibility and clock warnings.</p>')
+        for index, (name, rows) in enumerate(_stress_groups(result).items()):
+            parts.append(f'<h4>Baseline versus {esc(name)} stress</h4>')
+            group = pd.DataFrame(rows)
+            parts.append(_table(group, metrics, ["mean_return","median_return","probability_loss","mean_mc_standard_error"]))
+            for kind in ("growth", "paths", "density", "tails"):
+                figures(f"stress_mc_{kind}_{index}", exact=True)
+            losses = result.loss_thresholds[result.loss_thresholds.scenario.isin(group.scenario)]
+            if len(losses):
+                display = losses.pivot(index="scenario", columns="loss_threshold", values="probability")
+                display.columns = [f"Loss greater than {x:.0%}" for x in display.columns]
+                parts.append(_table(display.reset_index(), percent=list(display.columns)))
     parts.append('<h3>Forecast and comparison eligibility</h3>')
     parts.append(_table(comp, ["scenario","initial_value","forecast_start","forecast_end","comparability","comparison_reason"]))
     parts.append('<p>Approximate terminal comparison does not authorize comparisons of daily losses or maximum drawdown across different observation grids. No such ranking is made here.</p>')
@@ -1169,3 +1311,121 @@ def _render(result):
     css = 'body{margin:0;background:#f2f5f9;color:#1e293b;font:16px/1.6 system-ui,sans-serif}header{background:#142b45;color:white;padding:40px max(24px,calc((100% - 1180px)/2))}header p{color:#b8d7eb}h1{font-size:32px;line-height:1.25}nav{position:sticky;top:0;background:white;padding:14px;display:flex;gap:24px;flex-wrap:wrap;box-shadow:0 2px 8px #ddd;z-index:2}nav a,a{color:#126a8e}main{max-width:1180px;margin:auto;padding:24px}section{background:white;border-radius:12px;padding:28px;margin-bottom:24px;scroll-margin-top:90px}h2{font-size:25px;border-bottom:2px solid #d7e8ef;padding-bottom:12px}h3{margin-top:26px}.table-wrap{overflow:auto}table{border-collapse:collapse;font-size:13px;width:100%}th,td{text-align:left;padding:10px;border-bottom:1px solid #e2e8f0;white-space:nowrap}th{background:#edf4f8}tbody tr:nth-child(even){background:#f8fafc}figure{margin:24px 0}img{width:100%;height:auto}figcaption,.muted{font-size:14px;color:#52657b}details{background:#f8fafc;padding:16px;margin-top:16px}summary{cursor:pointer;font-weight:600}pre,code{white-space:pre-wrap;overflow-wrap:anywhere}li{margin:10px 0}@media print{nav{position:static}section{break-inside:auto}figure{break-inside:avoid}}'
     css += '.equation{text-align:center;background:#f8fafc;padding:20px 12px;margin:18px 0;overflow-x:auto}.equation img{width:auto;max-width:100%;height:auto;vertical-align:middle}'
     return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Academic project - portfolio analysis</title><style>' + css + '</style></head><body>' + ''.join(parts) + '</body></html>'
+
+
+class _MarkdownReport(HTMLParser):
+    """Translate our own HTML report, so both formats share every metric.
+
+    This is a deliberately small renderer for the tags emitted by _render(),
+    not a general web-page converter. Tables keep their formatted values;
+    embedded PNGs become links to the SAME saved figures. SVG equations remain
+    inline HTML images to retain scientific notation without network access.
+    """
+    SECTIONS = ("overview", "modeling", "forecast", "vol", "history", "sources")
+
+    def __init__(self, figures, sections, include_figures):
+        super().__init__(convert_charrefs=True)
+        selected = self.SECTIONS if sections is None else sections
+        if isinstance(selected, str) or not isinstance(selected, (list, tuple)) or any(s not in self.SECTIONS for s in selected):
+            raise ValueError("Report sections must be a list drawn from: " + ", ".join(self.SECTIONS))
+        self.selected = set(selected)
+        self.include_figures = include_figures
+        self.images = {base64.b64encode(content).decode(): name + ".png" for name, (_, content) in figures.items()}
+        self.parts, self.links = [], []
+        self.section, self.hidden = None, 0
+        self.rows, self.row, self.cell = None, None, None
+        self.pre = False
+
+    def visible(self):
+        return not self.hidden and (self.section is None or self.section in self.selected)
+
+    def emit(self, value):
+        if self.cell is not None:
+            self.cell.append(value)
+        else:
+            self.parts.append(value)
+
+    def handle_starttag(self, tag, attributes):
+        attrs = dict(attributes)
+        if tag in {"head", "nav"} or (tag == "figure" and not self.include_figures):
+            self.hidden += 1
+        if tag == "section":
+            self.section = attrs.get("id")
+        if not self.visible():
+            return
+        if tag in {"h1", "h2", "h3", "h4"}:
+            self.emit("\n\n" + "#" * int(tag[1]) + " ")
+        elif tag in {"p", "ul", "ol", "figure"}:
+            self.emit("\n\n")
+        elif tag == "li":
+            self.emit("\n- ")
+        elif tag in {"strong", "summary"}:
+            self.emit("**")
+        elif tag == "em":
+            self.emit("*")
+        elif tag == "br":
+            self.emit(" ")
+        elif tag == "pre":
+            self.emit("\n\n```text\n"); self.pre = True
+        elif tag == "code" and not self.pre:
+            self.emit("`")
+        elif tag == "a":
+            self.links.append(attrs.get("href", "")); self.emit("[")
+        elif tag == "table":
+            self.rows = []
+        elif tag == "tr":
+            self.row = []
+        elif tag in {"td", "th"}:
+            self.cell = []
+        elif tag == "img":
+            source, alt = attrs.get("src", ""), attrs.get("alt", "")
+            if source.startswith("data:image/png;base64,"):
+                name = self.images.get(source.split(",", 1)[1])
+                if name and self.include_figures:
+                    self.emit("\n\n![" + alt.replace("]", "\\]") + "](" + name + ")\n\n")
+            elif source.startswith("data:image/svg+xml;base64,"):
+                self.emit('\n\n<img alt="' + html.escape(alt, quote=True) + '" src="' + source + '"/>\n\n')
+
+    def handle_endtag(self, tag):
+        if tag in {"head", "nav"} or (tag == "figure" and not self.include_figures):
+            self.hidden -= 1
+            return
+        if tag == "section":
+            self.section = None
+            return
+        if not self.visible():
+            return
+        if tag in {"td", "th"}:
+            self.row.append("".join(self.cell).strip().replace("|", "\\|").replace("\n", " "))
+            self.cell = None
+        elif tag == "tr":
+            self.rows.append(self.row)
+        elif tag == "table":
+            if self.rows:
+                rows = self.rows[:1] + [["---"] * len(self.rows[0])] + self.rows[1:]
+                self.emit("\n\n" + "\n".join("| " + " | ".join(row) + " |" for row in rows) + "\n\n")
+            self.rows = None
+        elif tag in {"strong", "summary"}:
+            self.emit("**")
+        elif tag == "em":
+            self.emit("*")
+        elif tag == "pre":
+            self.emit("\n```\n\n"); self.pre = False
+        elif tag == "code" and not self.pre:
+            self.emit("`")
+        elif tag == "a":
+            self.emit("](<" + self.links.pop() + ">)")
+        elif tag in {"h1", "h2", "h3", "h4", "p", "ul", "ol", "figcaption", "details", "figure"}:
+            self.emit("\n\n")
+
+    def handle_data(self, text):
+        if self.visible() and (self.rows is None or self.cell is not None):
+            # Ignore HTML indentation between table cells, preserving cell text.
+            self.emit(text if self.pre else html.escape(re.sub(r"\s+", " ", text), quote=False))
+
+
+def _markdown(result, page, sections=None, include_figures=True):
+    parser = _MarkdownReport(result.figures, sections, include_figures)
+    parser.feed(page)
+    parser.close()
+    return re.sub(r"\n[ \t]*\n(?:[ \t]*\n)+", "\n\n", "".join(parser.parts)).strip() + "\n"

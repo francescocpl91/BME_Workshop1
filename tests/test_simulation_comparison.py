@@ -82,6 +82,75 @@ class FinalAnalysisTests(unittest.TestCase):
         with patch('socket.socket.connect',side_effect=AssertionError('No network')):
             return build_analysis(self.cob, folders or {}, self.cfg,requested_portfolio=self.portfolio,**kwargs)
 
+    def stress_history(self, available=True):
+        """A named synthetic stress, independent of production JSON and dates."""
+        self.settings["stress_calibrations"] = [dict(name="custom_crisis", start="2001-01-01",
+                                                     end="2002-01-01", drift="stress")]
+        attempt = dict(self.settings["stress_calibrations"][0],
+                       status="complete" if available else "unavailable",
+                       calibration=dict(first_start="2001-01-03",last_end="2001-12-31",observations=260) if available else None,
+                       warnings=[] if available else ["Insufficient matched observations in requested stress window"])
+        folder = self.historical(stress_calibrations=[attempt])
+        meta = json.loads((folder/"manifest.json").read_text())
+        terminal = pd.read_csv(folder/"terminal_values.csv")
+        if available:
+            stress = terminal.copy()
+            stress["terminal_value"] *= .8
+            stress["model"] = "custom_crisis__" + stress.model
+            stress["calibration_set"] = "custom_crisis"
+            sensitivity = stress.iloc[:4].copy()
+            sensitivity["model"] = "custom_crisis__student_t_tail_0.001"
+            terminal = pd.concat([terminal,stress,sensitivity],ignore_index=True)
+        bands, paths = [], []
+        for model, group in terminal.groupby("model",sort=False):
+            for day, values in [(self.settings["forecast_start"],np.full(4,100)),
+                                 (self.settings["forecast_end"],group.terminal_value.to_numpy())]:
+                bands.append(dict(model=model,scope="portfolio",date=day,mean=np.mean(values),
+                                  p50=np.median(values),p05=np.quantile(values,.05),p95=np.quantile(values,.95)))
+                paths.append(dict(model=model,scope="portfolio",date=day,path=0,value=values[0]))
+        for name, table in [("terminal_values",terminal),("bands",pd.DataFrame(bands)),("sample_paths",pd.DataFrame(paths))]:
+            file=folder/(name+".csv");table.to_csv(file,index=False)
+            meta["files"][name]=dict(file=file.name,sha256=hashlib.sha256(file.read_bytes()).hexdigest())
+        (folder/"manifest.json").write_text(json.dumps(meta))
+        return folder
+
+    def test_named_stress_has_full_comparison_plots_without_options(self):
+        folder=self.stress_history(); before={f.name:f.read_bytes() for f in folder.iterdir()}
+        result=self.build({"monte_carlo":folder})
+        text=result.report(include_figures=False)
+        self.assertIn("Baseline versus custom_crisis stress",text)
+        self.assertIn("2001-01-03",text)
+        self.assertIn("260",text)
+        self.assertEqual(set(result.forecast_bands.scenario),
+                         {"gaussian","student_t_truncated","custom_crisis__gaussian","custom_crisis__student_t_truncated"})
+        self.assertIn("custom_crisis__student_t_tail_0.001",set(result.comparison.scenario))
+        bands=result.forecast_bands.copy()
+        target=result.save(self.root/"reports")
+        for kind in ("paths","growth","density","tails"):
+            self.assertTrue((target/f"stress_mc_{kind}_0.png").is_file())
+        self.assertTrue((target/"mc_paths_0.png").is_file())
+        pd.testing.assert_frame_equal(bands,result.forecast_bands)
+        self.assertEqual(text,result.report(include_figures=False))
+        self.assertEqual(before,{f.name:f.read_bytes() for f in folder.iterdir()})
+
+    def test_missing_stress_history_is_visible_without_removing_baseline(self):
+        result=self.build({"monte_carlo":self.stress_history(available=False)})
+        text=result.report(include_figures=False)
+        self.assertIn("Insufficient matched observations",text)
+        self.assertIn("unavailable",text)
+        self.assertEqual(set(result.comparison.scenario),{"gaussian","student_t_truncated"})
+        self.assertEqual(set(result.forecast_bands.scenario),{"gaussian","student_t_truncated"})
+        from src.simulation_comparison import _stress_groups
+        self.assertFalse(_stress_groups(result))
+
+    def test_stress_comparison_excludes_incompatible_physical(self):
+        from src.simulation_comparison import _stress_groups
+        result=self.build({"monte_carlo":self.stress_history(),"local_vol_real_world":self.physical()})
+        names=lambda: {r["scenario"] for r in _stress_groups(result)["custom_crisis"]}
+        self.assertIn("physical_local_vol",names())
+        result.comparison.loc[result.comparison.category=="physical","comparability"]="not_comparable"
+        self.assertNotIn("physical_local_vol",names())
+
     def test_no_data_is_an_explicit_report_not_an_exception(self):
         result=self.build(); target=result.save(self.root/'reports')
         page=(target/'report.html').read_text(encoding='utf-8')
@@ -158,7 +227,7 @@ class FinalAnalysisTests(unittest.TestCase):
         # stage returns without any optional volatility result.
         with patch.object(run,'_process_inventory_stages',return_value=None),patch.object(run,'_final_analysis') as report:
             run._process_inventory(SimpleNamespace(cob=self.cob))
-        report.assert_called_once_with(self.cob,{}, {})
+        report.assert_called_once_with(self.cob,{}, {}, portfolio=None)
 
     def test_mismatched_currency_weights_dates_and_clock_are_not_compared(self):
         edits=[lambda m:m.update(simulation_currency='EUR'),
@@ -313,7 +382,15 @@ class FinalAnalysisTests(unittest.TestCase):
         frame,sample=data['gaussian']
         self.assertEqual(sample.shape,(2,1));self.assertEqual(frame.mean_index.iloc[-1],105)
         self.assertEqual(frame.lower_index.iloc[-1],83)
+        # Text-only preparation must publish the same full-population bands,
+        # without requiring chart rendering or changing them on a later save.
+        with patch('src.simulation_comparison._figures', side_effect=AssertionError('No plots')):
+            text_only = r.report(include_figures=False)
+        before = r.forecast_bands.copy(deep=True)
+        self.assertEqual(len(before), 4)
         r.save(self.root/'reports')
+        pd.testing.assert_frame_equal(before, r.forecast_bands)
+        self.assertEqual(text_only, r.report(include_figures=False))
         self.assertTrue(any(k.startswith('mc_paths_') for k in r.figures))
         self.assertTrue(any(k.startswith('mc_density_') for k in r.figures))
         self.assertEqual(len(r.forecast_bands),4)
@@ -424,8 +501,8 @@ class FinalAnalysisTests(unittest.TestCase):
         with ExitStack() as stack:
             stack.enter_context(redirect_stdout(StringIO()))
             stack.enter_context(patch.object(run,'process_inventory',return_value=result))
-            stack.enter_context(patch.object(run,'analyze_processed',side_effect=ValueError('insufficient historical observations')))
-            simulator=stack.enter_context(patch.object(run,'simulate_processed',return_value=mc))
+            stack.enter_context(patch('src.statistics.analyze_processed',side_effect=ValueError('insufficient historical observations')))
+            simulator=stack.enter_context(patch('src.monte_carlo.simulate_processed',return_value=mc))
             for name in ('_calibrate_available','_surface_available','_local_vol_available','_local_vol_mc_available','_real_world_available'):
                 stack.enter_context(patch.object(run,name,return_value=None))
             stack.enter_context(patch('src.volatility_workflow.save_overview',return_value=self.root))

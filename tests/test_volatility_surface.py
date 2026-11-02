@@ -312,8 +312,8 @@ class SurfaceWorkflowTests(unittest.TestCase):
         with patch('src.volatility_workflow.save_overview',return_value=Path('.')),patch.object(run,'process_inventory',return_value=processed), \
              patch.object(run,'_calibrate_available',return_value=self.calibration), \
              patch.object(run,'_surface_available',side_effect=surface), \
-             patch.object(run,'analyze_processed',side_effect=statistics), \
-             patch.object(run,'simulate_processed',side_effect=simulation),redirect_stdout(StringIO()):
+             patch('src.statistics.analyze_processed',side_effect=statistics), \
+             patch('src.monte_carlo.simulate_processed',side_effect=simulation),redirect_stdout(StringIO()):
             # This test isolates stage ordering; final-report behavior has separate fixtures.
             with patch.object(run, '_final_analysis'):
                 run._process_inventory(SimpleNamespace(cob='2026-10-19'))

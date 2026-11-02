@@ -247,8 +247,8 @@ class AutomaticCalibrationTests(unittest.TestCase):
         def statistics(*args):order.append('statistics');return stats
         def mc(*args):order.append('mc');return simulation
         with patch.object(run,'process_inventory',return_value=processed), \
-             patch.object(run,'analyze_processed',side_effect=statistics), \
-             patch.object(run,'simulate_processed',side_effect=mc), \
+             patch('src.statistics.analyze_processed',side_effect=statistics), \
+             patch('src.monte_carlo.simulate_processed',side_effect=mc), \
              patch('src.option_calibration.calibrate_processed',side_effect=unavailable), \
              patch('socket.socket.connect',side_effect=AssertionError('No network')),redirect_stdout(StringIO()) as output:
             # This test isolates stage ordering; final-report behavior has separate fixtures.
@@ -409,8 +409,8 @@ class CalibrationConfigurationTests(unittest.TestCase):
             # Invalid settings must fail before opening any processed inputs.
             with self.subTest(cfg=cfg), patch.object(run, 'CALIBRATION_FILE', self.config), \
                  patch.object(run, 'process_inventory', return_value=processed), \
-                 patch.object(run, 'analyze_processed', side_effect=statistics), \
-                 patch.object(run, 'simulate_processed', side_effect=mc), \
+                 patch('src.statistics.analyze_processed', side_effect=statistics), \
+                 patch('src.monte_carlo.simulate_processed', side_effect=mc), \
                  patch('src.option_calibration.load_processed_inputs', side_effect=AssertionError('No data reads')), \
                  patch('socket.socket.connect', side_effect=AssertionError('No network')), \
                  redirect_stdout(StringIO()) as output:
