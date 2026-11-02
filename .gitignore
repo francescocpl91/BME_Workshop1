@@ -18,3 +18,7 @@ tests/data_dumps/
 
 # Local explanatory documents are intentionally excluded from Git
 /docs/
+
+# Proposal PDFs are retained locally, not published to GitHub
+/BME_B1_T1_GitHub_Implementation_Proposal.pdf
+/BME_B1_T1_Project_Proposal.pdf
