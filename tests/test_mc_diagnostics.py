@@ -54,6 +54,54 @@ class DiagnosticTests(unittest.TestCase):
     def stress(self,drift="baseline"):
         self.cfg["stress_calibrations"] = [dict(name="test_crisis",start="2026-01-02",end="2026-06-30",drift=drift)]
 
+    def test_user_view_preserves_history_stress_and_joint_tail_fit(self):
+        self.stress("stress")
+        before = self.run_model()
+        self.cfg["user_scenario"] = dict(name="my_view", periods_per_year=252,
+            holdings={"A":{"annual_compound_growth":.06, "annual_volatility":.30},
+                      "B":{"annual_volatility":.12}})
+        after = self.run_model()
+        view = after.summary["user_scenario"]
+        self.assertEqual(view["status"],"complete")
+        self.assertEqual(view["models"],["my_view__gaussian","my_view__student_t_truncated"])
+        for table in ("calibration_returns","terminal_values","risk_summary"):
+            prior = after.tables[table].query("calibration_set != 'my_view'").reset_index(drop=True)
+            pd.testing.assert_frame_equal(prior,before.tables[table])
+        cov = after.tables["calibration_covariance"]
+        base = cov.query("calibration_set == 'baseline'")
+        changed = cov.query("calibration_set == 'my_view'")
+        np.testing.assert_allclose(base.correlation,changed.correlation,atol=1e-12)
+        params = after.tables["calibration_parameters"].query("calibration_set == 'my_view'").set_index("factor")
+        np.testing.assert_allclose(params.loc["asset::A",["mean_daily_log","std_daily_log"]].astype(float),
+                                   [np.log1p(.06)/252,.30/np.sqrt(252)])
+        self.assertTrue(pd.isna(params.loc["asset::A","mean_estimation_standard_error"]))
+        self.assertEqual(params.loc["asset::B","drift_source"],"same_window")
+        self.assertAlmostEqual(params.loc["asset::B","std_daily_log"],.12/np.sqrt(252))
+        models=after.summary["models"]
+        self.assertEqual(models["student_t_truncated"]["df"],models["my_view__student_t_truncated"]["df"])
+        self.assertIn("User assumptions",after.report())
+
+    def test_reference_only_id_marks_only_user_view_unavailable(self):
+        self.cfg["user_scenario"] = dict(name="custom",periods_per_year=252,
+                                       holdings={"reference_only":{"annual_volatility":.3}})
+        result=self.run_model()
+        self.assertEqual(result.summary["status"],"complete")
+        view=result.summary["user_scenario"]
+        self.assertEqual(view["status"],"unavailable")
+        self.assertIn("not a simulated portfolio holding",view["reason"])
+        self.assertEqual(set(result.tables["terminal_values"].calibration_set),{"baseline"})
+
+    def test_user_moments_support_three_holdings_and_fx(self):
+        from src.monte_carlo import _user_moments
+        keys=["asset::A","asset::B","asset::C","fx::FX"]
+        root=np.array([[.1,0],[.04,.01],[.02,.03],[.01,.05]])
+        means=np.array([.001,.002,.003,.004])
+        view=dict(name="custom", periods_per_year=252, holdings={"C":{"annual_volatility":.25}})
+        actual,scaled,_=_user_moments(view,keys,means,root,{"baseline"})
+        np.testing.assert_array_equal(actual,means)
+        np.testing.assert_array_equal(scaled[[0,1,3]],root[[0,1,3]])
+        self.assertAlmostEqual(np.linalg.norm(scaled[2])*np.sqrt(252),.25)
+
     def test_daily_moments_histogram_overflow_and_zero_variance(self):
         x = np.array([-12.,-4.,-1.,0.,1.,4.,12.])
         info,hist = daily_distribution(x,0.,1.,[3,4],100)

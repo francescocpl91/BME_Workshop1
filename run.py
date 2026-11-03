@@ -4,6 +4,7 @@ python run.py       : choose local processing or download, then enter the requir
 python -i run.py    : execute and keep result available in a Python prompt
 """
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 from src import MarketDataDownloader, inspect_archive, process_inventory, Portfolio
@@ -183,6 +184,13 @@ def _final_analysis(cob, stage_folders, issues, *, portfolio=None):
             target = analysis.save(INVENTORY_DIR)
             print(f"Final academic analysis (start here): {target / 'report.html'}")
             print(f"Markdown version: {target / 'report.md'}")
+            desktop_run = __name__ == "__main__" and (
+                getattr(sys.stdin, "isatty", lambda: False)() or os.environ.get("TERM_PROGRAM") == "vscode")
+            if desktop_run:
+                if analysis.cfg.get("open_report_after_run") and not analysis.show(target):
+                    print("Open the saved HTML path above to view the figures.")
+                if analysis.cfg.get("plot_windows_after_run") and not analysis.show_plot_windows(target):
+                    print("No matching plots or desktop display available; the saved report contains the available figures.")
     except (OSError, ValueError, ImportError) as exc:
         print(f"Final report could not be saved: {exc}. Original stage outputs are unchanged.")
 

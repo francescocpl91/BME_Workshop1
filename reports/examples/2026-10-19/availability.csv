@@ -1,0 +1,9 @@
+stage,label,status,reason
+processing,Cleaned data,saved,Verified saved artifacts
+statistics,Historical statistics,available,Verified saved artifacts
+monte_carlo,Historical portfolio Monte Carlo,complete,Verified saved artifacts
+option_calibration,"OIS, forwards and individual IVs",completed,Verified saved artifacts
+volatility_surface,Fitted implied volatility,completed,Verified saved artifacts
+local_volatility,Local volatility and boundary validation,saved,Verified saved artifacts
+local_vol_mc,Risk-neutral underlying validation,saved,Verified saved artifacts
+local_vol_real_world,Physical local-volatility portfolio,diagnostic,Verified saved artifacts

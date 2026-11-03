@@ -114,6 +114,141 @@ class FinalAnalysisTests(unittest.TestCase):
         (folder/"manifest.json").write_text(json.dumps(meta))
         return folder
 
+    def test_user_view_report_and_browser_use_saved_results_without_options(self):
+        folder = self.stress_history()
+        manifest_file = folder/"manifest.json"
+        meta = json.loads(manifest_file.read_text())
+        meta["stress_calibrations"] = []
+        meta["identity"]["settings"]["stress_calibrations"] = []
+        view_models=["custom_crisis__gaussian","custom_crisis__student_t_truncated"]
+        request=dict(name="custom_crisis",periods_per_year=252,holdings={"0005":{"annual_volatility":.30}})
+        meta["identity"]["settings"]["user_scenario"]=request
+        meta["user_scenario"] = dict(requested=request,status="complete",models=view_models,reason="",
+            applied=[dict(instrument="0005",historical_annual_compound_growth=.07,effective_annual_compound_growth=.07,
+                          historical_annual_volatility=.14,effective_annual_volatility=.30)])
+        manifest_file.write_text(json.dumps(meta))
+        result = self.build({"monte_carlo":folder})
+        selected = result.comparison[result.comparison.category == "user_assumption"]
+        self.assertEqual(set(selected.scenario),set(view_models))
+        self.assertNotIn("custom_crisis__student_t_tail_0.001",set(result.comparison.scenario))
+        dest = result.save(self.root/"reports")
+        text = (dest/"report.md").read_text(encoding="utf-8")
+        self.assertIn("User assumptions versus historical baseline",text)
+        self.assertTrue((dest/"user_mc_density_0.png").exists())
+        self.assertTrue((dest/"user_mc_paths_0.png").exists())
+        with patch("webbrowser.open",return_value=True) as browser:
+            self.assertTrue(result.show(dest))
+        browser.assert_called_once_with((dest/"report.html").as_uri(),new=2)
+
+    def combined_history(self):
+        folder=self.stress_history()
+        file=folder/"manifest.json"
+        meta=json.loads(file.read_text())
+        req=dict(name="view",periods_per_year=252,holdings={"0005":{"annual_volatility":.30}})
+        meta["identity"]["settings"]["user_scenario"]=req
+        meta["user_scenario"]=dict(requested=req,status="complete",reason="",
+            models=["view__gaussian","view__student_t_truncated"],applied=[dict(instrument="0005",
+            historical_annual_compound_growth=.07,effective_annual_compound_growth=.07,
+            historical_annual_volatility=.14,effective_annual_volatility=.30)])
+        for table_name in ("bands","sample_paths","terminal_values"):
+            csv=folder/(table_name+".csv")
+            original=pd.read_csv(csv)
+            view=original[original.model.isin(["custom_crisis__gaussian","custom_crisis__student_t_truncated"])].copy()
+            view["model"]=view.model.str.replace("custom_crisis__","view__",regex=False)
+            if "calibration_set" in view:
+                view["calibration_set"]="view"
+            pd.concat([original,view]).to_csv(csv,index=False)
+            meta["files"][table_name]["sha256"]=hashlib.sha256(csv.read_bytes()).hexdigest()
+        file.write_text(json.dumps(meta))
+        return folder
+
+    def test_primary_and_crisis_charts_compare_user_view_and_eligible_physical(self):
+        from src import simulation_comparison as sc
+        r=self.build({"monte_carlo":self.combined_history(),"local_vol_real_world":self.physical()})
+        expected={"gaussian","student_t_truncated","physical_local_vol","view__gaussian","view__student_t_truncated"}
+        with patch.object(sc,"_mc_detail_figures",wraps=sc._mc_detail_figures) as panels, \
+             patch.object(sc,"_terminal_figures",wraps=sc._terminal_figures) as distributions:
+            r.save(self.root/"reports")
+        groups=[{item["scenario"] for item in c.args[1]} for c in panels.call_args_list]
+        self.assertIn(expected,groups)
+        stress=expected | {"custom_crisis__gaussian","custom_crisis__student_t_truncated"}
+        self.assertIn(stress,groups)
+        terminal_groups=[{item["scenario"] for item in c.args[1]} for c in distributions.call_args_list]
+        self.assertIn(stress,terminal_groups)
+        self.assertIn(expected,terminal_groups)
+        self.assertIn("User assumptions for the full portfolio",r.report(sections=["overview"],include_figures=False))
+        method=r.report(sections=["modeling"],include_figures=False)
+        self.assertIn("User assumptions on the historical forecast",method)
+        self.assertIn("30.00%",method)
+        self.assertIn("retained",method)
+        self.assertIn("view__student_t_truncated: loss probability differs from student_t_truncated", " ".join(r.findings))
+        self.assertIn("stress_mc_loss_probability_0",r.figures)
+        r.comparison.loc[r.comparison.category=="physical","comparability"]="not_comparable"
+        self.assertNotIn("physical_local_vol",{x["scenario"] for x in sc._stress_groups(r)["custom_crisis"]})
+
+    def test_user_model_order_does_not_change_report_eligibility(self):
+        folder = self.combined_history()
+        file = folder / "manifest.json"
+        meta = json.loads(file.read_text())
+        meta["identity"]["settings"]["models"].reverse()
+        file.write_text(json.dumps(meta))
+        result = self.build({"monte_carlo": folder})
+        self.assertEqual(set(result.comparison.query("category == 'user_assumption'").scenario),
+                         {"view__gaussian", "view__student_t_truncated"})
+
+    def test_accepted_portfolio_rounding_retains_both_simulations(self):
+        self.portfolio["holdings"][0]["weight"] -= 5e-9
+        result = self.build({"monte_carlo": self.historical(), "local_vol_real_world": self.physical()})
+        self.assertEqual(set(result.comparison.category), {"baseline", "physical"})
+        self.portfolio["holdings"][0]["weight"] -= 2e-8
+        rejected = self.build({"monte_carlo": self.historical()})
+        self.assertTrue(rejected.comparison.empty)
+
+    def test_zero_weight_holding_is_absent_from_physical_paths(self):
+        self.portfolio["holdings"].insert(1, dict(request_id="UNUSED", weight=0.0))
+        folder = self.physical()
+        file = folder / "paths.npz"
+        with np.load(file) as archive:
+            terminal = archive["terminal_wealth"].copy()
+        manifest = folder / "manifest.json"
+        for ids, expected in [(["0005", "NA"], True), (["NA", "0005"], False)]:
+            with self.subTest(ids=ids):
+                np.savez(file, terminal_wealth=terminal, holding_ids=ids)
+                meta = json.loads(manifest.read_text())
+                meta["files"]["paths.npz"] = hashlib.sha256(file.read_bytes()).hexdigest()
+                manifest.write_text(json.dumps(meta))
+                result = self.build({"local_vol_real_world": folder})
+                self.assertEqual("physical_local_vol" in set(result.comparison.scenario), expected)
+
+    def test_absent_or_null_view_leaves_no_user_output_even_with_stale_record(self):
+        for explicit_null in (False,True):
+            folder=self.combined_history()
+            file=folder/"manifest.json";meta=json.loads(file.read_text())
+            settings=meta["identity"]["settings"]
+            if explicit_null:settings["user_scenario"]=None
+            else:del settings["user_scenario"]
+            file.write_text(json.dumps(meta))
+            r=self.build({"monte_carlo":folder})
+            text=r.report(include_figures=True)
+            self.assertNotIn("view__gaussian",set(r.comparison.scenario))
+            self.assertNotIn("User assumptions",text)
+            self.assertFalse(any(k.startswith("user_mc_") for k in r.figures))
+            self.assertNotIn("user_scenario",_modeling_context(r)[0])
+
+    def test_partial_optional_sample_preserves_baseline_and_gfc(self):
+        folder=self.combined_history();csv=folder/"terminal_values.csv"
+        frame=pd.read_csv(csv)
+        frame[~((frame.model=="view__gaussian") & (frame.path==0))].to_csv(csv,index=False)
+        file=folder/"manifest.json";meta=json.loads(file.read_text())
+        meta["files"]["terminal_values"]["sha256"]=hashlib.sha256(csv.read_bytes()).hexdigest()
+        file.write_text(json.dumps(meta))
+        r=self.build({"monte_carlo":folder})
+        self.assertEqual(r.sources["monte_carlo"].user_view["status"],"unavailable")
+        self.assertIn("custom_crisis__gaussian",set(r.comparison.scenario))
+        self.assertIn("gaussian",set(r.comparison.scenario))
+        self.assertNotIn("user_assumption",set(r.comparison.category))
+        self.assertIn("Invalid saved portfolio samples",r.report(include_figures=False))
+
     def test_named_stress_has_full_comparison_plots_without_options(self):
         folder=self.stress_history(); before={f.name:f.read_bytes() for f in folder.iterdir()}
         result=self.build({"monte_carlo":folder})

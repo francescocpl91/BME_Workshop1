@@ -14,6 +14,11 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures" / "config"
 
 
 class PortfolioTests(unittest.TestCase):
+    def test_negative_nav_is_rejected(self):
+        self.data["nav"] = -1000
+        with self.assertRaisesRegex(ValueError, "nav must be a positive amount"):
+            self.load(self.data)
+
     @classmethod
     def setUpClass(cls):
         cls.config = load_provider_configs(FIXTURES, history_start=date(2000,1,3))
@@ -34,6 +39,12 @@ class PortfolioTests(unittest.TestCase):
         self.assertEqual(result.target_allocation, {'equity': .5, 'sovereign_fixed_income': .5})
         self.assertEqual([(h['request_id'], h['weight']) for h in result.holdings], [('SPY', .5), ('IEF', .5)])
         self.assertEqual(len(self.config['requests']), 20)
+
+    def test_bucket_rounding_must_also_pass_the_portfolio_total(self):
+        for holding in self.data["holdings"]:
+            holding["weight"] -= 7e-9
+        with self.assertRaisesRegex(ValueError, "add to one"):
+            self.load(self.data)
 
     def test_complete_weights_are_validated_without_normalizing(self):
         # Synthetic fixture allocations, not proposed portfolio weights.

@@ -10,8 +10,12 @@ data/
 .pytest_cache/
 tests/data_dumps/
 
-# Regenerable archive inventory reports
-/reports/
+# Keep generated runs local; publish only the two curated final-analysis examples.
+/reports/*
+!/reports/examples/
+/reports/examples/*
+!/reports/examples/2026-10-19/
+!/reports/examples/2026-10-30/
 
 # Reproducible offline cleaning and merging outputs
 /processed/

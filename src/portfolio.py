@@ -11,6 +11,8 @@ import re
 
 from .json_config import _unique_object, _invalid_constant
 
+WEIGHT_TOLERANCE = 1e-8
+
 if TYPE_CHECKING:
     # Type-only imports avoid coupling retrieval/configuration imports to the
     # optional numerical engines. Runtime imports remain inside public methods.
@@ -60,7 +62,7 @@ def load_portfolio(path, retrieval_config):
     allocation = data['target_allocation']
     if (not isinstance(allocation, dict) or not allocation or
         any(not isinstance(k, str) or not k or not number(v) or not 0 <= v <= 1 for k, v in allocation.items()) or
-        not math.isclose(sum(allocation.values()), 1, abs_tol=1e-8, rel_tol=0)):
+        not math.isclose(math.fsum(allocation.values()), 1, abs_tol=WEIGHT_TOLERANCE, rel_tol=0)):
         raise ValueError('Target allocation must contain fractions adding to one.')
     requests = {r['id']: r for r in retrieval_config['requests']}
     holdings = data['holdings']
@@ -82,10 +84,15 @@ def load_portfolio(path, retrieval_config):
             raise ValueError('Use long-only fractional weights between zero and one, or null.')
         else: totals[bucket] += weight
         seen.add(key)
-    if any(totals[k] > allocation[k] + 1e-8 for k in totals):
+    if any(totals[k] > allocation[k] + WEIGHT_TOLERANCE for k in totals):
         raise ValueError('Known holding weights exceed the target allocation.')
-    if not missing and any(not math.isclose(totals[k], allocation[k], abs_tol=1e-8, rel_tol=0) for k in totals):
-        raise ValueError('Complete holding weights must match target_allocation and add to one.')
+    if not missing:
+        # Small rounding differences in separate buckets can add up to a material
+        # error across the portfolio. Apply the same total-weight rule as MC.
+        total = math.fsum(h['weight'] for h in holdings)
+        if (not math.isclose(total, 1, abs_tol=WEIGHT_TOLERANCE, rel_tol=0)
+                or any(not math.isclose(totals[k], allocation[k], abs_tol=WEIGHT_TOLERANCE, rel_tol=0) for k in totals)):
+            raise ValueError('Complete holding weights must match target_allocation and add to one.')
     refs = data['reference_data']
     if not isinstance(refs, list) or any(not isinstance(k, str) or k not in requests for k in refs):
         raise ValueError('reference_data must contain configured request IDs.')

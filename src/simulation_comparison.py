@@ -37,6 +37,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.mathtext import math_to_image
 from matplotlib.font_manager import FontProperties
 
+from .portfolio import WEIGHT_TOLERANCE
 from .mc_diagnostics import probability_of_loss, probability_label, confidence_label, _tail_mean
 
 
@@ -90,11 +91,17 @@ def load_config(path):
                 "confidence_levels", "sampling_confidence", "allow_approximate_terminal_horizon",
                 "maximum_relative_horizon_difference", "material_loss_probability_difference",
                 "minimum_expected_tail_paths", "maximum_chart_points", "surface_display_points", "simulation_plots"}
-    if set(cfg) - expected - {"instructions"} or expected - set(cfg):
+    if set(cfg) - expected - {"instructions","open_report_after_run","plot_windows_after_run"} or expected - set(cfg):
         raise ValueError("Invalid final-report configuration keys")
     if type(cfg["schema_version"]) is not int or cfg["schema_version"] != 1 or cfg["primary_return_type"] not in ("simple", "log"):
         raise ValueError("Unsupported final-report schema or return type")
-    for key in ("enabled", "allow_approximate_terminal_horizon"):
+    cfg.setdefault("open_report_after_run", False)
+    windows = cfg.setdefault("plot_windows_after_run", [])
+    if (not isinstance(windows,list) or
+            any(not isinstance(w,str) or not re.fullmatch("[a-z][a-z0-9_]*",w) for w in windows)
+            or len(windows) != len(set(windows))):
+        raise ValueError("plot_windows_after_run must list distinct chart families")
+    for key in ("enabled", "allow_approximate_terminal_horizon","open_report_after_run"):
         if not isinstance(cfg[key], bool):
             raise ValueError(f"{key} must be boolean")
     for key in ("sampling_confidence", "maximum_relative_horizon_difference", "material_loss_probability_difference"):
@@ -136,6 +143,7 @@ class Source:
     summary: dict
     files: dict
     fingerprint: str
+    user_view: dict | None = None
 
     def table(self, key):
         """Load only recorded CSVs; identifiers remain strings, including 'NA'."""
@@ -246,7 +254,8 @@ def _signature(portfolio):
     holdings = portfolio.get("holdings", [])
     pairs = sorted((str(x["request_id"]), float(x["weight"])) for x in holdings)
     if not pairs or len({x[0] for x in pairs}) != len(pairs) or not all(
-            math.isfinite(w) and w >= 0 for _, w in pairs) or not math.isclose(sum(w for _, w in pairs), 1, abs_tol=1e-10):
+            math.isfinite(w) and 0 <= w <= 1 for _, w in pairs) or not math.isclose(
+                math.fsum(w for _, w in pairs), 1, abs_tol=WEIGHT_TOLERANCE, rel_tol=0):
         raise ValueError("Invalid or incomplete portfolio weights")
     return pairs
 
@@ -370,6 +379,25 @@ class FinalAnalysis:
                 # Preparation reads saved results only and draws no figures.
                 _prepare_report_data(self)
         return _markdown(self, _render(self), sections, include_figures)
+
+    def show(self, report_folder):
+        """Open the completed offline HTML. Display consumes no simulation inputs."""
+        import webbrowser
+        file = Path(report_folder).resolve() / "report.html"
+        if file.parent.name != self.run_id or not file.is_file():
+            raise ValueError("Expected the saved HTML report for this analysis.")
+        try:
+            return webbrowser.open(file.as_uri(), new=2)
+        except (OSError, webbrowser.Error):
+            return False
+
+    def show_plot_windows(self, report_folder):
+        """Launch the native viewer using the images from this saved analysis."""
+        from .plot_windows import launch
+        folder = Path(report_folder).resolve()
+        if folder.name != self.run_id:
+            raise ValueError("Expected the saved folder for this analysis.")
+        return launch(folder, self.cfg.get("plot_windows_after_run", []))
 
     def plots_report(self, reports_root):
         """Publish/verify the existing bundle and return its saved PNG paths."""
@@ -506,6 +534,8 @@ def build_analysis(cob, stage_folders, config_file, *, issues=None, requested_po
     rows, samples, findings = [], {}, []
     historical = sources.get("monte_carlo")
     physical = sources.get("local_vol_real_world")
+    if historical is not None:
+        historical.user_view = _saved_view(historical.summary)
     for stage, src in (("monte_carlo", historical), ("local_vol_real_world", physical)):
         if src is None or not src.summary.get("simulation_performed"):
             continue
@@ -517,7 +547,7 @@ def build_analysis(cob, stage_folders, config_file, *, issues=None, requested_po
             groups = []
             if stage == "monte_carlo":
                 table = src.table("terminal_values")
-                table = table[table.scope == "portfolio"]
+                table = _verified_view_samples(src, table[table.scope == "portfolio"], settings)
                 for model, group in table.groupby("model", sort=False):
                     if group.path.duplicated().any() or len(group) != settings["paths"]:
                         raise ValueError("Incomplete or duplicate terminal portfolio paths")
@@ -526,6 +556,8 @@ def build_analysis(cob, stage_folders, config_file, *, issues=None, requested_po
                         raise ValueError("Mixed calibration sets in one scenario")
                     base_models = settings.get("models", [])
                     kind = "stress" if calibration_set != "baseline" else ("baseline" if model in base_models else "tail_sensitivity")
+                    if src.user_view and model in src.user_view["models"]:
+                        kind = "user_assumption"
                     groups.append((model, kind, calibration_set, _numbers(group, "terminal_value").to_numpy(), "same_historical_run", "Common historical simulation clock"))
             else:
                 name = src.files.get("paths.npz")
@@ -533,7 +565,12 @@ def build_analysis(cob, stage_folders, config_file, *, issues=None, requested_po
                     raise ValueError("Physical terminal paths were not saved")
                 with np.load(src.folder / name, allow_pickle=False) as archive:
                     values = archive["terminal_wealth"]
-                    if values.ndim != 2 or values.shape != (settings["paths"], len(identity["portfolio"]["holdings"])+1):
+                    # The engine simulates positive-weight holdings in portfolio order.
+                    # Older bundles may lack column labels; still check their shape.
+                    holding_ids = [h["request_id"] for h in identity["portfolio"]["holdings"] if h["weight"] > 0]
+                    if "holding_ids" in archive and archive["holding_ids"].tolist() != holding_ids:
+                        raise ValueError("Physical terminal holding identifiers mismatch")
+                    if values.shape != (settings["paths"], len(holding_ids) + 1):
                         raise ValueError("Physical terminal portfolio shape mismatch")
                     terminal = values[:, -1].copy()
                 comparison, reason = _compatibility(historical, physical, cfg)
@@ -567,12 +604,9 @@ def build_analysis(cob, stage_folders, config_file, *, issues=None, requested_po
     if not rows:
         findings.append("No usable full-portfolio terminal simulation is available. Historical observations, if present, remain descriptive evidence only.")
     else:
-        baseline = comparison[(comparison.scenario == cfg["reference_model"]) & (comparison.category == "baseline")]
-        if len(baseline) == 1:
-            ref = baseline.iloc[0]
-            for row in rows:
-                if row["scenario"] == ref.scenario or row["category"] in ("stress", "tail_sensitivity") or row["comparability"] in ("not_comparable", "standalone"):
-                    continue
+        for row in rows:
+            ref = _reference_for(row, comparison, cfg)
+            if ref is not None:
                 delta = row["probability_loss"] - ref.probability_loss
                 adjective = "Above" if abs(delta) >= cfg["material_loss_probability_difference"] else "Below"
                 findings.append(f"{row['scenario']}: loss probability differs from {ref.scenario} by {delta*100:+.2f} percentage points. {adjective} the configured descriptive materiality threshold; this is not a model-ranking or significance test.")
@@ -591,6 +625,13 @@ def build_analysis(cob, stage_folders, config_file, *, issues=None, requested_po
             for alpha in cfg["confidence_levels"]:
                 if row[f"expected_tail_paths_{probability_label(alpha)}"] < cfg["minimum_expected_tail_paths"]:
                     findings.append(f"{row['scenario']}: limited simulated tail support at {alpha:.0%}; inspect quantile and ES sampling sensitivity.")
+    if historical and historical.user_view:
+        view = historical.user_view
+        if view["status"] == "complete":
+            inputs = [f"{a['instrument']}: annual compound growth {a['effective_annual_compound_growth']:.2%}, annual volatility {a['effective_annual_volatility']:.2%}" for a in view["applied"]]
+            findings.insert(0,"User assumptions for the full portfolio using the baseline calibration window: "+"; ".join(inputs)+".")
+        else:
+            findings.insert(0,"User scenario unavailable: "+view["reason"])
     portfolio = sources.get("processing").summary.get("portfolio", {}) if "processing" in sources else {}
     if not portfolio:
         for src in sources.values():
@@ -631,10 +672,96 @@ def _png(fig):
 def _model_label(name):
     """Readable algorithm labels, never instrument-specific assumptions."""
     if "__" in name:
-        period, model = name.split("__", 1)
+        period, model = name.rsplit("__", 1)
         return f"{period.replace('_', ' ')}: {_model_label(model)}"
     return {"gaussian": "Historical Gaussian", "student_t_truncated": "Historical Student-t",
             "physical_local_vol": "Physical local volatility"}.get(name, name.replace("_", " "))
+
+
+PRIMARY = ("baseline","user_assumption","physical")
+
+
+def _reference_for(row, comparison, cfg):
+    """Match an assumed scenario with its baseline shock family for numerical deltas."""
+    if row["category"] not in PRIMARY or row["comparability"] in ("not_comparable","standalone"):
+        return None
+    model = (row["scenario"].rsplit("__",1)[-1] if row["category"] == "user_assumption"
+             else cfg["reference_model"])
+    refs = comparison[(comparison.category == "baseline") & (comparison.scenario == model)]
+    return refs.iloc[0] if len(refs) == 1 and row["scenario"] != model else None
+
+
+def _saved_view(summary):
+    """Use the saved run settings. Absent or null means there is no view to report."""
+    settings = summary.get("identity",{}).get("settings",{})
+    request = settings.get("user_scenario")
+    if request is None:
+        return None
+    record = summary.get("user_scenario")
+    def unavailable(reason):
+        return dict(requested=request,status="unavailable",models=[],reason=str(reason))
+    if not isinstance(record,dict) or record.get("requested") != request:
+        return unavailable("Saved user-scenario metadata is missing or differs from the request.")
+    if record.get("status") != "complete":
+        return unavailable(record.get("reason") or "No completed user scenario.")
+    if not isinstance(request,dict) or not isinstance(request.get("holdings"),dict) or not request["holdings"] or type(request.get("periods_per_year")) is not int or request["periods_per_year"] < 1:
+        return unavailable("Invalid saved user-scenario holdings.")
+    primary = settings.get("models")
+    if not isinstance(primary,list) or not all(isinstance(m,str) for m in primary):
+        return unavailable("Invalid primary models in saved historical settings.")
+    models = [f"{request.get('name')}__{model}" for model in primary]
+    fields = ("historical_annual_compound_growth","effective_annual_compound_growth",
+              "historical_annual_volatility","effective_annual_volatility")
+    applied = record.get("applied")
+    # The engine and configuration may list the same two shock families in different orders.
+    saved_models = record.get("models")
+    if (not models or not isinstance(saved_models, list) or not all(isinstance(m, str) for m in saved_models)
+            or sorted(saved_models) != sorted(models) or not isinstance(applied,list)
+            or not all(isinstance(a,dict) and isinstance(a.get("instrument"),str)
+                       and all(type(a.get(k)) in (int,float) and math.isfinite(a[k]) for k in fields) for a in applied)
+            or len(applied) != len(request["holdings"])
+            or {a["instrument"] for a in applied} != set(request["holdings"])):
+        return unavailable("Incomplete saved user-scenario parameters or model identifiers.")
+    return record.copy()
+
+
+def _verified_view_samples(src, table, settings):
+    """Keep baseline and crisis results when an optional view is incomplete."""
+    view = src.user_view
+    record = src.summary.get("user_scenario")
+    listed = record.get("models") if isinstance(record,dict) else None
+    suspects = {m for m in (listed if isinstance(listed,list) else []) if isinstance(m,str) and "__" in m}
+    name = view["requested"].get("name") if view and isinstance(view["requested"],dict) else None
+    declared = settings.get("stress_calibrations")
+    stresses = {s["name"] for s in (declared if isinstance(declared,list) else [])
+                if isinstance(s,dict) and isinstance(s.get("name"),str)}
+    if isinstance(name,str) and name not in stresses and name != "baseline" and isinstance(settings.get("models"),list):
+        suspects.update(name+"__"+m for m in settings.get("models",[]))
+    if view and view["status"] == "complete":
+        for model in view["models"]:
+            group = table[table.model == model]
+            values = _numbers(group,"terminal_value")
+            if (len(group) != settings["paths"] or group.path.duplicated().any()
+                    or "calibration_set" not in group or not group.calibration_set.eq(name).all()
+                    or not np.isfinite(values).all() or (values < 0).any()):
+                view.update(status="unavailable",models=[],reason="Invalid saved portfolio samples for "+model)
+                break
+    if view and view["status"] == "complete" and "calibration_set" in table:
+        # Only declared primary models belong to the view. An unlisted row in
+        # that same calibration must not leak into the historical stress bucket.
+        table = table[(table.calibration_set != name) | table.model.isin(view["models"])]
+    # Actual named stress rows always retain their original identity.
+    if "stress_calibrations" in settings and "calibration_set" in table:
+        allowed = {"baseline", *stresses}
+        if view and view["status"] == "complete":
+            allowed.add(name)
+        table = table[table.calibration_set.isin(allowed)]
+    if view is None or view["status"] != "complete":
+        drop = table.model.isin(suspects)
+        if "calibration_set" in table:
+            drop &= ~table.calibration_set.isin(stresses | {"baseline"})
+        return table[~drop]
+    return table
 
 
 def _stress_groups(result):
@@ -650,7 +777,7 @@ def _stress_groups(result):
         return {}
     models = source.summary.get("identity", {}).get("settings", {}).get("models", [])
     rows = result.comparison.to_dict("records")
-    reference = [r for r in rows if r["category"] in ("baseline", "physical")
+    reference = [r for r in rows if r["category"] in PRIMARY
                  and r["comparability"] not in ("not_comparable", "standalone")]
     groups = {}
     for row in rows:
@@ -682,7 +809,8 @@ def _stress_context(result):
     for attempt in attempts:
         if isinstance(attempt, dict) and isinstance(attempt.get("name"), str):
             records[attempt["name"]] = {**records.get(attempt["name"], {}), **attempt}
-    for name in _stress_groups(result):
+    groups = _stress_groups(result)
+    for name in groups:
         records.setdefault(name, {"name": name})
     rows = []
     for name, record in records.items():
@@ -690,7 +818,7 @@ def _stress_context(result):
         calibration = calibration if isinstance(calibration, dict) else {}
         warnings = record.get("warnings") or []
         reason = "; ".join(str(w) for w in warnings) if isinstance(warnings, list) else str(warnings)
-        available = name in _stress_groups(result)
+        available = name in groups
         if not available:
             reason = reason or "No saved primary stress outcomes; no stress forecast is inferred."
         rows.append(dict(name=name, requested_start=record.get("start"), requested_end=record.get("end"),
@@ -817,37 +945,39 @@ def _mc_detail_figures(result, rows, index, create, figures, forecasts, prefix="
             ax.set_xlabel("Terminal portfolio return (%)");ax.set_ylabel("Probability density per percentage point")
             ax.legend(fontsize=9)
     create(f"{prefix}_density_{index}","Terminal return distributions (dotted lines: medians)",density)
-    fig=Figure(figsize=(12,4.8),layout="constrained")
-    axes=fig.subplots(1,2)
-    left,right=np.quantile(combined,[policy["tail_display_fraction"],1-policy["tail_display_fraction"]])
-    for i,name in enumerate(names):
-        values,counts=np.unique(result.samples[name],return_counts=True);n=counts.sum()
-        cumulative=np.cumsum(counts)
-        # Aggregate ties: at a deterministic return the CDF is one, not a
-        # misleading sequence of tiny probabilities at the same x-coordinate.
-        for ax,mask,prob in ((axes[0],values<=left,cumulative/n),(axes[1],values>=right,(n-cumulative+counts)/n)):
-            x=values[mask];y=prob[mask]
-            keep=np.unique(np.linspace(0,len(x)-1,min(len(x),result.cfg["maximum_chart_points"])).astype(int)) if len(x) else []
-            ax.semilogy(x[keep]*100,y[keep],color=f"C{i}",label=_model_label(name))
-    for ax,title,label in zip(axes,["Downside tail","Upside tail"],["P(return <= x)","P(return >= x)"]):
-        ax.set_title(title);ax.set_xlabel("Terminal return x (%)");ax.set_ylabel(label)
-        ax.grid(alpha=.2);ax.legend(fontsize=8)
-    figures[f"{prefix}_tails_{index}"]=("Terminal tails on a logarithmic probability scale; all outcomes retained",_png(fig))
+    if prefix != "user_mc":
+        fig=Figure(figsize=(12,4.8),layout="constrained")
+        axes=fig.subplots(1,2)
+        left,right=np.quantile(combined,[policy["tail_display_fraction"],1-policy["tail_display_fraction"]])
+        for i,name in enumerate(names):
+            values,counts=np.unique(result.samples[name],return_counts=True);n=counts.sum()
+            cumulative=np.cumsum(counts)
+            # Aggregate ties: at a deterministic return the CDF is one, not a
+            # misleading sequence of tiny probabilities at the same x-coordinate.
+            for ax,mask,prob in ((axes[0],values<=left,cumulative/n),(axes[1],values>=right,(n-cumulative+counts)/n)):
+                x=values[mask];y=prob[mask]
+                keep=np.unique(np.linspace(0,len(x)-1,min(len(x),result.cfg["maximum_chart_points"])).astype(int)) if len(x) else []
+                ax.semilogy(x[keep]*100,y[keep],color=f"C{i}",label=_model_label(name))
+        for ax,title,label in zip(axes,["Downside tail","Upside tail"],["P(return <= x)","P(return >= x)"]):
+            ax.set_title(title);ax.set_xlabel("Terminal return x (%)");ax.set_ylabel(label)
+            ax.grid(alpha=.2);ax.legend(fontsize=8)
+        figures[f"{prefix}_tails_{index}"]=("Terminal tails on a logarithmic probability scale; all outcomes retained",_png(fig))
     # Numerical preparation is shared with the text-only report. Select this
     # comparable group without recalculating data or duplicating warnings.
     forecasts = {name: forecasts[name] for name in names if name in forecasts}
     if not forecasts:
         return
-    fig=Figure(figsize=(12,4.8),layout="constrained");axes=fig.subplots(1,2)
-    for i,name in enumerate(names):
-        if name not in forecasts:continue
-        bands,_=forecasts[name]
-        for ax,col in zip(axes,["mean_index","median_index"]):
-            ax.plot(bands.timestamp,bands[col],color=f"C{i}",label=_model_label(name))
-    for ax,title in zip(axes,["Expected portfolio wealth (mean)","Median portfolio wealth"]):
-        ax.set_title(title);ax.set_ylabel("Wealth index (initial = 100)");ax.grid(alpha=.2);ax.legend(fontsize=8)
-        ax.tick_params(axis="x",rotation=25)
-    figures[f"{prefix}_growth_{index}"]=("Portfolio growth comparison at each engine's recorded dates",_png(fig))
+    if prefix != "user_mc":
+        fig=Figure(figsize=(12,4.8),layout="constrained");axes=fig.subplots(1,2)
+        for i,name in enumerate(names):
+            if name not in forecasts:continue
+            bands,_=forecasts[name]
+            for ax,col in zip(axes,["mean_index","median_index"]):
+                ax.plot(bands.timestamp,bands[col],color=f"C{i}",label=_model_label(name))
+        for ax,title in zip(axes,["Expected portfolio wealth (mean)","Median portfolio wealth"]):
+            ax.set_title(title);ax.set_ylabel("Wealth index (initial = 100)");ax.grid(alpha=.2);ax.legend(fontsize=8)
+            ax.tick_params(axis="x",rotation=25)
+        figures[f"{prefix}_growth_{index}"]=("Portfolio growth comparison at each engine's recorded dates",_png(fig))
     fig=Figure(figsize=(12,3.7*len(forecasts)),layout="constrained");axes=np.atleast_1d(fig.subplots(len(forecasts),1,sharex=True,sharey=True))
     for ax,(name,(bands,sample)) in zip(axes,forecasts.items()):
         color=f"C{names.index(name)}"
@@ -910,7 +1040,7 @@ def _prepare_report_data(result):
     # Include primary stress trajectories once; sensitivity sweeps remain in
     # their separate terminal tables. This also works for text-only reports.
     selected = {r["scenario"]: r for r in result.comparison.to_dict("records")
-                if r["category"] in ("baseline", "physical")}
+                if r["category"] in PRIMARY}
     for group in _stress_groups(result).values():
         selected.update({r["scenario"]: r for r in group})
     rows = list(selected.values())
@@ -918,6 +1048,26 @@ def _prepare_report_data(result):
     if forecasts:
         result.forecast_bands = pd.concat([item[0] for item in forecasts.values()], ignore_index=True)
     return forecasts
+
+
+def _terminal_figures(result, rows, bucket, index, create, prefix=""):
+    """Compare the same scenario set in both the ECDF and loss-probability chart."""
+    def ecdf(ax):
+        for row in rows:
+            values = np.sort(result.samples[row["scenario"]])
+            indices = np.unique(np.linspace(0, len(values)-1, min(len(values), result.cfg["maximum_chart_points"])).astype(int))
+            ax.plot(values[indices]*100, (indices+1)/len(values), label=row["scenario"])
+        ax.axvline(0, color="black", linestyle=":", linewidth=1)
+        ax.set_xlabel("Terminal portfolio return (%)"); ax.set_ylabel("Cumulative simulated probability")
+        ax.legend(fontsize=8)
+    create(f"{prefix}terminal_distribution_{index}", f"Terminal distributions: {bucket}", ecdf)
+    def losses(ax):
+        y = np.arange(len(rows)); p = np.array([r["probability_loss"] for r in rows])
+        lo = np.array([r["loss_probability_low"] for r in rows]); hi = np.array([r["loss_probability_high"] for r in rows])
+        ax.errorbar(p*100, y, xerr=np.maximum(0,np.array([p-lo, hi-p])*100), fmt="o", capsize=4)
+        ax.set_yticks(y, [r["scenario"] for r in rows]); ax.set_xlim(0,100)
+        ax.set_xlabel(f"Loss probability (%) with {result.cfg['sampling_confidence']:.0%} sampling interval")
+    create(f"{prefix}loss_probability_{index}", f"Probability of finishing below initial wealth: {bucket}", losses)
 
 
 def _figures(result):
@@ -979,31 +1129,23 @@ def _figures(result):
             if row["comparability"] in ("not_comparable", "standalone"):
                 bucket = row["scenario"] + " (standalone)"
             else:
-                bucket = "portfolio models" if category in ("baseline", "physical") else category
+                bucket = "portfolio models" if category in PRIMARY else category
             buckets.setdefault(bucket, []).append(row)
         for index, (bucket, rows) in enumerate(buckets.items()):
-            if any(row["category"] in ("baseline","physical") for row in rows):
+            if any(row["category"] in PRIMARY for row in rows):
                 _mc_detail_figures(result, rows, index, create, figures, forecasts)
-            def ecdf(ax):
-                for row in rows:
-                    values = np.sort(result.samples[row["scenario"]])
-                    indices = np.unique(np.linspace(0, len(values)-1, min(len(values), result.cfg["maximum_chart_points"])).astype(int))
-                    ax.plot(values[indices]*100, (indices+1)/len(values), label=row["scenario"])
-                ax.axvline(0, color="black", linestyle=":", linewidth=1)
-                ax.set_xlabel("Terminal portfolio return (%)"); ax.set_ylabel("Cumulative simulated probability")
-                ax.legend(fontsize=8)
-            create(f"terminal_distribution_{index}", f"Terminal distributions: {bucket}", ecdf)
-            def losses(ax):
-                y = np.arange(len(rows)); p = np.array([r["probability_loss"] for r in rows])
-                lo = np.array([r["loss_probability_low"] for r in rows]); hi = np.array([r["loss_probability_high"] for r in rows])
-                ax.errorbar(p*100, y, xerr=np.maximum(0,np.array([p-lo, hi-p])*100), fmt="o", capsize=4)
-                ax.set_yticks(y, [r["scenario"] for r in rows]); ax.set_xlim(0,100)
-                ax.set_xlabel(f"Loss probability (%) with {result.cfg['sampling_confidence']:.0%} sampling interval")
-            create(f"loss_probability_{index}", f"Probability of finishing below initial wealth: {bucket}", losses)
+            _terminal_figures(result, rows, bucket, index, create)
     # Separate panels make conditional crisis assumptions explicit, while
     # preserving the original baseline versus physical-model comparisons.
     for index, (name, rows) in enumerate(_stress_groups(result).items()):
         _mc_detail_figures(result, rows, index, create, figures, forecasts, prefix="stress_mc")
+        _terminal_figures(result, rows, str(name)+" stress comparison", index, create, prefix="stress_mc_")
+    user_rows = comp[comp.category == "user_assumption"]
+    if len(user_rows):
+        models = set(user_rows.scenario.str.split("__").str[-1])
+        baseline = comp[(comp.category == "baseline") & comp.scenario.isin(models)]
+        rows = pd.concat([baseline,user_rows]).to_dict("records")
+        _mc_detail_figures(result, rows, 0, create, figures, forecasts, prefix="user_mc")
     for stage, table_name, zcol in (("volatility_surface", "surface_grid", "iv"),
                                     ("local_volatility", "local_vol_grid", "local_volatility")):
         src = result.sources.get(stage)
@@ -1055,12 +1197,11 @@ def _outcome_interpretation(result):
     """Numerical comparisons, not a claim that the best-looking model is true."""
     data=result.comparison
     if data.empty:return []
-    ref=data[(data.scenario==result.cfg["reference_model"]) & (data.category=="baseline")]
-    if len(ref)!=1:return []
-    ref=ref.iloc[0];alpha=max(result.cfg["confidence_levels"]);key="loss_es_"+probability_label(alpha)
+    alpha=max(result.cfg["confidence_levels"]);key="loss_es_"+probability_label(alpha)
     statements=[]
     for row in data.to_dict("records"):
-        if row["scenario"]==ref.scenario or row["category"] not in ("baseline","physical") or row["comparability"] in ("not_comparable","standalone"):
+        ref = _reference_for(row,data,result.cfg)
+        if ref is None:
             continue
         statements.append(f"{_model_label(row['scenario'])}: expected growth {row['mean_return']:.2%}, median growth {row['median_return']:.2%}, and loss probability {row['probability_loss']:.2%}. The corresponding {_model_label(ref.scenario)} estimates are {ref.mean_return:.2%}, {ref.median_return:.2%}, and {ref.probability_loss:.2%}.")
         if row["probability_loss"] < ref.probability_loss and row[key] > ref[key]:
@@ -1111,6 +1252,8 @@ def _modeling_context(result):
             student_t_settings=cfg.get('student_t') if stage=='monte_carlo' else None,
             physical_settings=identity.get('config') if stage=='local_vol_real_world' else None,
             stress_calibrations=s.get('stress_calibrations',[]) if stage=='monte_carlo' else [])
+        if src.user_view:
+            record["user_scenario"] = src.user_view
         records.append(record)
     return records
 
@@ -1164,6 +1307,16 @@ def _modeling_section(result):
             parts.append('<p><strong>Student-t extension.</strong> The same daily mean/covariance are used with fitted, radially truncated multivariate Student-t shocks, rescaled to retain the target covariance. This is a discrete-time fat-tail return model, not an exact Brownian SDE solution. The fitted degrees of freedom and truncation are recalculated from the applicable calibration sample.</p>')
             if r['student_t_settings']:
                 parts.append('<details><summary>Saved Student-t assumptions</summary><pre>'+esc(json.dumps(r['student_t_settings'],indent=2))+'</pre></details>')
+            view = r.get("user_scenario")
+            if view:
+                parts.append("<h4>User assumptions on the historical forecast</h4>")
+                if view["status"] == "complete":
+                    periods = view["requested"]["periods_per_year"]
+                    parts.append(f'<p>Baseline historical calibration: {esc(r["actual_history_start"])} to {esc(r["actual_history_end"])} ({esc(r["matched_daily_intervals"])} matched intervals). Forecast: {esc(r["actual_forecast_start"])} to {esc(r["actual_forecast_end"])} with {esc(r["paths"])} paths per shock model. Annual compound growth g sets daily log drift to log(1+g)/{esc(periods)}. Annual native volatility is divided by the square root of {esc(periods)}. Baseline correlations, FX parameters and Student-t tail parameters are retained.</p>')
+                    applied = pd.DataFrame(view["applied"])
+                    parts.append(_table(applied,percent=[c for c in applied if c.startswith(("historical_","effective_"))]))
+                else:
+                    parts.append("<p>Unavailable: "+esc(view["reason"])+"</p>")
             stresses=r['stress_calibrations']
             if stresses:
                 parts.append('<p>Stress windows are separate conditional experiments, not extra observations added to the baseline calibration. A baseline drift choice borrows the baseline daily log mean; a stress drift choice uses the stress-period mean.</p>')
@@ -1219,12 +1372,13 @@ def _render(result):
     parts.append('<section id="forecast"><h2>What do the portfolio simulations imply?</h2><p>These are conditional model outcomes, not guarantees. Returns are V(T)/V(0)-1. Mean, median and standard errors below are expressed as percentages of initial wealth. Stress scenarios and tail sensitivities are separate experiments. Risk-neutral underlying paths are excluded from this portfolio forecast comparison.</p>')
     comp = result.comparison
     metrics = ["scenario","category","status","currency","paths","mean_return","median_return","probability_loss","mean_mc_standard_error"]
-    core = comp[comp.category.isin(["baseline","physical"])] if len(comp) else comp
+    core = comp[comp.category.isin(PRIMARY)] if len(comp) else comp
     parts.append(_table(core, metrics, ["mean_return","median_return","probability_loss","mean_mc_standard_error"]))
     parts.append('<ul>'+''.join(f'<li>{esc(x)}</li>' for x in _outcome_interpretation(result))+'</ul>')
-    if len(comp) > len(core):
+    secondary = comp[comp.category.isin(["stress","tail_sensitivity"])]
+    if len(secondary):
         parts.append('<details><summary>Stress and tail-sensitivity scenario results</summary>')
-        parts.append(_table(comp[~comp.category.isin(["baseline","physical"])],metrics,["mean_return","median_return","probability_loss","mean_mc_standard_error"]))
+        parts.append(_table(secondary,metrics,["mean_return","median_return","probability_loss","mean_mc_standard_error"]))
         parts.append('</details>')
     parts.append('<h3>Monte Carlo portfolio paths and expected growth</h3><p>The shaded fan summarizes the full simulated population at each recorded time. The thin lines are a saved display subset, not all simulated paths. A small path sample can miss rare losses; use the full-population tail plots and probability tables for those. The mean and median curves answer different questions: expected wealth versus the middle simulated outcome. Models keep their original clocks; connecting plotted observations does not create a common daily return grid.</p>')
     figures("mc_growth_"); figures("mc_paths_")
@@ -1240,6 +1394,28 @@ def _render(result):
         parts.append('<h3>Probability of specified terminal losses</h3><p>A zero observed count means no such event occurred in this finite sample; it is not proof that the true probability is zero.</p>')
         parts.append(_table(display.reset_index(),percent=list(display.columns)))
     parts.append('<p>Mean MC standard error measures precision of the simulated mean, not the volatility of individual outcomes. All probability intervals are sampling-only; drift estimation, calibration uncertainty and model risk remain outside them.</p>')
+    historical_source = result.sources.get("monte_carlo")
+    view = historical_source.user_view if historical_source else None
+    if view:
+        parts.append('<h3>User assumptions versus historical baseline</h3>')
+        if view["status"] != "complete":
+            parts.append(f'<p>Unavailable: {esc(view["reason"])}</p>')
+        else:
+            parts.append('<p>Annual native-currency assumptions for the selected holdings. Compound growth sets the daily mean log return. The scenario retains baseline correlations, FX inputs, weights and forecast dates.</p>')
+            tail_key = "loss_es_"+probability_label(max(result.cfg["confidence_levels"]))
+            columns = ["mean_return","median_return","probability_loss",tail_key]
+            baseline = comp[comp.category == "baseline"].set_index("scenario")
+            comparisons = []
+            for row in comp[comp.category == "user_assumption"].to_dict("records"):
+                model = row["scenario"].rsplit("__",1)[-1]
+                if model in baseline.index:
+                    base = baseline.loc[model]
+                    comparisons.append(dict(scenario=model, **{k:base[k] for k in columns}))
+                    comparisons.append(dict(scenario=row["scenario"], **{k:row[k] for k in columns},
+                        loss_change_pp=100*(row["probability_loss"]-base["probability_loss"])))
+            parts.append(_table(pd.DataFrame(comparisons),percent=columns))
+            parts.append('<p>Loss change is measured in percentage points against the corresponding baseline shock model.</p>')
+            figures("user_mc_paths_"); figures("user_mc_density_")
     stress_context = _stress_context(result)
     if not stress_context.empty:
         parts.append('<h3>Historical stress Monte Carlo comparisons</h3><p>The baseline lookback and each stress calibration window are independent JSON inputs. A shorter baseline lookback does not disable a crisis scenario if the saved archive still contains sufficient matched observations in that crisis window. Missing or insufficient history makes that stress calibration unavailable; baseline analysis continues. Actual interval coverage is reported below, without inventing missing dates.</p>')
@@ -1247,9 +1423,11 @@ def _render(result):
         parts.append('<p>These are conditional stress experiments over the same forecast horizon, not forecasts that another crisis will occur. Drift = stress uses the stress-period mean; drift = baseline retains the baseline mean and changes the risk calibration. Tail-cutoff sensitivity variants remain in the separate results above. Optional physical models retain their original eligibility and clock warnings.</p>')
         for index, (name, rows) in enumerate(_stress_groups(result).items()):
             parts.append(f'<h4>Baseline versus {esc(name)} stress</h4>')
+            if any(r["category"] == "user_assumption" for r in rows):
+                parts.append("<p>The user scenario is a baseline-window alternative shown alongside the crisis calibration. Its assumptions are not applied to the crisis window.</p>")
             group = pd.DataFrame(rows)
             parts.append(_table(group, metrics, ["mean_return","median_return","probability_loss","mean_mc_standard_error"]))
-            for kind in ("growth", "paths", "density", "tails"):
+            for kind in ("growth", "paths", "density", "tails", "terminal_distribution", "loss_probability"):
                 figures(f"stress_mc_{kind}_{index}", exact=True)
             losses = result.loss_thresholds[result.loss_thresholds.scenario.isin(group.scenario)]
             if len(losses):

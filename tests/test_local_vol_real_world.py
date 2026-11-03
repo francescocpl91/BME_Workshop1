@@ -217,6 +217,24 @@ class RealWorldTests(unittest.TestCase):
         r=self.run_model();folder=r.save()
         self.assertIn('missing_or_ambiguous_surface',(folder/'report.html').read_text(encoding='utf-8'))
 
+    def test_saved_processed_price_and_reference_identifiers_round_trip(self):
+        from src.local_vol_real_world import simulate_saved
+        tables = {"selected_prices": b"instrument_id,date,analysis_price\nNA,2026-10-19,101\n",
+                  "selected_references": b"instrument_id,date,value\nNULL,2026-10-19,\n"}
+        manifest = dict(run_id=self.root.name, cob="2026-10-19", archive="raw",
+                        files={k: {"rows": 1} for k in tables})
+        stages = [(manifest, tables), ({}, {"state_mapping": b"group_id\n", "inputs": b"{}"}),
+                  ({}, {}), ({}, {"cohorts": b"group_id\n"})]
+        with patch("src.local_vol_real_world._read_stage", side_effect=stages), \
+                patch("src.local_vol_real_world.simulate_processed") as engine:
+            simulate_saved(self.root, self.root/"lv", self.root/"surface", self.root/"validation",
+                           "mc.json", "physical.json")
+        processed = engine.call_args.args[0]
+        self.assertEqual(processed.tables["selected_prices"].instrument_id.tolist(), ["NA"])
+        refs = processed.tables["selected_references"]
+        self.assertEqual(refs.instrument_id.tolist(), ["NULL"])
+        self.assertTrue(pd.isna(refs.value.iloc[0]))
+
     def test_saved_manifest_checksums_and_path_escape(self):
         import hashlib
         p=self.root/'stage';p.mkdir();raw=b'hello';(p/'data.csv').write_bytes(raw)

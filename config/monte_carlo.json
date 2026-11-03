@@ -7,6 +7,13 @@
   ],
   "forecast_start": "cob_plus_one",
   "forecast_end": "2027-12-17",
+  "user_scenario": {
+    "name": "higher_equity_volatility",
+    "periods_per_year": 252,
+    "holdings": {
+      "SPY": {"annual_compound_growth": 0.06, "annual_volatility": 0.30}
+    }
+  },
   "paths": 10000,
   "seed": 1729,
   "calendar": "XNYS",
@@ -51,6 +58,7 @@
   "sample_paths": 20,
   "plots": true,
   "instructions": {
+    "user_scenario": "Optional historical what-if. Use null to disable. Each holdings key must be a simulated portfolio request_id with sufficient aligned history. Override annual compound growth and/or positive annual native-currency volatility as decimal fractions; other factors retain baseline moments. No option data is required.",
     "scope": "Offline historical-measure Gaussian and radially truncated multivariate Student-t daily log-return scenarios only. No option pricing, Dupire/local volatility, OIS use or risk-neutral simulation.",
     "dates": "Forecast starts exactly one calendar day after the selected archive COB, resolved by Python. Calibration ends at COB. The first shock ends on the next exchange session strictly after the initial point. Initial levels are normalized assumed valuations, not observed quotes on that date.",
     "drift": "Use the arithmetic sample mean of DAILY LOG returns over a shared calibration window. Default latest ten calendar years through COB; explicit start overrides lookback_years. No additional half-variance subtraction. Report drift estimation uncertainty and actual coverage.",

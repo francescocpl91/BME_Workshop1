@@ -1,6 +1,8 @@
 {
   "schema_version": 1,
   "enabled": true,
+  "open_report_after_run": true,
+  "plot_windows_after_run": ["mc_paths", "mc_density"],
   "primary_return_type": "simple",
   "reference_model": "gaussian",
   "confidence_levels": [
@@ -17,7 +19,7 @@
   "instructions": {
     "scope": "Offline academic project synthesis. Read only this execution's explicitly supplied saved results. Do not download, recalibrate, simulate, change allocations or overwrite source outputs.",
     "returns": "Use simple daily returns for the main historical summary; the detailed statistics report retains both simple and log returns. Historical daily statistics and forecast-horizon losses are different quantities.",
-    "comparison": "Compare full portfolios when currency, holdings, weights, investment convention, calibration observations and intended forecast dates agree. Available physical local-volatility results participate in the main analysis while their saved validation status remains visible. Each saved primary stress calibration is compared with the baseline in dedicated path, growth, density and tail panels. Tail-cutoff sensitivities stay separate. Missing stress history is reported explicitly; baseline lookback and stress windows are independent.",
+    "comparison": "Compare full portfolios when currency, holdings, weights, investment convention, calibration observations and intended forecast dates agree. Available physical local-volatility results participate in the main analysis while their saved validation status remains visible. Optional user models participate in primary and named stress forecast comparisons alongside eligible physical results; same-shock baselines anchor their numerical deltas. Each saved stress comparison includes growth, paths, distributions, tails and loss probabilities. Tail-cutoff sensitivities stay separate. Missing stress history is reported explicitly; baseline lookback and stress windows are independent.",
     "clock": "The optional 0.5% relative horizon tolerance permits an explicitly approximate terminal comparison between exchange-session time and ACT/365F. It never makes daily path metrics or drawdowns directly comparable.",
     "materiality": "A two-percentage-point difference in loss probability is a descriptive review threshold, not a hypothesis test or evidence that one model is correct.",
     "uncertainty": "Mean intervals use the Monte Carlo standard error. Loss-probability intervals use Wilson intervals for independent simulated paths. Neither accounts for parameter estimation, missing data or model risk.",

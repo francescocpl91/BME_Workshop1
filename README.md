@@ -15,6 +15,7 @@ the project, rather than only describing how to launch it. Examples illustrate
 the supplied configuration; executable JSON and saved run metadata remain the
 authority for instruments, weights, dates and numerical policies.
 
+- [Official example reports](#official-example-reports)
 - [Installation and execution](#installation-and-execution)
 - [Configuration and provider access](#configuration-and-provider-access)
 - [Architecture and portfolio interface](#architecture-and-portfolio-interface)
@@ -36,6 +37,19 @@ authority for instruments, weights, dates and numerical policies.
 - [Physical portfolio simulation](#physical-drift-local-volatility-portfolio-scenario)
 - [Final academic analysis](#final-academic-analysis)
 - [Tests and submission scope](#tests-and-submission-scope)
+
+## Official example reports
+
+The [official reports directory](reports/examples/) contains two complete Final Analysis examples. You can read the Markdown on GitHub or clone the repository and open `report.html` in a browser for the full layout and embedded charts. Viewing either example requires no Python environment, provider credentials or IBKR subscription.
+
+| Archived COB | What to look for |
+|---|---|
+| **19 October 2026 · With option data** ([Markdown](reports/examples/2026-10-19/report.md) · [HTML](reports/examples/2026-10-19/report.html)) | The 70% SPY / 30% IEF portfolio includes Gaussian, Student-t, user-assumption and GFC comparisons. The volatility section shows the fitted SPX smiles, implied and local volatility surfaces. The physical portfolio forecast uses SPX as the proxy for SPY and historical volatility for IEF. Its status is **diagnostic** because risk-neutral pricing precision remained under review. |
+| **30 October 2026 · Historical models only** ([Markdown](reports/examples/2026-10-30/report.md) · [HTML](reports/examples/2026-10-30/report.html)) | With no eligible SPX surface, the physical portfolio forecast is unavailable. The historical, stress and user-assumption models still produce paths, distributions, loss probabilities and a final report. |
+
+Read **availability** first to see which models ran. Then compare growth, terminal distributions and downside risk over the stated forecast period. Both examples use the USD fallback because usable EUR/USD history was missing. A probability of loss in these reports therefore describes wealth in USD. The option-underlying risk-neutral simulation validates pricing; the physical simulation is the portfolio forecast.
+
+Each folder also contains the comparison tables, figure files and `summary.json` with the run ID and source fingerprints. These are portable copies of the saved results. The source-stage locations are shown for provenance; the raw data required to rerun those stages are local. A new execution writes to its own dated output folder, separate from these submission examples.
 
 ## Installation and execution
 
@@ -62,36 +76,92 @@ as `src`; do not add the `src` directory itself to `PYTHONPATH`, because its
    The downloader retrieves/reuses the archive and the same offline pipeline follows.
 
 COB must be yesterday or earlier in Europe/London; history start must not exceed
-COB. A fresh clone does not include the private market-data archives or generated
-results. Use download mode with available access, or supply your own valid saved
+COB. A fresh clone includes the two official reports. The private market-data archives are local. Use download mode with available access, or supply your own valid saved
 archive. The automated tests provide reproducible synthetic examples without API
 access; they are not observations from the demonstration portfolio.
 
 ## Configuration and provider access
 
-| Input | Purpose |
+### Start with the portfolio, then decide what to download
+
+The example tickers, weights, dates and model settings are **hardcoded in the JSON files** so that a reviewer can reproduce or change the experiment. The `instructions` fields explain the settings. Edit the actual values alongside them. Three different inputs answer three different questions:
+
+| Question | Where to edit | Current example |
+|---|---|---|
+| What do we own? | `config/portfolio.json`: `holdings`, `target_allocation`, `reporting_currency` | 70% SPY (equity ETF) and 30% IEF (US Treasury ETF), reported in EUR |
+| What market series do we need? | Enabled requests in the provider JSONs below. Use `reference_data` in the portfolio for supporting series. | SPX is the reference index for SPY's option model. SPX, its options, FX and interest rates receive no portfolio weight. |
+| How should we analyse those series? | Cleaning, statistics, simulation and calibration JSONs below | Ten years for baseline MC calibration, a separate GFC window and optional option-based models |
+
+**One holding.** For 100% SPY, replace just the following two fields in `config/portfolio.json`. Keep the other required fields, including `reference_data`. This runs the same portfolio statistics, simulation and report for one asset. IEF can remain in the provider files if you still want its history. To stop requesting it on a fresh download, disable its requests in each relevant provider JSON.
+
+```json
+{
+  "target_allocation": {"equity": 1.0},
+  "holdings": [
+    {"request_id": "SPY", "bucket": "equity", "weight": 1.0}
+  ]
+}
+```
+
+**Multiple holdings or classes.** To change the example to 60% equity and 40% fixed income, replace the same two fields:
+
+```json
+{
+  "target_allocation": {"equity": 0.60, "sovereign_fixed_income": 0.40},
+  "holdings": [
+    {"request_id": "SPY", "bucket": "equity", "weight": 0.60},
+    {"request_id": "IEF", "bucket": "sovereign_fixed_income", "weight": 0.40}
+  ]
+}
+```
+
+A single asset class may contain several holdings. Two equity ETFs could have weights 0.60 and 0.40 in the same `equity` bucket with a target of 1.0. Each holding needs a distinct configured request ID and a usable price history. Use decimal weights from 0 to 1. The budget for each bucket must equal its holdings' weights, and all buckets together must total 1. A null weight is a placeholder and must be filled before portfolio processing. The schema uses long-only weights; the number of holdings is not limited to two.
+
+**Adding a new instrument.** First define the instrument in at least one enabled provider request. Reuse a common `id` across providers for the same economic series, and give each provider its own native `input`. For instance, the project's `SPX` is Yahoo symbol `^GSPC`, Massive ticker `I:SPX` and an IBKR index contract. Check the product, operation, exchange, currency, unit, frequency, timeframe and provider-specific parameters. An option also needs the selected contract, including expiry, strike and right. Then use the ID in the portfolio, review its calendar, price basis and any option mapping in cleaning, and check currency conversion. If you disable a provider, any holding or reference you retain still needs a configured request. A new asset-class label alone does not implement a pricing model. The fixed-income example uses ETF prices; it does not price an individual bond's coupons.
+
+### Which mode and dates should I use?
+
+- **Reweight instruments already in a completed archive:** choose **1 - Process saved archive**. Processing validates today's portfolio definition against that archive's request IDs and uses the current weights for derived results. No credentials are needed. Adding a ticker to a provider JSON cannot supply missing prices in an old archive.
+- **Retrieve a new instrument or a new COB:** choose **2 - Download + process** with the appropriate requests enabled. A matching completed archive can be reused. For a changed retrieval universe use a fresh compatible archive, for example a new COB. Existing raw data retain their original inputs.
+- Enter the COB and requested history start in **DD/MM/YYYY** in download mode. `HISTORY_START` and `COB` in the provider JSONs resolve to those dates. The latest permitted COB is yesterday in London. The history actually returned depends on listing dates, provider coverage and access. A rejected date range can trigger the adapter's history fallback. An authentication failure needs valid access.
+- The forecast is a separate decision. `forecast_start: "cob_plus_one"` takes its date from the run, and trading steps follow the configured calendar. `forecast_end: "2027-12-17"` is an explicit example date. Review it for a new COB and for the maturity range supported by any optional local-volatility model.
+
+### What each analytical JSON controls
+
+All paths in this table are relative to `config/`.
+
+| File | What to review when changing the experiment |
 |---|---|
-| `config/<provider>.json` | Instruments, provider-native identifiers, operations and history requests |
-| `config/portfolio.json` | Holdings, weights, reporting currency and reference instruments |
-| `config/cleaning.json` | Price basis, provider selection, calendars and option-reference mappings |
-| `config/modeling.json` | Descriptive statistics and stress windows |
-| `config/monte_carlo.json` | Historical calibration, forecast end, paths, seed and shock models |
-| `config/ois.json` | Fixed manual par OIS quotes with their actual observation dates |
-| `config/calibration/*.json` | Option IVs, surfaces, local volatility and risk-neutral validation |
-| `config/local_vol_real_world.json` | Physical local-volatility policies and boundary permissions |
-| `config/simulation_comparison.json` | Final-report comparisons, figures and reporting thresholds |
+| `cleaning.json` | Provider priority, compatible price bases, exchange calendars, gap checks and instrument metadata. `instruments.SPY.option_reference = "SPX"` explicitly links the holding to its option underlying. Add an equivalent mapping only where economically justified. |
+| `modeling.json` | Descriptive statistics, annualisation, rolling windows and named historical stress periods. |
+| `monte_carlo.json` | Forecast dates, 10,000 paths, seed, calendar, baseline lookback (10 years, minimum 252 aligned observations), stress calibrations, FX conventions and optional user assumptions. The GFC window (January 2008 to June 2009) needs its own downloaded history independently of the baseline lookback. |
+| `ois.json` | Manually supplied SOFR and €STR par swap quotes in percent per annum. The fixed example curves are observed on 20 October 2026. They are archived for each COB with that actual date; copying them into a later archive does not make them current. |
+| `calibration/option_calibration.json` | OIS convention assumptions, forwards, dividend/carry inputs and live/historical quote eligibility for European-option implied volatility. Curve and option observation dates must agree. |
+| `calibration/surface.json` | Implied-volatility smile fitting, supported strikes/maturities and fit acceptance. |
+| `calibration/local_volatility.json` | Dupire evaluation, boundary policies and option repricing checks. |
+| `calibration/local_vol_monte_carlo.json` | Risk-neutral simulation of the option underlying and its validation. |
+| `local_vol_real_world.json` | Physical portfolio simulation using a validated mapped surface and historical factors for the other eligible holdings. |
+| `simulation_comparison.json` | Final comparisons, tolerances, figures and optional display. `open_report_after_run` opens the report; `plot_windows_after_run` currently selects path and density plots. |
 
-Provider files resolve `HISTORY_START` and `COB` from terminal input. A rejected
-history range may trigger a provider-specific maximum-accessible-history request;
-authentication and network failures are not repaired by changing dates. Records
-retain the actual range, response status and limitations. Unsupported operations
-remain explicit failures, not substitutes with a different instrument.
+Two settings are especially relevant when changing holdings. In `monte_carlo.json`, the example `user_scenario.holdings.SPY` assumes 6% annual compound growth and 30% annual volatility. It changes SPY's assumptions in a separate portfolio scenario; IEF keeps its historical assumptions. Use only positive-weight holding IDs here, and remove the section or set it to `null` to omit the scenario. For EUR reporting, `fx_series` identifies `EURUSD` as USD per EUR. Review the currency pair, its orientation and available history when changing currencies. The USD fallback applies only when the model can express the portfolio in USD.
 
-Runtime settings and environment-variable names are visible in `run.py`:
-`ALPHA_VANTAGE_API_KEY`, `MARKETDATA_API_TOKEN`, `MASSIVE_API_KEY`, `FRED_API_KEY`.
-IBKR uses an authenticated TWS/IB Gateway session and matching socket settings,
-not a token. Market-data subscriptions and permissions are separate from a
-successful connection. Offline analysis needs none of these connections.
+### Provider access for a fresh download
+
+Enabling a JSON requests an operation. It does not grant credentials, a subscription or data coverage. Keep credentials outside the JSON files. Read the per-request status in the COB archive when a series is missing.
+
+| Provider JSON | What this adapter needs | What to expect |
+|---|---|---|
+| `yahoo.json` | No provider key | Public price history where available, including eligible adjusted prices. |
+| `ecb.json` | No provider key | Public ECB series, using the dataflow and series key. These are reference observations. [ECB data services](https://data.ecb.europa.eu/help/getting-data-web-services-sdmx-0) |
+| `fred.json` | `FRED_API_KEY` | A FRED API key is required even for public series such as DGS10. [FRED API keys](https://fred.stlouisfed.org/docs/api/api_key.html) |
+| `alpha_vantage.json` | `ALPHA_VANTAGE_API_KEY` | Endpoint and depth of history depend on the plan. |
+| `marketdata.json` | `MARKETDATA_API_TOKEN` | Token and permission for the requested product and history. |
+| `massive.json` | `MASSIVE_API_KEY` | Plan must cover the requested asset, endpoint and date range. |
+| `ibkr.json` | Authenticated TWS or IB Gateway, socket API enabled, matching host and port, appropriate market-data permissions | Explicit contracts for historical prices and options. Connecting successfully only verifies the session. |
+
+Without any provider credentials or IBKR session, **Yahoo and ECB are the two configured providers that can still return fresh data**. Availability depends on the series, service and dates. Missing access at one provider does not prevent independent requests at the others.
+
+**IBKR options need a separate check.** For yesterday's COB the program requests current live snapshots and records the actual capture date. Live option quotes require the relevant exchange entitlements; broker Greeks generally require market data for both the option and its underlying. For older COBs the program requests historical bars. This route does not return broker model IVs or Greeks. Access, retention and contract expiry can prevent historical bars from being returned even with a working connection. Without the required subscriptions, do not count on reconstructing an option surface from IBKR history. A saved archive can still support historical portfolio analysis when it contains sufficient aligned prices; the option-based stages require their own dated inputs and validation. [IBKR market-data limitations](https://www.interactivebrokers.com/docs/tws-api/doc/md/market-data-limitations) · [IBKR option Greeks](https://www.interactivebrokers.com/docs/tws-api/doc/md/option-greeks)
 
 ## Architecture and portfolio interface
 
@@ -1353,6 +1423,51 @@ Physical-MC review notes:
 
 ## Final academic analysis
 
+### Historical user assumptions
+
+`config/monte_carlo.json` enables an additional what-if for SPY with 6% annual
+compound growth and 30% annual volatility. Set `user_scenario` to `null` (or omit
+it) to disable it. Each key under `user_scenario.holdings` must match the
+`request_id` of an invested holding in the portfolio used for cleaning. You may
+specify SPY alone, both SPY and IEF, or any number of actual holdings. Listing a
+ticker in a provider JSON or as reference data does not add it to the portfolio.
+A new holding needs valid portfolio weights and sufficient aligned price history,
+including FX when needed. An unknown holding makes just the user view unavailable.
+Omitted holdings use their observed moments; growth and volatility may be set
+independently. Rates are decimals in the native currency. Compound growth sets
+daily log drift via `log1p(growth)/periods_per_year`; annual volatility is divided
+by the square root of that period count. Historical correlations and Student-t
+tail calibration are retained. The scenario runs the configured primary models.
+
+Choose **1 - Process saved archive** and enter the archived COB. The new view
+uses cleaned historical returns; current option quotes are unnecessary. A run
+started before the changes will need a fresh offline analysis to show the view.
+A completed view appears in the overview, method and calibration section, primary
+portfolio tables and charts, loss thresholds, tails and each available crisis
+comparison. Its numerical deltas use the corresponding baseline shock family.
+The stress charts compare alternatives over the same forecast horizon; the view
+uses baseline-window parameters. Option repricing diagnostics and observed historical
+statistics retain their own interpretation. An omitted or null block produces no
+user-scenario section or figures. A requested but unusable view reports its reason.
+
+Both Download + process and Process saved archive use the same reporting stage.
+At the final stage of an interactive VS Code terminal run, `open_report_after_run`
+opens the HTML. Independently, `plot_windows_after_run` in
+`config/simulation_comparison.json` opens native desktop windows for the selected
+chart families (default: `mc_paths`, `mc_density`). Use the selector in either
+window to browse every published PNG, including stress comparisons. Set the list
+to `[]` to disable plot windows. Tk and a graphical desktop are required for
+native display. In an unattended terminal or without a desktop the saved HTML
+and PNGs remain available. From Python use `analysis.show(saved_folder)` for HTML
+or `analysis.show_plot_windows(saved_folder)` for the configured plot windows.
+
+The analytical price-series dataclass is `AssetStatistics`. Constructing it
+calculates the mean and sample standard deviation on the cleaned return intervals.
+For example, after `portfolio.analyze(modeling_file)`, inspect
+`portfolio.assets[holding_id].metrics["mean_daily"]` and `["std_daily"]` on the
+same metrics dictionary. Calendar gaps stay missing instead of becoming daily
+returns between nonconsecutive sessions.
+
 Named historical stress scenarios configured in `config/monte_carlo.json` also
 receive dedicated baseline-versus-stress path, mean/median growth, terminal
 density, tail and loss-probability comparisons. Compatible physical local-vol
@@ -1444,8 +1559,8 @@ There is no hardcoded COB, instrument, portfolio allocation or input directory.
 Tests use synthetic data, mocked providers and temporary folders. They cover
 financial identities, validation, recovery, dates, portfolio delegation, reporting
 and optional-data failures. Passing offline tests does not verify live subscriptions.
-Raw archives, generated outputs, credentials, environments and local `docs/` remain
-excluded from Git. No additional stocks are required for the current example.
+Only the official report examples are distributed. Raw archives, other generated outputs,
+credentials, environments and local `docs/` are excluded from Git. No additional stocks are required for the current example.
 
 The BME core is multi-source extraction, standardisation, analytical DataClasses,
 portfolio aggregation, configurable Monte Carlo, cleaning and reports. Student-t,

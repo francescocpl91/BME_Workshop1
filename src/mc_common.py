@@ -10,6 +10,7 @@ import math
 import numpy as np
 import pandas as pd
 import exchange_calendars as xcals
+from .portfolio import WEIGHT_TOLERANCE
 from .statistics import _day, _prepare, _basis_kind
 
 class SimulationUnavailable(ValueError):
@@ -65,7 +66,7 @@ def _holding_inputs(processed,cfg,risk_window=None):
     # Zero-weight references do not enter simulated holdings. Every positive
     # holding must be present; do not silently redistribute a missing holding.
     holdings = [h for h in all_holdings if h["weight"] > 0]
-    if not holdings or not math.isclose(math.fsum(h["weight"] for h in holdings),1,abs_tol=1e-8,rel_tol=0):
+    if not holdings or not math.isclose(math.fsum(h["weight"] for h in holdings),1,abs_tol=WEIGHT_TOLERANCE,rel_tol=0):
         raise ValueError("Positive holding weights must sum to one.")
     if not isinstance(portfolio.get("reporting_currency"),str) or not portfolio["reporting_currency"]:
         raise ValueError("A reporting currency is required.")

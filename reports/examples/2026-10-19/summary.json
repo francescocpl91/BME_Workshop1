@@ -1,0 +1,862 @@
+{
+  "availability": [
+    {
+      "label": "Cleaned data",
+      "reason": "Verified saved artifacts",
+      "stage": "processing",
+      "status": "saved"
+    },
+    {
+      "label": "Historical statistics",
+      "reason": "Verified saved artifacts",
+      "stage": "statistics",
+      "status": "available"
+    },
+    {
+      "label": "Historical portfolio Monte Carlo",
+      "reason": "Verified saved artifacts",
+      "stage": "monte_carlo",
+      "status": "complete"
+    },
+    {
+      "label": "OIS, forwards and individual IVs",
+      "reason": "Verified saved artifacts",
+      "stage": "option_calibration",
+      "status": "completed"
+    },
+    {
+      "label": "Fitted implied volatility",
+      "reason": "Verified saved artifacts",
+      "stage": "volatility_surface",
+      "status": "completed"
+    },
+    {
+      "label": "Local volatility and boundary validation",
+      "reason": "Verified saved artifacts",
+      "stage": "local_volatility",
+      "status": "saved"
+    },
+    {
+      "label": "Risk-neutral underlying validation",
+      "reason": "Verified saved artifacts",
+      "stage": "local_vol_mc",
+      "status": "saved"
+    },
+    {
+      "label": "Physical local-volatility portfolio",
+      "reason": "Verified saved artifacts",
+      "stage": "local_vol_real_world",
+      "status": "diagnostic"
+    }
+  ],
+  "chart_notes": [],
+  "cob": "2026-10-19",
+  "comparison": [
+    {
+      "calibration_set": "baseline",
+      "category": "baseline",
+      "comparability": "same_historical_run",
+      "comparison_reason": "Common historical simulation clock",
+      "currency": "USD",
+      "expected_tail_paths_0.95": 500.0,
+      "expected_tail_paths_0.99": 100.0,
+      "forecast_end": "2027-12-17",
+      "forecast_start": "2026-10-20",
+      "initial_value": 100.0,
+      "loss_es_0.95": 0.142959917,
+      "loss_es_0.99": 0.2087780471,
+      "loss_probability_high": 0.1947617949,
+      "loss_probability_low": 0.1794785881,
+      "loss_var_0.95": 0.0935387098,
+      "loss_var_0.99": 0.1741657619,
+      "mean_ci_high": 0.1482910858,
+      "mean_ci_low": 0.1418519429,
+      "mean_mc_standard_error": 0.0016426687,
+      "mean_return": 0.1450715143,
+      "median_return": 0.1279330462,
+      "paths": 10000,
+      "probability_loss": 0.187,
+      "scenario": "gaussian",
+      "stage": "monte_carlo",
+      "status": "complete"
+    },
+    {
+      "calibration_set": "baseline",
+      "category": "baseline",
+      "comparability": "same_historical_run",
+      "comparison_reason": "Common historical simulation clock",
+      "currency": "USD",
+      "expected_tail_paths_0.95": 500.0,
+      "expected_tail_paths_0.99": 100.0,
+      "forecast_end": "2027-12-17",
+      "forecast_start": "2026-10-20",
+      "initial_value": 100.0,
+      "loss_es_0.95": 0.1440003584,
+      "loss_es_0.99": 0.2092323631,
+      "loss_probability_high": 0.2028819029,
+      "loss_probability_low": 0.1873523361,
+      "loss_var_0.95": 0.0991736275,
+      "loss_var_0.99": 0.1672037723,
+      "mean_ci_high": 0.1428837251,
+      "mean_ci_low": 0.1365263557,
+      "mean_mc_standard_error": 0.0016218077,
+      "mean_return": 0.1397050404,
+      "median_return": 0.1241749054,
+      "paths": 10000,
+      "probability_loss": 0.195,
+      "scenario": "student_t_truncated",
+      "stage": "monte_carlo",
+      "status": "complete"
+    },
+    {
+      "calibration_set": "baseline",
+      "category": "tail_sensitivity",
+      "comparability": "same_historical_run",
+      "comparison_reason": "Common historical simulation clock",
+      "currency": "USD",
+      "expected_tail_paths_0.95": 500.0,
+      "expected_tail_paths_0.99": 100.0,
+      "forecast_end": "2027-12-17",
+      "forecast_start": "2026-10-20",
+      "initial_value": 100.0,
+      "loss_es_0.95": 0.1406010681,
+      "loss_es_0.99": 0.2029334554,
+      "loss_probability_high": 0.1942541153,
+      "loss_probability_low": 0.1789866517,
+      "loss_var_0.95": 0.0933877829,
+      "loss_var_0.99": 0.1751062246,
+      "mean_ci_high": 0.1457256938,
+      "mean_ci_low": 0.1393927087,
+      "mean_mc_standard_error": 0.0016155871,
+      "mean_return": 0.1425592012,
+      "median_return": 0.1263345536,
+      "paths": 10000,
+      "probability_loss": 0.1865,
+      "scenario": "student_t_tail_0.002",
+      "stage": "monte_carlo",
+      "status": "complete"
+    },
+    {
+      "calibration_set": "baseline",
+      "category": "tail_sensitivity",
+      "comparability": "same_historical_run",
+      "comparison_reason": "Common historical simulation clock",
+      "currency": "USD",
+      "expected_tail_paths_0.95": 500.0,
+      "expected_tail_paths_0.99": 100.0,
+      "forecast_end": "2027-12-17",
+      "forecast_start": "2026-10-20",
+      "initial_value": 100.0,
+      "loss_es_0.95": 0.1407842722,
+      "loss_es_0.99": 0.2035919982,
+      "loss_probability_high": 0.1936448724,
+      "loss_probability_low": 0.1783963554,
+      "loss_var_0.95": 0.0942146666,
+      "loss_var_0.99": 0.1720371293,
+      "mean_ci_high": 0.1487005271,
+      "mean_ci_low": 0.1422491901,
+      "mean_mc_standard_error": 0.0016457795,
+      "mean_return": 0.1454748586,
+      "median_return": 0.1286673678,
+      "paths": 10000,
+      "probability_loss": 0.1859,
+      "scenario": "student_t_tail_5e-05",
+      "stage": "monte_carlo",
+      "status": "complete"
+    },
+    {
+      "calibration_set": "gfc",
+      "category": "stress",
+      "comparability": "same_historical_run",
+      "comparison_reason": "Common historical simulation clock",
+      "currency": "USD",
+      "expected_tail_paths_0.95": 500.0,
+      "expected_tail_paths_0.99": 100.0,
+      "forecast_end": "2027-12-17",
+      "forecast_start": "2026-10-20",
+      "initial_value": 100.0,
+      "loss_es_0.95": 0.4442721447,
+      "loss_es_0.99": 0.4951789059,
+      "loss_probability_high": 0.7710351139,
+      "loss_probability_low": 0.7543630565,
+      "loss_var_0.95": 0.4044752637,
+      "loss_var_0.99": 0.4701449846,
+      "mean_ci_high": -0.1185451321,
+      "mean_ci_low": -0.1276208996,
+      "mean_mc_standard_error": 0.0023152894,
+      "mean_return": -0.1230830159,
+      "median_return": -0.1711750767,
+      "paths": 10000,
+      "probability_loss": 0.7628,
+      "scenario": "gfc__gaussian",
+      "stage": "monte_carlo",
+      "status": "complete"
+    },
+    {
+      "calibration_set": "gfc",
+      "category": "stress",
+      "comparability": "same_historical_run",
+      "comparison_reason": "Common historical simulation clock",
+      "currency": "USD",
+      "expected_tail_paths_0.95": 500.0,
+      "expected_tail_paths_0.99": 100.0,
+      "forecast_end": "2027-12-17",
+      "forecast_start": "2026-10-20",
+      "initial_value": 100.0,
+      "loss_es_0.95": 0.4451200612,
+      "loss_es_0.99": 0.4935863288,
+      "loss_probability_high": 0.7844593114,
+      "loss_probability_low": 0.7681284143,
+      "loss_var_0.95": 0.4081987784,
+      "loss_var_0.99": 0.4676554202,
+      "mean_ci_high": -0.1262547009,
+      "mean_ci_low": -0.135162037,
+      "mean_mc_standard_error": 0.0022723214,
+      "mean_return": -0.1307083689,
+      "median_return": -0.1764748029,
+      "paths": 10000,
+      "probability_loss": 0.7764,
+      "scenario": "gfc__student_t_truncated",
+      "stage": "monte_carlo",
+      "status": "complete"
+    },
+    {
+      "calibration_set": "gfc",
+      "category": "stress",
+      "comparability": "same_historical_run",
+      "comparison_reason": "Common historical simulation clock",
+      "currency": "USD",
+      "expected_tail_paths_0.95": 500.0,
+      "expected_tail_paths_0.99": 100.0,
+      "forecast_end": "2027-12-17",
+      "forecast_start": "2026-10-20",
+      "initial_value": 100.0,
+      "loss_es_0.95": 0.4418217054,
+      "loss_es_0.99": 0.490814744,
+      "loss_probability_high": 0.7761693242,
+      "loss_probability_low": 0.7596248527,
+      "loss_var_0.95": 0.4033941935,
+      "loss_var_0.99": 0.4682443194,
+      "mean_ci_high": -0.1228344979,
+      "mean_ci_low": -0.1317285419,
+      "mean_mc_standard_error": 0.0022689305,
+      "mean_return": -0.1272815199,
+      "median_return": -0.1736417358,
+      "paths": 10000,
+      "probability_loss": 0.768,
+      "scenario": "gfc__student_t_tail_0.002",
+      "stage": "monte_carlo",
+      "status": "complete"
+    },
+    {
+      "calibration_set": "gfc",
+      "category": "stress",
+      "comparability": "same_historical_run",
+      "comparison_reason": "Common historical simulation clock",
+      "currency": "USD",
+      "expected_tail_paths_0.95": 500.0,
+      "expected_tail_paths_0.99": 100.0,
+      "forecast_end": "2027-12-17",
+      "forecast_start": "2026-10-20",
+      "initial_value": 100.0,
+      "loss_es_0.95": 0.4437354224,
+      "loss_es_0.99": 0.4905411122,
+      "loss_probability_high": 0.7710351139,
+      "loss_probability_low": 0.7543630565,
+      "loss_var_0.95": 0.405875715,
+      "loss_var_0.99": 0.4669382276,
+      "mean_ci_high": -0.1180893723,
+      "mean_ci_low": -0.127261129,
+      "mean_mc_standard_error": 0.0023397768,
+      "mean_return": -0.1226752506,
+      "median_return": -0.1709024985,
+      "paths": 10000,
+      "probability_loss": 0.7628,
+      "scenario": "gfc__student_t_tail_5e-05",
+      "stage": "monte_carlo",
+      "status": "complete"
+    },
+    {
+      "calibration_set": "higher_equity_volatility",
+      "category": "user_assumption",
+      "comparability": "same_historical_run",
+      "comparison_reason": "Common historical simulation clock",
+      "currency": "USD",
+      "expected_tail_paths_0.95": 500.0,
+      "expected_tail_paths_0.99": 100.0,
+      "forecast_end": "2027-12-17",
+      "forecast_start": "2026-10-20",
+      "initial_value": 100.0,
+      "loss_es_0.95": 0.3105797853,
+      "loss_es_0.99": 0.3846222385,
+      "loss_probability_high": 0.4250892098,
+      "loss_probability_low": 0.4057757627,
+      "loss_var_0.95": 0.25316454,
+      "loss_var_0.99": 0.3462196585,
+      "mean_ci_high": 0.0973667043,
+      "mean_ci_low": 0.0871295768,
+      "mean_mc_standard_error": 0.0026115601,
+      "mean_return": 0.0922481406,
+      "median_return": 0.0505560594,
+      "paths": 10000,
+      "probability_loss": 0.4154,
+      "scenario": "higher_equity_volatility__gaussian",
+      "stage": "monte_carlo",
+      "status": "complete"
+    },
+    {
+      "calibration_set": "higher_equity_volatility",
+      "category": "user_assumption",
+      "comparability": "same_historical_run",
+      "comparison_reason": "Common historical simulation clock",
+      "currency": "USD",
+      "expected_tail_paths_0.95": 500.0,
+      "expected_tail_paths_0.99": 100.0,
+      "forecast_end": "2027-12-17",
+      "forecast_start": "2026-10-20",
+      "initial_value": 100.0,
+      "loss_es_0.95": 0.3121459584,
+      "loss_es_0.99": 0.3848499218,
+      "loss_probability_high": 0.4299030375,
+      "loss_probability_low": 0.4105582486,
+      "loss_var_0.95": 0.2607106395,
+      "loss_var_0.99": 0.340576336,
+      "mean_ci_high": 0.0885731181,
+      "mean_ci_low": 0.0785117797,
+      "mean_mc_standard_error": 0.0025667151,
+      "mean_return": 0.0835424489,
+      "median_return": 0.0449098363,
+      "paths": 10000,
+      "probability_loss": 0.4202,
+      "scenario": "higher_equity_volatility__student_t_truncated",
+      "stage": "monte_carlo",
+      "status": "complete"
+    },
+    {
+      "calibration_set": "baseline",
+      "category": "physical",
+      "comparability": "approximate_terminal_only",
+      "comparison_reason": "Terminal horizon difference 0.0099%; exchange sessions versus ACT/365F. Intraday endpoints differ.",
+      "currency": "USD",
+      "expected_tail_paths_0.95": 500.0,
+      "expected_tail_paths_0.99": 100.0,
+      "forecast_end": "2027-12-17",
+      "forecast_start": "2026-10-20",
+      "initial_value": 100.0,
+      "loss_es_0.95": 0.2569331359,
+      "loss_es_0.99": 0.4459405174,
+      "loss_probability_high": 0.1132101359,
+      "loss_probability_low": 0.1010916868,
+      "loss_var_0.95": 0.1044641955,
+      "loss_var_0.99": 0.3669373225,
+      "mean_ci_high": 0.1473476464,
+      "mean_ci_low": 0.1416204892,
+      "mean_mc_standard_error": 0.0014610363,
+      "mean_return": 0.1444840678,
+      "median_return": 0.150642305,
+      "paths": 10000,
+      "probability_loss": 0.107,
+      "scenario": "physical_local_vol",
+      "stage": "local_vol_real_world",
+      "status": "diagnostic"
+    }
+  ],
+  "downloads_performed": false,
+  "findings": [
+    "Requested reporting currency is EUR; available simulation currencies are USD. These results do not measure EUR portfolio risk without the corresponding FX conversion.",
+    "User assumptions for the full portfolio using the baseline calibration window: SPY: annual compound growth 6.00%, annual volatility 30.00%.",
+    "student_t_truncated: loss probability differs from gaussian by +0.80 percentage points. Below the configured descriptive materiality threshold; this is not a model-ranking or significance test.",
+    "At 99% confidence, student_t_truncated terminal ES is 20.92% of initial wealth, versus 20.88% for gaussian. Loss frequency and tail severity answer different questions.",
+    "higher_equity_volatility__gaussian: loss probability differs from gaussian by +22.84 percentage points. Above the configured descriptive materiality threshold; this is not a model-ranking or significance test.",
+    "At 99% confidence, higher_equity_volatility__gaussian terminal ES is 38.46% of initial wealth, versus 20.88% for gaussian. Loss frequency and tail severity answer different questions.",
+    "higher_equity_volatility__student_t_truncated: loss probability differs from student_t_truncated by +22.52 percentage points. Above the configured descriptive materiality threshold; this is not a model-ranking or significance test.",
+    "At 99% confidence, higher_equity_volatility__student_t_truncated terminal ES is 38.48% of initial wealth, versus 20.92% for student_t_truncated. Loss frequency and tail severity answer different questions.",
+    "physical_local_vol: loss probability differs from gaussian by -8.00 percentage points. Above the configured descriptive materiality threshold; this is not a model-ranking or significance test.",
+    "At 99% confidence, physical_local_vol terminal ES is 44.59% of initial wealth, versus 20.88% for gaussian. Loss frequency and tail severity answer different questions.",
+    "Stress scenarios: loss probabilities range from 76.28% to 77.64%. These are conditional scenario outcomes, not estimated probabilities of a crisis or proof of a preferred tail specification.",
+    "Tail sensitivity scenarios: loss probabilities range from 18.59% to 18.65%. These are conditional scenario outcomes, not estimated probabilities of a crisis or proof of a preferred tail specification.",
+    "physical_local_vol retains source status 'diagnostic'. It is included in the main analysis; the original validation qualification remains visible.",
+    "SPY: 81.05% of physical paths visit extrapolated wings. These paths depend on boundary assumptions beyond directly supported quotes.",
+    "No automatic allocation recommendation: compare conditional downside, data coverage and model assumptions rather than choosing the model with the highest mean."
+  ],
+  "identity": {
+    "availability": [
+      {
+        "label": "Cleaned data",
+        "reason": "Verified saved artifacts",
+        "stage": "processing",
+        "status": "saved"
+      },
+      {
+        "label": "Historical statistics",
+        "reason": "Verified saved artifacts",
+        "stage": "statistics",
+        "status": "available"
+      },
+      {
+        "label": "Historical portfolio Monte Carlo",
+        "reason": "Verified saved artifacts",
+        "stage": "monte_carlo",
+        "status": "complete"
+      },
+      {
+        "label": "OIS, forwards and individual IVs",
+        "reason": "Verified saved artifacts",
+        "stage": "option_calibration",
+        "status": "completed"
+      },
+      {
+        "label": "Fitted implied volatility",
+        "reason": "Verified saved artifacts",
+        "stage": "volatility_surface",
+        "status": "completed"
+      },
+      {
+        "label": "Local volatility and boundary validation",
+        "reason": "Verified saved artifacts",
+        "stage": "local_volatility",
+        "status": "saved"
+      },
+      {
+        "label": "Risk-neutral underlying validation",
+        "reason": "Verified saved artifacts",
+        "stage": "local_vol_mc",
+        "status": "saved"
+      },
+      {
+        "label": "Physical local-volatility portfolio",
+        "reason": "Verified saved artifacts",
+        "stage": "local_vol_real_world",
+        "status": "diagnostic"
+      }
+    ],
+    "cob": "2026-10-19",
+    "code_sha256": {
+      "mc_diagnostics": "65f116083fc40d3ce8d4cfd5d71d423c170a7323623818752c517aafc44581d8",
+      "simulation_comparison": "ec8f2ea1aeda013179b3a017f8c1502aa96641c272697304009cf4d49f69c74b"
+    },
+    "dependencies": {
+      "matplotlib": "3.11.2",
+      "numpy": "2.5.3",
+      "pandas": "2.3.3"
+    },
+    "portfolio": {
+      "archived_input": {
+        "holdings": [
+          {
+            "bucket": "equity",
+            "request_id": "SPY",
+            "weight": 0.7
+          },
+          {
+            "bucket": "sovereign_fixed_income",
+            "request_id": "IEF",
+            "weight": 0.3
+          }
+        ],
+        "instructions": {
+          "allocation": "50% SPY equity ETF and 50% IEF 7-10 Year US Treasury ETF. Weights are fractions of portfolio value in EUR.",
+          "fx": "EURUSD is quoted in USD per EUR: EUR value = USD value / EURUSD. Reporting currency does not change native quote currencies.",
+          "nav": "Optional portfolio market value in EUR. Required later, together with prices, FX and multipliers, to turn weights into quantities. No quantities are calculated now.",
+          "options": "Options are contract reference data only, not portfolio holdings. Contract-code discovery does not download prices or calibrate a volatility surface.",
+          "scope": "SPX and SPX options are reference inputs for a future model of SPY movements, not portfolio holdings. Cleaning records this relationship without calibrating or simulating it.",
+          "weights": "Use decimal fractions (0.20 means 20%) of market value in reporting currency. Complete holding weights must match target_allocation and sum to 1. No automatic normalization. This first schema is long-only."
+        },
+        "nav": null,
+        "reference_data": [
+          "SPX",
+          "US10Y",
+          "EUR10Y",
+          "SOFR",
+          "ESTR",
+          "EURUSD"
+        ],
+        "reporting_currency": "EUR",
+        "schema_version": 1,
+        "target_allocation": {
+          "equity": 0.7,
+          "sovereign_fixed_income": 0.3
+        },
+        "weight_basis": "reporting_currency_market_value"
+      },
+      "changed_from_archived_snapshot": true,
+      "current_input": {
+        "holdings": [
+          {
+            "bucket": "equity",
+            "request_id": "SPY",
+            "weight": 0.7
+          },
+          {
+            "bucket": "sovereign_fixed_income",
+            "request_id": "IEF",
+            "weight": 0.3
+          }
+        ],
+        "instructions": {
+          "allocation": "The holdings and target_allocation fields define the allocation. Weights are fractions of portfolio value in the configured reporting_currency.",
+          "fx": "EURUSD is quoted in USD per EUR: EUR value = USD value / EURUSD. Reporting currency does not change native quote currencies.",
+          "nav": "Optional portfolio market value in EUR. Required later, together with prices, FX and multipliers, to turn weights into quantities. No quantities are calculated now.",
+          "options": "Options are contract reference data only, not portfolio holdings. Contract-code discovery does not download prices or calibrate a volatility surface.",
+          "scope": "SPX and SPX options are reference inputs for a future model of SPY movements, not portfolio holdings. Cleaning records this relationship without calibrating or simulating it.",
+          "weights": "Use decimal fractions (0.20 means 20%) of market value in reporting currency. Complete holding weights must match target_allocation and sum to 1. No automatic normalization. This first schema is long-only."
+        },
+        "nav": null,
+        "reference_data": [
+          "SPX",
+          "US10Y",
+          "EUR10Y",
+          "SOFR",
+          "ESTR",
+          "EURUSD"
+        ],
+        "reporting_currency": "EUR",
+        "schema_version": 1,
+        "target_allocation": {
+          "equity": 0.7,
+          "sovereign_fixed_income": 0.3
+        },
+        "weight_basis": "reporting_currency_market_value"
+      },
+      "holdings": [
+        {
+          "bucket": "equity",
+          "request_id": "SPY",
+          "weight": 0.7
+        },
+        {
+          "bucket": "sovereign_fixed_income",
+          "request_id": "IEF",
+          "weight": 0.3
+        }
+      ],
+      "reference_data": [
+        "SPX",
+        "US10Y",
+        "EUR10Y",
+        "SOFR",
+        "ESTR",
+        "EURUSD"
+      ],
+      "reporting_currency": "EUR"
+    },
+    "schema_version": 1,
+    "settings": {
+      "allow_approximate_terminal_horizon": true,
+      "confidence_levels": [
+        0.95,
+        0.99
+      ],
+      "enabled": true,
+      "material_loss_probability_difference": 0.02,
+      "maximum_chart_points": 1500,
+      "maximum_relative_horizon_difference": 0.005,
+      "minimum_expected_tail_paths": 50,
+      "open_report_after_run": true,
+      "plot_windows_after_run": [
+        "mc_paths",
+        "mc_density"
+      ],
+      "primary_return_type": "simple",
+      "reference_model": "gaussian",
+      "sampling_confidence": 0.95,
+      "schema_version": 1,
+      "simulation_plots": {
+        "fan_quantiles": [
+          0.05,
+          0.95
+        ],
+        "histogram_bins": 70,
+        "loss_thresholds": [
+          0.05,
+          0.1,
+          0.2,
+          0.3,
+          0.5
+        ],
+        "sample_paths": 20,
+        "smiles_per_figure": 6,
+        "tail_display_fraction": 0.1
+      },
+      "surface_display_points": 2500
+    },
+    "source_manifests": {
+      "local_vol_mc": {
+        "folder": "processed/2026-10-19/4807811218385d61/local_vol_mc/3f28620e05ccfb3a",
+        "sha256": "20d7ce8e21701bf8c43dc80dfb9f41d1ab15814d54283d8d54cfd316a4cba4d5"
+      },
+      "local_vol_real_world": {
+        "folder": "processed/2026-10-19/4807811218385d61/local_vol_real_world/e6878f48a09347f9",
+        "sha256": "ab9c39343576b04fc020c2a6788df1f0fd99f4f78bf59dc11b66999844a758ae"
+      },
+      "local_volatility": {
+        "folder": "processed/2026-10-19/4807811218385d61/local_volatility/a3f30eb0ad0eedc0",
+        "sha256": "46432534f5d380abba0f040108f37546d7e831e8dc07ad20a5b916af36f2c783"
+      },
+      "monte_carlo": {
+        "folder": "processed/2026-10-19/4807811218385d61/monte_carlo/83d507f338ea387d",
+        "sha256": "7fc52ae4b1915d9993249607bca267acf0c48e3e16510892fe25e63ee2411cef"
+      },
+      "option_calibration": {
+        "folder": "processed/2026-10-19/4807811218385d61/option_calibration/29310296402c18fc",
+        "sha256": "da501b5b71063e5b85565f6f68904b35aeef6ad07b195e211a9473f6edf6dc7b"
+      },
+      "processing": {
+        "folder": "processed/2026-10-19/4807811218385d61",
+        "sha256": "fec0a47124c0f1454aa55e29ad0f4b5604ba950b8a88e8e9d4650d7e174067d7"
+      },
+      "statistics": {
+        "folder": "processed/2026-10-19/4807811218385d61/statistics/80ee9956b4b6ad38",
+        "sha256": "57bf2db81fc8c734a7b660cfa7a62d1db97d0535c239d26b0c87f7a134ceed43"
+      },
+      "volatility_surface": {
+        "folder": "processed/2026-10-19/4807811218385d61/volatility_surface/842ba9ac3485b68b",
+        "sha256": "242974a098260d7e36870073cbd3609e082c2de4c4475fa8def1d9b668ace34f"
+      }
+    }
+  },
+  "modeling_context": [
+    {
+      "actual_forecast_end": "2027-12-17",
+      "actual_forecast_start": "2026-10-20",
+      "actual_history_end": "2026-10-19",
+      "actual_history_start": "2016-10-19",
+      "calendar": "XNYS",
+      "clock": "Exchange-session daily log increments",
+      "currency": "USD",
+      "history_policy": "Trailing 10 calendar years",
+      "initial_value": 100,
+      "label": "Historical portfolio Monte Carlo",
+      "matched_daily_intervals": 2512,
+      "minimum_observations": 252,
+      "paths": 10000,
+      "physical_settings": null,
+      "portfolio_method": "buy_and_hold",
+      "requested_forecast_end": "2027-12-17",
+      "requested_forecast_start": "2026-10-20",
+      "requested_history_end": "2026-10-19",
+      "requested_history_start": "2016-10-19",
+      "seed": 1729,
+      "simulation_performed": true,
+      "stage": "monte_carlo",
+      "status": "complete",
+      "steps": 292,
+      "stress_calibrations": [
+        {
+          "calibration": {
+            "drift_source": "same_window",
+            "dropped_holding_intervals_for_fx": 0,
+            "first_start": "2008-01-02",
+            "last_end": "2009-06-30",
+            "observations": 376,
+            "requested_end": "2009-06-30",
+            "requested_start": "2008-01-01"
+          },
+          "drift": "stress",
+          "end": "2009-06-30",
+          "name": "gfc",
+          "start": "2008-01-01",
+          "status": "complete",
+          "warnings": []
+        }
+      ],
+      "student_t_settings": {
+        "df_bounds": [
+          2.1,
+          50
+        ],
+        "excluded_tail_probability": 0.0005,
+        "fit_df": true,
+        "sensitivity_tail_probabilities": [
+          0.002,
+          5e-05
+        ]
+      },
+      "terminal_results_included": true,
+      "user_scenario": {
+        "applied": [
+          {
+            "effective_annual_compound_growth": 0.06,
+            "effective_annual_volatility": 0.3,
+            "growth_source": "user",
+            "historical_annual_compound_growth": 0.15452798760289788,
+            "historical_annual_volatility": 0.17992233703505534,
+            "instrument": "SPY",
+            "volatility_source": "user"
+          }
+        ],
+        "models": [
+          "higher_equity_volatility__gaussian",
+          "higher_equity_volatility__student_t_truncated"
+        ],
+        "reason": "",
+        "requested": {
+          "holdings": {
+            "SPY": {
+              "annual_compound_growth": 0.06,
+              "annual_volatility": 0.3
+            }
+          },
+          "name": "higher_equity_volatility",
+          "periods_per_year": 252
+        },
+        "status": "complete"
+      }
+    },
+    {
+      "actual_forecast_end": "2027-12-17T14:30:00+00:00",
+      "actual_forecast_start": "2026-10-20T17:01:45.377463+00:00",
+      "actual_history_end": "2026-10-19",
+      "actual_history_start": "2016-10-19",
+      "calendar": "XNYS",
+      "clock": "ACT/365F",
+      "currency": "USD",
+      "history_policy": "Trailing 10 calendar years",
+      "initial_value": 100,
+      "label": "Physical local-volatility portfolio",
+      "matched_daily_intervals": 2512,
+      "minimum_observations": 252,
+      "paths": 10000,
+      "physical_settings": {
+        "allow_boundary_assumptions": true,
+        "allow_precision_only_review": true,
+        "annualization_periods": 252,
+        "convergence_relative_initial": 0.001,
+        "convergence_z": 3.0,
+        "drift_convention": "historical_arithmetic",
+        "enabled": true,
+        "end_time": "09:30",
+        "end_timezone": "America/New_York",
+        "maximum_path_steps": 50000000,
+        "methods_by_return_basis": {
+          "gross_total_return_index_level": "total_return_proxy",
+          "net_total_return_index_level": "total_return_proxy",
+          "price_index_level": "direct_price",
+          "split_and_dividend_adjusted_close": "total_return_proxy"
+        },
+        "refinement": 2,
+        "save_observations": 80,
+        "schema_version": 1,
+        "steps_per_year": 365,
+        "unmapped_holdings": "historical"
+      },
+      "portfolio_method": "buy_and_hold",
+      "requested_forecast_end": "2027-12-17",
+      "requested_forecast_start": "2026-10-20",
+      "requested_history_end": "2026-10-19",
+      "requested_history_start": "2016-10-19",
+      "seed": 1729,
+      "simulation_performed": true,
+      "stage": "local_vol_real_world",
+      "status": "diagnostic",
+      "steps": 972,
+      "stress_calibrations": [],
+      "student_t_settings": null,
+      "terminal_results_included": true
+    }
+  ],
+  "portfolio": {
+    "archived_input": {
+      "holdings": [
+        {
+          "bucket": "equity",
+          "request_id": "SPY",
+          "weight": 0.7
+        },
+        {
+          "bucket": "sovereign_fixed_income",
+          "request_id": "IEF",
+          "weight": 0.3
+        }
+      ],
+      "instructions": {
+        "allocation": "50% SPY equity ETF and 50% IEF 7-10 Year US Treasury ETF. Weights are fractions of portfolio value in EUR.",
+        "fx": "EURUSD is quoted in USD per EUR: EUR value = USD value / EURUSD. Reporting currency does not change native quote currencies.",
+        "nav": "Optional portfolio market value in EUR. Required later, together with prices, FX and multipliers, to turn weights into quantities. No quantities are calculated now.",
+        "options": "Options are contract reference data only, not portfolio holdings. Contract-code discovery does not download prices or calibrate a volatility surface.",
+        "scope": "SPX and SPX options are reference inputs for a future model of SPY movements, not portfolio holdings. Cleaning records this relationship without calibrating or simulating it.",
+        "weights": "Use decimal fractions (0.20 means 20%) of market value in reporting currency. Complete holding weights must match target_allocation and sum to 1. No automatic normalization. This first schema is long-only."
+      },
+      "nav": null,
+      "reference_data": [
+        "SPX",
+        "US10Y",
+        "EUR10Y",
+        "SOFR",
+        "ESTR",
+        "EURUSD"
+      ],
+      "reporting_currency": "EUR",
+      "schema_version": 1,
+      "target_allocation": {
+        "equity": 0.7,
+        "sovereign_fixed_income": 0.3
+      },
+      "weight_basis": "reporting_currency_market_value"
+    },
+    "changed_from_archived_snapshot": true,
+    "current_input": {
+      "holdings": [
+        {
+          "bucket": "equity",
+          "request_id": "SPY",
+          "weight": 0.7
+        },
+        {
+          "bucket": "sovereign_fixed_income",
+          "request_id": "IEF",
+          "weight": 0.3
+        }
+      ],
+      "instructions": {
+        "allocation": "The holdings and target_allocation fields define the allocation. Weights are fractions of portfolio value in the configured reporting_currency.",
+        "fx": "EURUSD is quoted in USD per EUR: EUR value = USD value / EURUSD. Reporting currency does not change native quote currencies.",
+        "nav": "Optional portfolio market value in EUR. Required later, together with prices, FX and multipliers, to turn weights into quantities. No quantities are calculated now.",
+        "options": "Options are contract reference data only, not portfolio holdings. Contract-code discovery does not download prices or calibrate a volatility surface.",
+        "scope": "SPX and SPX options are reference inputs for a future model of SPY movements, not portfolio holdings. Cleaning records this relationship without calibrating or simulating it.",
+        "weights": "Use decimal fractions (0.20 means 20%) of market value in reporting currency. Complete holding weights must match target_allocation and sum to 1. No automatic normalization. This first schema is long-only."
+      },
+      "nav": null,
+      "reference_data": [
+        "SPX",
+        "US10Y",
+        "EUR10Y",
+        "SOFR",
+        "ESTR",
+        "EURUSD"
+      ],
+      "reporting_currency": "EUR",
+      "schema_version": 1,
+      "target_allocation": {
+        "equity": 0.7,
+        "sovereign_fixed_income": 0.3
+      },
+      "weight_basis": "reporting_currency_market_value"
+    },
+    "holdings": [
+      {
+        "bucket": "equity",
+        "request_id": "SPY",
+        "weight": 0.7
+      },
+      {
+        "bucket": "sovereign_fixed_income",
+        "request_id": "IEF",
+        "weight": 0.3
+      }
+    ],
+    "reference_data": [
+      "SPX",
+      "US10Y",
+      "EUR10Y",
+      "SOFR",
+      "ESTR",
+      "EURUSD"
+    ],
+    "reporting_currency": "EUR"
+  },
+  "run_id": "ce5ce8408eb92ea2",
+  "schema_version": 1,
+  "scope": "final_report_only",
+  "simulations_performed": false
+}

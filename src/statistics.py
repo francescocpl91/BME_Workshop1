@@ -37,6 +37,7 @@ import numpy as np
 import pandas as pd
 
 from .json_config import _unique_object, _invalid_constant
+from .portfolio import WEIGHT_TOLERANCE
 from .storage import safe_name, write_json
 
 
@@ -693,7 +694,7 @@ def analyze_processed(processed, modeling_file):
     # Zero-weight entries need no history. Every positive-weight entry remains
     # required for aggregation; unavailable holdings are never redistributed.
     holdings = [h for h in raw_holdings if h["weight"] > 0]
-    if not holdings or not math.isclose(sum(h["weight"] for h in holdings),1,abs_tol=1e-8,rel_tol=0):
+    if not holdings or not math.isclose(math.fsum(h["weight"] for h in holdings),1,abs_tol=WEIGHT_TOLERANCE,rel_tol=0):
         raise ValueError("Statistics require complete positive portfolio weights summing to one.")
     # Cleaning already calculated simple_return (and may have excluded some
     # intervals). Select configured holdings only; references/options stay out.

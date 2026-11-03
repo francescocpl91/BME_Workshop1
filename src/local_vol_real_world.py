@@ -452,6 +452,7 @@ def report(result):
 def simulate_processed(processed, local, surface, validation, mc_file, config_file, *, source_folder, progress=None):
     """Integrated entry point: current objects in, offline result out, no writes."""
     cfg=load_config(config_file);mc=load_monte_carlo_config(mc_file)
+    mc.pop("user_scenario", None)  # A historical what-if is not a physical local-vol input.
     from .cob import forecast_start_for_cob
     mc['forecast_start'] = forecast_start_for_cob(processed.cob)
     identity=dict(config=cfg,mc_config=mc,processing_id=processed.run_id,cob=processed.cob,
@@ -564,7 +565,8 @@ def simulate_saved(processed_folder, local_folder, surface_folder, validation_fo
         if not Path(path).resolve().is_relative_to(folder):raise ValueError('stages_must_belong_to_processing_folder')
     pm,pfiles=_read_stage(folder);lm,lfiles=_read_stage(local_folder)
     sm,_=_read_stage(surface_folder);vm,vfiles=_read_stage(validation_folder)
-    tables={k:pd.read_csv(BytesIO(pfiles[k]),dtype={'instrument_id':str,'date':str},float_precision='round_trip')
+    tables={k:pd.read_csv(BytesIO(pfiles[k]),dtype={'instrument_id':str,'date':str},
+                          keep_default_na=False,na_values=[''],float_precision='round_trip')
             for k in ('selected_prices','selected_references') if k in pfiles}
     if pm['run_id'] != folder.name:raise ValueError('processed_folder_identity_mismatch')
     for k,table in tables.items():

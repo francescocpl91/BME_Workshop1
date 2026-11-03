@@ -70,7 +70,7 @@ def load_monte_carlo_config(path):
             "seed","calendar","initial_value","portfolio_method","calibration",
             "fallback_currency","fx_series","student_t","quantiles","confidence_levels",
             "sample_paths","plots","instructions"}
-    optional = {"diagnostics", "stress_calibrations"}
+    optional = {"diagnostics", "stress_calibrations", "user_scenario"}
     if not isinstance(cfg,dict) or not keys <= set(cfg) or set(cfg)-keys-optional:
         raise ValueError("Missing or unknown Monte Carlo configuration settings.")
     if type(cfg["schema_version"]) is not int or cfg["schema_version"] != 2:
@@ -403,8 +403,14 @@ class MonteCarloResult:
         # Distinguish simulated mean from risk-window volatility: a stress may
         # intentionally retain baseline drift while using stress covariance.
         for row in self.tables["calibration_parameters"].to_dict("records"):
+            se = row["mean_estimation_standard_error"]
+            se_text = f"{se:.6f}" if pd.notna(se) else "n/a (assumed drift)"
             lines.append(f"| {row['calibration_set']} | {row['factor']} | {row['mean_daily_log']:.6f} | "
-                         f"{row['std_daily_log']:.6f} | {row['mean_estimation_standard_error']:.6f} |")
+                         f"{row['std_daily_log']:.6f} | {se_text} |")
+        if s.get("user_scenario"):
+            view = s["user_scenario"]
+            lines += ["","## User assumptions","",f"Status: {view['status']}. {view['reason']}",
+                      "",json.dumps(view["requested"],ensure_ascii=False)]
         lines += ["","Mean estimation standard errors assume independent observations and exclude regime uncertainty."]
         lines += ["","Loss VaR and Expected Shortfall in risk_summary.csv apply to the FULL forecast horizon, not one day.",
                   "They are fractions of initial wealth and can be negative if the threshold is a gain.",
@@ -619,6 +625,65 @@ def _run_scenario(model,mean,covariance,root,transform,weights,dates,cfg,student
     return wealth,sample_mean,sample_cov
 
 
+def _user_moments(view, factors, historical_mean, historical_root, reserved_names):
+    """Apply native holding assumptions to the baseline daily log moments.
+
+    Scaling rows of the covariance root preserves historical shock correlations,
+    including cross-covariances with unchanged FX factors. It also retains the
+    same shock coordinates (and hence the same random draws) as the baseline.
+    """
+    if not isinstance(view,dict) or set(view) != {"name","periods_per_year","holdings"}:
+        raise SimulationUnavailable("User scenario requires name, periods_per_year and holdings.")
+    name = view["name"]
+    if not isinstance(name,str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,39}",name) or name in reserved_names:
+        raise SimulationUnavailable("User scenario name must be a unique, safe identifier distinct from baseline and stress names.")
+    periods, overrides = view["periods_per_year"], view["holdings"]
+    if type(periods) is not int or periods <= 0 or not isinstance(overrides,dict) or not overrides:
+        raise SimulationUnavailable("User scenario requires a positive annualization period and nonempty holding assumptions.")
+    mean, root, applied = historical_mean.copy(), historical_root.copy(), []
+    for instrument, settings in overrides.items():
+        factor = "asset::" + instrument
+        if factor not in factors:
+            raise SimulationUnavailable(f"User scenario ID {instrument!r} is not a simulated portfolio holding.")
+        if not isinstance(settings,dict) or not settings or set(settings) - {"annual_compound_growth","annual_volatility"}:
+            raise SimulationUnavailable(f"Invalid assumption fields for {instrument}.")
+        if any(type(v) not in (int,float) or not math.isfinite(v) for v in settings.values()):
+            raise SimulationUnavailable(f"Assumptions for {instrument} must be finite numbers.")
+        i = factors.index(factor)
+        daily_sigma = float(np.linalg.norm(root[i]))
+        if "annual_compound_growth" in settings:
+            growth = settings["annual_compound_growth"]
+            if growth <= -1:
+                raise SimulationUnavailable(f"Compound growth for {instrument} must exceed -100%.")
+            mean[i] = math.log1p(growth) / periods
+        if "annual_volatility" in settings:
+            sigma = settings["annual_volatility"]
+            if sigma <= 0 or daily_sigma == 0:
+                raise SimulationUnavailable(f"{instrument} needs positive assumed volatility and observed variation.")
+            root[i] *= (sigma / math.sqrt(periods)) / daily_sigma
+        applied.append(dict(instrument=instrument,
+            growth_source="user" if "annual_compound_growth" in settings else "historical",
+            volatility_source="user" if "annual_volatility" in settings else "historical",
+            historical_annual_compound_growth=math.expm1(historical_mean[i]*periods),
+            effective_annual_compound_growth=math.expm1(mean[i]*periods),
+            historical_annual_volatility=daily_sigma*math.sqrt(periods),
+            effective_annual_volatility=float(np.linalg.norm(root[i]))*math.sqrt(periods)))
+    return mean,root,applied
+
+
+def _append_calibration(result, compared, label):
+    """Prefix AFTER simulation so names cannot affect the seeded draws."""
+    prefix = label+"__"
+    for model,meta in compared.summary["models"].items():
+        result.summary["models"][prefix+model] = dict(meta,calibration_set=label)
+    for name,table in compared.tables.items():
+        table = table.copy()
+        table["calibration_set"] = label
+        if "model" in table:
+            table["model"] = prefix+table["model"]
+        result.tables[name] = pd.concat([result.tables[name],table],ignore_index=True)
+
+
 def simulate_processed(processed,config_file):
     """Run baseline and independent named stress calibrations from the same archive.
 
@@ -628,6 +693,10 @@ Missing stress history is reported without discarding a successful baseline.
 """
     cfg = load_monte_carlo_config(config_file)
     result = _simulate_core(processed,cfg)
+    view = cfg.get("user_scenario")
+    if view is not None:
+        result.summary["user_scenario"] = dict(requested=view, status="unavailable", models=[],
+            reason="Baseline status: "+result.summary["status"]+". "+"; ".join(result.summary["warnings"]))
     if result.summary["status"] != "complete":
         return result
     # Capture baseline drifts before concatenating stress tables. A stress
@@ -652,19 +721,30 @@ Missing stress history is reported without discarding a successful baseline.
             continue
         # Prefix output labels AFTER drawing paths, preserving matching random
         # streams for the same model in baseline and stress comparisons.
-        prefix = stress["name"]+"__"
-        for model,meta in compared.summary["models"].items():
-            result.summary["models"][prefix+model] = dict(meta,calibration_set=stress["name"])
-        for name,table in compared.tables.items():
-            table = table.copy()
-            table["calibration_set"] = stress["name"]
-            if "model" in table:
-                table["model"] = prefix+table["model"]
-            result.tables[name] = pd.concat([result.tables[name],table],ignore_index=True)
+        _append_calibration(result, compared, stress["name"])
+    if view is not None:
+        # Use the baseline window and currency, independently of crisis windows.
+        # A bad optional view leaves every successful historical result usable.
+        record = result.summary["user_scenario"]
+        try:
+            with np.errstate(over="raise",invalid="raise",divide="raise"):
+                compared = _simulate_core(processed,cfg,user_view=view,
+                                         forced_currency=result.summary["simulation_currency"])
+        except (SimulationUnavailable,OverflowError,FloatingPointError) as exc:
+            record["reason"] = str(exc)
+        else:
+            if compared.summary["status"] == "complete":
+                _append_calibration(result, compared, view["name"])
+                record.update(status="complete", reason="", applied=compared.summary["applied_assumptions"],
+                              models=[view["name"]+"__"+m for m in compared.summary["models"]])
+            else:
+                record["reason"] = "; ".join(compared.summary["warnings"])
+        if record["status"] != "complete":
+            result.summary["warnings"].append("User scenario unavailable: "+record["reason"])
     return result
 
 
-def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_currency=None):
+def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_currency=None,user_view=None):
     """Calibrate and simulate; invalid inputs never trigger API requests.
 
     A missing-data condition returns a result with status=unavailable and a
@@ -687,6 +767,8 @@ def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_cur
                     code={p.name:hashlib.sha256(p.read_bytes()).hexdigest()
                           for p in (Path(__file__),Path(__file__).with_name("statistics.py"),Path(__file__).with_name("mc_diagnostics.py"),Path(__file__).with_name("cob.py"),Path(__file__).with_name("mc_common.py"))},
                     dependencies={k:version(k) for k in ("numpy","pandas","scipy","exchange-calendars","matplotlib")})
+    if user_view is not None:
+        identity["applied_user_scenario"] = user_view
     # Sorted JSON makes a stable compact identifier for this exact setup.
     # Explanatory JSON instructions were excluded by the loader above.
     run_id = hashlib.sha256(json.dumps(identity,sort_keys=True).encode()).hexdigest()[:16]
@@ -737,6 +819,13 @@ def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_cur
     # (ddof=1). atleast_2d preserves matrix shape for a single factor.
     root = _root_covariance(covariance)
     keys = joined.columns.tolist()
+    historical_root = root
+    observed_std = np.sqrt(np.diag(covariance))
+    if user_view is not None:
+        reserved = {"baseline", *(stress["name"] for stress in cfg["stress_calibrations"])}
+        mean,root,applied = _user_moments(user_view, keys, sample_mean, historical_root, reserved)
+        covariance = root @ root.T
+        summary["applied_assumptions"] = applied
     # The input validator already permits rounding within 1e-8 of one.
     # Resolve only that accepted rounding, not missing holdings or incorrect
     # allocations. Keep the configured values in metadata and the identity.
@@ -758,7 +847,8 @@ def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_cur
                    weight_rounding_reconciled=configured_total != 1.,
                    fx_factors=fx,forecast_dates=dates,steps=len(dates)-1,
                    calibration=dict(requested_start=requested_start,requested_end=risk_window["end"] if risk_window else _day(processed.cob),
-                                    drift_source="baseline" if drift_override is not None else "same_window",first_start=joined.index[0][0],
+                                    drift_source=("historical_with_user_assumptions" if user_view is not None else
+                                                  "baseline" if drift_override is not None else "same_window"),first_start=joined.index[0][0],
                                     last_end=joined.index[-1][1],observations=len(joined),
                                     dropped_holding_intervals_for_fx=len(native)-len(joined)),
                    models={},warnings=summary["warnings"])
@@ -782,6 +872,13 @@ def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_cur
                              mean_estimation_standard_error=(drift_override[k]["mean_estimation_standard_error"] if drift_override is not None
                                                             else float(math.sqrt(covariance[i,i]/len(joined)))),
                              observations=len(joined)) for i,k in enumerate(keys)]
+    if user_view is not None:
+        for i,row in enumerate(calibration_rows):
+            native_id = keys[i].removeprefix("asset::")
+            if keys[i].startswith("asset::") and "annual_compound_growth" in user_view["holdings"].get(native_id,{}):
+                row.update(drift_source="user_assumption",mean_estimation_standard_error=None)
+            else:
+                row["mean_estimation_standard_error"] = float(observed_std[i]/math.sqrt(len(joined)))
     # Correlation C_ij/sqrt(C_ii*C_jj) is undefined for a constant factor;
     # export None rather than divide by zero or invent correlation.
     cov_rows = [dict(factor_i=a,factor_j=b,covariance_daily_log=float(covariance[i,j]),
@@ -795,7 +892,7 @@ def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_cur
         try:
             # Fit tails on actual window data centered on their own sample mean.
             # Changing simulated drift alone must not change the estimated tail shape.
-            fitted = _student_parameters(x-sample_mean,root,cfg["student_t"])
+            fitted = _student_parameters(x-sample_mean,historical_root,cfg["student_t"])
         except SimulationUnavailable as exc:
             summary["status"] = "unavailable"
             summary["warnings"].append(str(exc))
@@ -806,6 +903,8 @@ def _simulate_core(processed,cfg,risk_window=None,drift_override=None,forced_cur
             summary["warnings"].append("All factors are deterministic: df is not identifiable and no tail truncation is applied.")
         targets = [cfg["student_t"]["excluded_tail_probability"],
                    *cfg["student_t"]["sensitivity_tail_probabilities"]]
+        if user_view is not None:
+            targets = targets[:1]  # Only primary user models, without a second tail sweep.
         # Each removed-mass setting creates a full scenario sharing calibrated
         # mean/covariance/df but with a separately derived truncation radius.
         for i,target in enumerate(targets):
@@ -970,7 +1069,8 @@ def simulate_saved_processing(folder,config_file):
         raw = path.read_bytes()
         if hashlib.sha256(raw).hexdigest() != entry["sha256"]:
             raise ValueError("Cleaned input checksum mismatch: "+name)
-        table = pd.read_csv(BytesIO(raw),dtype={"instrument_id":str,"date":str,"return_start_date":str})
+        table = pd.read_csv(BytesIO(raw),dtype={"instrument_id":str,"date":str,"return_start_date":str},
+                            keep_default_na=False,na_values=[""],float_precision="round_trip")
         if len(table) != entry["rows"]:
             raise ValueError("Cleaned input row-count mismatch: "+name)
         tables[name] = table

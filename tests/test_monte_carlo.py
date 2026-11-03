@@ -252,6 +252,28 @@ class MonteCarloTests(unittest.TestCase):
         self.assertEqual(result.summary["status"],"disabled")
         self.assertFalse(result.summary["simulation_performed"])
 
+    def test_saved_reader_preserves_na_identifier_and_exact_history_for_user_view(self):
+        p=self.processed(reporting="USD")
+        holding=p.summary["portfolio"]["holdings"][0]
+        identifier=holding["request_id"]
+        holding["request_id"]="NA"
+        prices=p.tables["selected_prices"]
+        prices.loc[prices.instrument_id==identifier,"instrument_id"]="NA"
+        self.cfg["user_scenario"]=dict(name="my_view",periods_per_year=252,holdings={"NA":{"annual_volatility":.25}})
+        self.write_config()
+        source=self.root/"saved";source.mkdir()
+        files={}
+        for name,frame in p.tables.items():
+            file=source/(name+".csv");frame.to_csv(file,index=False)
+            files[name]=dict(file=file.name,rows=len(frame),sha256=hashlib.sha256(file.read_bytes()).hexdigest())
+        metadata=dict(p.summary,complete=True,archive=str(p.archive),cob=p.cob,run_id=p.run_id,files=files)
+        (source/"manifest.json").write_text(json.dumps(metadata),encoding="utf-8")
+        direct=simulate_processed(p,self.file)
+        saved=simulate_saved_processing(source,self.file)
+        self.assertEqual(saved.summary["user_scenario"]["status"],"complete")
+        for name in ("calibration_returns","terminal_values"):
+            pd.testing.assert_frame_equal(direct.tables[name],saved.tables[name],check_exact=True)
+
     def test_saved_reader_exports_hashes_and_keeps_sources_unchanged(self):
         p=self.processed(reporting="EUR")
         source=self.root/"processed"; source.mkdir()

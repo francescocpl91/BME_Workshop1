@@ -16,6 +16,7 @@ los JSON y los metadatos guardados de cada ejecución son la autoridad para fech
 instrumentos, ponderaciones y tolerancias. No hay una cartera adicional definida
 por esta documentación.
 
+- [Informes oficiales de ejemplo](#informes-oficiales-de-ejemplo)
 - [Flujos de ejecución](#flujos-de-ejecución)
 - [Estadística histórica](#estadística-histórica)
 - [Monte Carlo histórico](#monte-carlo-histórico)
@@ -32,6 +33,19 @@ por esta documentación.
 - [Simulación física de la cartera](#simulación-física-de-la-cartera)
 - [Análisis académico final](#análisis-académico-final)
 - [Verificación y alcance de la entrega](#verificación-y-alcance-de-la-entrega)
+
+## Informes oficiales de ejemplo
+
+El [directorio de informes oficiales](reports/examples/) contiene dos ejemplos completos del análisis final. Puedes leer el Markdown en GitHub o clonar el repositorio y abrir `report.html` en el navegador para ver el diseño completo y las figuras integradas. Para consultar los ejemplos no se necesitan Python, credenciales de proveedores ni suscripción de IBKR.
+
+| Fecha de cierre (COB) | Qué muestra el informe |
+|---|---|
+| **19 de octubre de 2026 · Con datos de opciones** ([Markdown](reports/examples/2026-10-19/report.md) · [HTML](reports/examples/2026-10-19/report.html)) | La cartera de 70% SPY y 30% IEF incluye comparaciones gaussianas, Student-t, de supuestos del usuario y de la crisis financiera global (GFC). La sección de volatilidad muestra las sonrisas ajustadas de SPX y las superficies de volatilidad implícita y local. La previsión bajo la medida física usa SPX como referencia de SPY y volatilidad histórica para IEF. Su estado es **diagnóstico** porque quedó pendiente una comprobación de precisión en la valoración neutral al riesgo. |
+| **30 de octubre de 2026 · Solo modelos históricos** ([Markdown](reports/examples/2026-10-30/report.md) · [HTML](reports/examples/2026-10-30/report.html)) | Sin una superficie SPX admisible, no se obtiene la previsión física con volatilidad local. Los modelos históricos, de estrés y de supuestos del usuario sí generan trayectorias, distribuciones, probabilidades de pérdida e informe final. |
+
+Consulta primero la **disponibilidad** para identificar qué modelos se ejecutaron. Después compara crecimiento, distribuciones terminales y riesgo de pérdida durante el horizonte indicado. En ambos casos se utilizó USD como divisa alternativa por falta de histórico EUR/USD utilizable. La probabilidad de pérdida se refiere, por tanto, al patrimonio en USD. La simulación neutral al riesgo del subyacente valida los precios de las opciones; la simulación física genera la previsión de cartera.
+
+Cada carpeta incluye tablas comparativas, figuras y un `summary.json` con el ID de ejecución y las huellas digitales de los resultados de origen. Son copias portátiles de resultados guardados. Las ubicaciones de las etapas anteriores se conservan como referencia; los datos brutos necesarios para repetirlas son locales. Las nuevas ejecuciones escriben en carpetas fechadas independientes de estos ejemplos de entrega.
 
 ## Instalación y ejecución
 
@@ -58,36 +72,93 @@ declaradas en `pyproject.toml`. No guardes credenciales en código o JSON versio
    `DD/MM/YYYY`. Descarga o reutiliza el archivo y ejecuta el mismo proceso local.
 
 El COB debe ser ayer o anterior según Europe/London; el inicio del histórico no
-puede superar el COB. Una copia nueva del repositorio no incluye los archivos
-privados de mercado ni los resultados generados. Utiliza descarga con los accesos
+puede superar el COB. Una copia nueva del repositorio incluye los dos informes oficiales. Los archivos
+privados de mercado son locales. Utiliza descarga con los accesos
 disponibles o proporciona un archivo local válido. Los tests ofrecen ejemplos
 sintéticos reproducibles sin APIs; no son observaciones de la cartera de ejemplo.
 
 ## Configuración y acceso a proveedores
 
-| Entrada | Finalidad |
+### Primero la cartera, después los datos que hay que descargar
+
+Los tickers, pesos, fechas y parámetros del ejemplo **están fijados en los JSON** («hardcoded») para que se pueda reproducir o modificar el experimento. Los campos `instructions` describen los parámetros. Para cambiar el comportamiento hay que editar sus valores. Conviene distinguir tres decisiones:
+
+| Pregunta | Dónde se configura | Ejemplo actual |
+|---|---|---|
+| ¿Qué activos tenemos en cartera? | `config/portfolio.json`: `holdings`, `target_allocation`, `reporting_currency` | 70% SPY (ETF de renta variable) y 30% IEF (ETF de deuda pública estadounidense), con resultados en EUR. |
+| ¿Qué series hacen falta? | Peticiones habilitadas en los JSON de proveedores indicados abajo. Las series de apoyo se identifican con `reference_data` en la cartera. | SPX es el índice de referencia para el modelo de opciones de SPY. SPX, sus opciones, las divisas y los tipos de interés no tienen peso en la cartera. |
+| ¿Cómo se analizan las series? | JSON de limpieza, estadística, simulación y calibración descritos abajo. | Diez años para calibrar el Monte Carlo base, un periodo independiente para la crisis financiera global (GFC) y modelos opcionales basados en opciones. |
+
+**Una posición.** Para invertir el 100% en SPY, sustituye solo estos dos campos de `config/portfolio.json`. Conserva los demás campos obligatorios, incluido `reference_data`. Así se ejecutan las mismas estadísticas, simulación e informe para un solo activo. Puedes conservar IEF en los proveedores si te interesa su histórico. Si quieres dejar de descargarlo, deshabilita sus peticiones en cada JSON de proveedor que lo solicite.
+
+```json
+{
+  "target_allocation": {"equity": 1.0},
+  "holdings": [
+    {"request_id": "SPY", "bucket": "equity", "weight": 1.0}
+  ]
+}
+```
+
+**Varias posiciones o clases.** Para pasar a un 60% de renta variable y un 40% de renta fija, sustituye los mismos dos campos:
+
+```json
+{
+  "target_allocation": {"equity": 0.60, "sovereign_fixed_income": 0.40},
+  "holdings": [
+    {"request_id": "SPY", "bucket": "equity", "weight": 0.60},
+    {"request_id": "IEF", "bucket": "sovereign_fixed_income", "weight": 0.40}
+  ]
+}
+```
+
+Una clase de activo puede contener varias posiciones. Dos ETF de renta variable podrían tener pesos de 0.60 y 0.40 dentro del mismo grupo `equity`, cuyo objetivo sería 1.0. Cada posición necesita un ID de petición distinto y un histórico de precios utilizable. Los pesos se expresan como fracciones entre 0 y 1. La suma de los pesos de cada grupo debe coincidir con su objetivo, y los objetivos deben sumar 1. Un peso nulo queda pendiente de definir e impide procesar la cartera. El esquema admite posiciones largas y no limita la cartera a dos activos.
+
+**Cómo añadir un instrumento.** Define primero el instrumento en al menos una petición habilitada. Usa el mismo `id` interno para la misma serie económica en distintos proveedores y rellena el `input` específico de cada uno. Por ejemplo, `SPX` corresponde a `^GSPC` en Yahoo, a `I:SPX` en Massive y a un contrato de índice en IBKR. Comprueba producto, operación, mercado, divisa, unidad, frecuencia, intervalo y parámetros del proveedor. Para una opción se necesita además el contrato elegido, con vencimiento, precio de ejercicio y tipo (call/put). Después incorpora el ID a la cartera y revisa calendario, base de precios, posible vínculo con opciones y conversión de divisa. Si deshabilitas un proveedor, cada posición o referencia que conserves debe seguir teniendo una petición definida. Añadir un nombre de clase no incorpora un nuevo modelo de valoración. El ejemplo de renta fija utiliza precios de un ETF; no valora los cupones de un bono individual.
+
+### ¿Qué modo y qué fechas conviene utilizar?
+
+- **Cambiar pesos de instrumentos ya presentes en un archivo completo:** elige **1 - Process saved archive**. El programa valida la cartera actual frente a los ID del archivo y usa los nuevos pesos en los resultados derivados. No requiere credenciales. Añadir un ticker al JSON de un proveedor no incorpora precios ausentes en un archivo antiguo.
+- **Descargar otro instrumento o ejecutar un nuevo cierre (COB):** elige **2 - Download + process** con las peticiones correspondientes habilitadas. Un archivo completo compatible puede reutilizarse. Si cambia el conjunto de instrumentos que se quiere descargar, utiliza un nuevo archivo compatible, por ejemplo el de otro COB. Los datos brutos guardados conservan sus entradas originales.
+- En modo descarga, introduce el COB y el inicio del histórico en **DD/MM/AAAA**. Los valores `HISTORY_START` y `COB` de los proveedores se resuelven con esas fechas. El COB más reciente permitido es ayer según la hora de Londres. El histórico efectivo depende de la fecha de cotización inicial, la cobertura y los permisos. Si el proveedor rechaza el intervalo, el adaptador puede intentar recuperar el máximo histórico accesible. Los fallos de autenticación requieren un acceso válido.
+- El horizonte de previsión se configura por separado. `forecast_start: "cob_plus_one"` toma la fecha de la ejecución y los pasos de negociación siguen el calendario configurado. `forecast_end: "2027-12-17"` es una fecha explícita del ejemplo. Revísala al cambiar de COB o de vencimientos cubiertos por el modelo opcional de volatilidad local.
+
+### Qué controla cada JSON de análisis
+
+Todas las rutas de esta tabla son relativas a `config/`.
+
+| Archivo | Qué revisar al cambiar el experimento |
 |---|---|
-| `config/<provider>.json` | Instrumentos, identificadores propios del proveedor, operaciones e históricos |
-| `config/portfolio.json` | Activos, ponderaciones, divisa de presentación y referencias |
-| `config/cleaning.json` | Base de precios, selección de proveedor, calendarios y referencias de opciones |
-| `config/modeling.json` | Estadística descriptiva y periodos de estrés |
-| `config/monte_carlo.json` | Calibración histórica, horizonte, trayectorias, semilla y modelos |
-| `config/ois.json` | Cotizaciones par OIS manuales y fijas, con su fecha real |
-| `config/calibration/*.json` | IVs, superficies, volatilidad local y validación neutral al riesgo |
-| `config/local_vol_real_world.json` | Políticas físicas de volatilidad local y permisos de extensión |
-| `config/simulation_comparison.json` | Comparaciones, figuras y umbrales del informe final |
+| `cleaning.json` | Prioridad de proveedores, bases de precios compatibles, calendarios, huecos en las series y metadatos. `instruments.SPY.option_reference = "SPX"` vincula la posición con el subyacente de las opciones. Añade otro vínculo solo si tiene sentido financiero. |
+| `modeling.json` | Estadística descriptiva, anualización, ventanas móviles y periodos históricos de estrés. |
+| `monte_carlo.json` | Fechas, 10 000 trayectorias, semilla, calendario, calibración base (10 años, mínimo de 252 observaciones alineadas), calibración de estrés, divisas y supuestos opcionales del usuario. La GFC (enero de 2008 a junio de 2009) requiere datos descargados de ese periodo, con independencia de la ventana base. |
+| `ois.json` | Cotizaciones par de swaps SOFR y €STR introducidas manualmente, en porcentaje anual. Las curvas fijas del ejemplo se observaron el 20 de octubre de 2026. Se archivan con su fecha real en cada COB; guardarlas en una carpeta posterior no actualiza sus tipos. |
+| `calibration/option_calibration.json` | Convenciones OIS asumidas, forwards, dividendos y criterios de admisión de cotizaciones en vivo o históricas para calcular la volatilidad implícita de opciones europeas. Las fechas de observación de la curva y de las opciones deben coincidir. |
+| `calibration/surface.json` | Ajuste de las sonrisas de volatilidad implícita, strikes y vencimientos admitidos, y criterios de aceptación. |
+| `calibration/local_volatility.json` | Evaluación de Dupire, tratamiento de los límites y validación por revaloración de opciones. |
+| `calibration/local_vol_monte_carlo.json` | Simulación neutral al riesgo del subyacente de las opciones y su validación. |
+| `local_vol_real_world.json` | Simulación de la cartera bajo la medida física con la superficie validada asignada y factores históricos para las demás posiciones admisibles. |
+| `simulation_comparison.json` | Comparaciones finales, tolerancias, figuras y visualización opcional. `open_report_after_run` abre el informe; `plot_windows_after_run` selecciona actualmente las gráficas de trayectorias y densidad. |
 
-Los archivos de proveedores resuelven `HISTORY_START` y `COB` con las fechas de la
-terminal. Si un proveedor rechaza el intervalo, puede solicitarse su máximo histórico
-accesible; cambiar fechas no resuelve errores de autenticación o red. Se conserva
-el intervalo efectivo, el estado y las limitaciones. Las operaciones no admitidas
-se registran como fallos explícitos; no se sustituye el instrumento por otro.
+Al cambiar las posiciones, hay dos ajustes particularmente importantes. En `monte_carlo.json`, el ejemplo `user_scenario.holdings.SPY` supone un crecimiento compuesto anual del 6% y una volatilidad anual del 30%. Modifica SPY en un escenario adicional de cartera; IEF conserva sus supuestos históricos. Aquí solo se admiten ID de posiciones con peso positivo. Para omitir el escenario, elimina la sección o asígnale `null`. Para presentar resultados en EUR, `fx_series` identifica `EURUSD` como dólares por euro. Revisa el par, el sentido de cotización y el histórico si cambias la divisa. La alternativa en USD solo se aplica cuando el modelo puede expresar la cartera en USD.
 
-`run.py` contiene los ajustes operativos y los nombres de variables de entorno:
-`ALPHA_VANTAGE_API_KEY`, `MARKETDATA_API_TOKEN`, `MASSIVE_API_KEY`, `FRED_API_KEY`.
-IBKR utiliza una sesión autenticada de TWS/IB Gateway y un socket configurado de
-forma coherente, no un token. Conectar no garantiza suscripciones o permisos de
-datos. El análisis local no necesita conexiones con estos proveedores.
+### Acceso a proveedores en una descarga nueva
+
+Habilitar un JSON solicita una operación. Las credenciales, suscripciones y coberturas dependen del proveedor. Guarda las credenciales fuera de los JSON. Si falta una serie, consulta el estado de su petición en el archivo del COB.
+
+| JSON del proveedor | Qué necesita este adaptador | Qué se obtiene |
+|---|---|---|
+| `yahoo.json` | Sin clave de proveedor | Histórico público de precios cuando está disponible, incluidos precios ajustados admisibles. |
+| `ecb.json` | Sin clave de proveedor | Series públicas del BCE identificadas por flujo de datos y clave de serie. Son observaciones de referencia. [Servicios de datos del BCE](https://data.ecb.europa.eu/help/getting-data-web-services-sdmx-0) |
+| `fred.json` | `FRED_API_KEY` | Se requiere una clave de la API de FRED incluso para series públicas como DGS10. [Claves de la API de FRED](https://fred.stlouisfed.org/docs/api/api_key.html) |
+| `alpha_vantage.json` | `ALPHA_VANTAGE_API_KEY` | Las operaciones y la profundidad del histórico dependen del plan. |
+| `marketdata.json` | `MARKETDATA_API_TOKEN` | Token y permiso para el producto e histórico solicitados. |
+| `massive.json` | `MASSIVE_API_KEY` | El plan debe cubrir el activo, el servicio y el intervalo de fechas. |
+| `ibkr.json` | Sesión iniciada en TWS o IB Gateway, API de socket habilitada, dirección y puerto correctos y permisos de datos | Contratos explícitos para precios históricos y opciones. Conectar correctamente solo confirma la sesión. |
+
+Sin credenciales de proveedores ni sesión de IBKR, **Yahoo y el BCE son los dos proveedores configurados que pueden devolver datos nuevos**. La disponibilidad depende de la serie, del servicio y de las fechas. La falta de acceso a un proveedor permite continuar con peticiones independientes a los demás.
+
+**Las opciones de IBKR requieren una comprobación específica.** Para el COB de ayer se solicitan instantáneas en vivo y se registra la fecha real de captura. Las cotizaciones en vivo requieren los permisos del mercado correspondiente; las sensibilidades (griegas) de IBKR normalmente requieren datos tanto de la opción como del subyacente. Para COB anteriores se solicitan barras históricas. Esta vía no devuelve la volatilidad implícita del modelo de IBKR ni sus griegas. Los permisos, la conservación del histórico y el vencimiento del contrato pueden impedir obtener barras incluso con una sesión operativa. Sin las suscripciones necesarias no se debe contar con reconstruir una superficie a partir del histórico de IBKR. Si el archivo contiene precios alineados suficientes, el análisis histórico de cartera puede continuar; las etapas de opciones exigen sus propios datos fechados y validaciones. [Limitaciones de datos de IBKR](https://www.interactivebrokers.com/docs/tws-api/doc/md/market-data-limitations) · [Griegas de opciones en IBKR](https://www.interactivebrokers.com/docs/tws-api/doc/md/option-greeks)
 
 ## Arquitectura e interfaz de cartera
 
@@ -1343,6 +1414,45 @@ el evaluador local cambiaría el modelo que valoró opciones.
 
 ## Análisis académico final
 
+### Supuestos históricos del usuario
+
+En `config/monte_carlo.json` se incluye un escenario para SPY con crecimiento
+compuesto anual del 6% y volatilidad anual del 30%. Para desactivarlo, usar
+`user_scenario: null` u omitir el bloque. Cada clave de `user_scenario.holdings`
+debe coincidir con el `request_id` de una posición invertida de la cartera usada
+en la limpieza. Se puede indicar solo SPY, SPY e IEF, o cualquier número de
+posiciones reales. Añadir un símbolo en el JSON de un proveedor o como referencia
+no lo convierte en posición. Para incorporar otra posición hacen falta pesos
+válidos e historia alineada suficiente, incluidos los tipos de cambio necesarios.
+Un identificador ajeno a la cartera deja sin resultado solo ese escenario.
+Las posiciones omitidas conservan sus parámetros históricos. Crecimiento y
+volatilidad se expresan en decimales y moneda local: la media logarítmica diaria
+es `log1p(crecimiento)/periodos_por_año` y la volatilidad diaria se obtiene
+dividiendo la anual por la raíz de ese número de períodos. Se mantienen las
+correlaciones históricas y el ajuste de colas Student-t.
+
+Elegir la opción **1** con un COB archivado para recalcular el escenario de forma
+local con los rendimientos históricos. El informe incorpora el escenario en el resumen, metodología, calibración,
+comparaciones principales, distribuciones, colas y ventanas de estrés, aunque no
+haya opciones ni volatilidad local. Las diferencias se calculan frente al mismo
+modelo base. En los gráficos de crisis se comparan alternativas sobre el mismo
+horizonte; el escenario de usuario conserva su ventana base. Si se omite el bloque
+o se indica `null`, no aparecen secciones ni gráficos del escenario. Una petición
+inviable muestra su motivo. Ambas modalidades de ejecución pasan por el mismo informe.
+
+Al final de la ejecución en la terminal interactiva de VS Code, `open_report_after_run`
+abre el HTML y `plot_windows_after_run` abre ventanas de escritorio para las familias
+de gráficos seleccionadas (por defecto, `mc_paths` y `mc_density`). Cada ventana
+permite elegir otros PNG del informe. Una lista vacía desactiva estas ventanas.
+La visualización nativa requiere Tk y un escritorio gráfico. Desde Python se puede
+llamar a `analysis.show(saved_folder)` o a `analysis.show_plot_windows(saved_folder)`.
+
+La dataclass analítica `AssetStatistics` calcula la media y la desviación típica
+muestral al construirla a partir de los intervalos de rentabilidad depurados.
+Tras `portfolio.analyze(modeling_file)`, consultar las claves `mean_daily` y
+`std_daily` de `portfolio.assets[holding_id].metrics`. Los huecos del calendario
+no se convierten en rendimientos diarios.
+
 Los escenarios históricos de estrés configurados en `config/monte_carlo.json`
 también tienen comparaciones específicas frente al escenario base: trayectorias,
 crecimiento medio y mediano, densidad terminal, colas y probabilidades de pérdida.
@@ -1443,7 +1553,7 @@ carpeta directamente a PYTHONPATH, para no ocultar `http` de la biblioteca está
 
 El repositorio incluye fuente en `/src`, configuración, tests, README en ambos
 idiomas y diagramas formales. Excluye credenciales, entornos, archivos de mercado,
-resultados regenerables y `docs/` local. Un clon no contiene los datos privados de
+resultados regenerables salvo los dos informes oficiales, y `docs/` local. Un clon no contiene los datos privados de
 la demostración: debe obtener datos con sus accesos o aportar archivos compatibles.
 Los fixtures permiten verificar la biblioteca sin conexión, pero no son datos de
 mercado reales. No se añaden acciones a la cartera de ejemplo para demostrar una
