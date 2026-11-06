@@ -8,6 +8,8 @@ la simula y compara la evidencia disponible. Los instrumentos, la composición y
 las políticas de modelización se definen mediante JSON. La cartera de ejemplo y
 sus referencias actuales no limitan los instrumentos admitidos por la biblioteca.
 
+**Presentación del proyecto:** [Ver las diapositivas (PDF)](presentacion/BME_Taller1_propuesta_13_diapositivas.pdf) o [descargar la presentación editable en PowerPoint](presentacion/BME_Taller1_propuesta_13_diapositivas.pptx). Los [informes de ejemplo](reports/examples/) contienen los gráficos y resultados que se comentan en las diapositivas.
+
 ## Guía de la documentación técnica
 
 Las secciones siguientes explican las entradas, los algoritmos, las restricciones

@@ -8,6 +8,8 @@ available evidence. Instruments, allocation and modelling policies come from JSO
 The current portfolio example and its reference instruments are not restrictions
 on the underlying library.
 
+**Project presentation (in Spanish):** [View the slides (PDF)](presentacion/BME_Taller1_propuesta_13_diapositivas.pdf) or [download the editable PowerPoint](presentacion/BME_Taller1_propuesta_13_diapositivas.pptx). The [example reports](reports/examples/) contain the figures and results discussed in the slides.
+
 ## Guide to this README
 
 The sections below retain the technical detail needed to review and reproduce
