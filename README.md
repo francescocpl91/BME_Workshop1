@@ -8,7 +8,7 @@ available evidence. Instruments, allocation and modelling policies come from JSO
 The current portfolio example and its reference instruments are not restrictions
 on the underlying library.
 
-**Project presentation (in Spanish):** [View the slides (PDF)](presentacion/BME_Taller1_propuesta_13_diapositivas.pdf) or [download the editable PowerPoint](presentacion/BME_Taller1_propuesta_13_diapositivas.pptx). The [example reports](reports/examples/) contain the figures and results discussed in the slides.
+**Project presentation (in Spanish):** [View the slides (PDF)](presentacion/BME_Taller1_propuesta_15_diapositivas.pdf) or [download the editable PowerPoint](presentacion/BME_Taller1_propuesta_15_diapositivas.pptx). The [example reports](reports/examples/) contain the figures and results discussed in the slides.
 
 ## Guide to this README
 
@@ -46,7 +46,7 @@ The [official reports directory](reports/examples/) contains two complete Final 
 
 | Archived COB | What to look for |
 |---|---|
-| **19 October 2026 · With option data** ([Markdown](reports/examples/2026-10-19/report.md) · [HTML](reports/examples/2026-10-19/report.html)) | The 70% SPY / 30% IEF portfolio includes Gaussian, Student-t, user-assumption and GFC comparisons. The volatility section shows the fitted SPX smiles, implied and local volatility surfaces. The physical portfolio forecast uses SPX as the proxy for SPY and historical volatility for IEF. Its status is **diagnostic** because risk-neutral pricing precision remained under review. |
+| **19 October 2026 · With option data** ([Markdown](reports/examples/2026-10-19/report.md) · [HTML](reports/examples/2026-10-19/report.html)) | The 70% SPY / 30% IEF portfolio includes Gaussian, Student-t, user-assumption and GFC comparisons. The volatility section shows the fitted SPX smiles, implied and local volatility surfaces. The physical portfolio forecast uses SPX as the proxy for SPY and historical volatility for IEF. Its saved status is **diagnostic**; the report documents the applicable validation results and modelling assumptions. |
 | **30 October 2026 · Historical models only** ([Markdown](reports/examples/2026-10-30/report.md) · [HTML](reports/examples/2026-10-30/report.html)) | With no eligible SPX surface, the physical portfolio forecast is unavailable. The historical, stress and user-assumption models still produce paths, distributions, loss probabilities and a final report. |
 
 Read **availability** first to see which models ran. Then compare growth, terminal distributions and downside risk over the stated forecast period. Both examples use the USD fallback because usable EUR/USD history was missing. A probability of loss in these reports therefore describes wealth in USD. The option-underlying risk-neutral simulation validates pricing; the physical simulation is the portfolio forecast.
@@ -118,6 +118,20 @@ The example tickers, weights, dates and model settings are **hardcoded in the JS
 ```
 
 A single asset class may contain several holdings. Two equity ETFs could have weights 0.60 and 0.40 in the same `equity` bucket with a target of 1.0. Each holding needs a distinct configured request ID and a usable price history. Use decimal weights from 0 to 1. The budget for each bucket must equal its holdings' weights, and all buckets together must total 1. A null weight is a placeholder and must be filled before portfolio processing. The schema uses long-only weights; the number of holdings is not limited to two.
+
+**Individual-stock example.** Apple (`AAPL`, product `stock`) is enabled in
+`config/yahoo.json`, `config/alpha_vantage.json`, `config/marketdata.json`,
+`config/massive.json` and `config/ibkr.json` to demonstrate the assignment's
+individual-equity data requirement across the applicable price providers.
+All requests share the AAPL ID and the entered history start/COB dates, with
+provider-specific inputs and adjustment conventions. Retrieval depends on access
+and permissions; cleaning compares only compatible observations. FRED and ECB
+remain reference-data providers and have no AAPL stock request. This is an additional download and cleaning example,
+outside the 70% SPY / 30% IEF portfolio. It does not enter the portfolio statistics
+or Monte Carlo comparisons. The saved example reports predate this addition
+and do not contain AAPL results. Retrieve it on a subsequent download run using
+a valid COB without an existing archive; adding a request changes archive
+compatibility and does not append it to a completed archive automatically.
 
 **Adding a new instrument.** First define the instrument in at least one enabled provider request. Reuse a common `id` across providers for the same economic series, and give each provider its own native `input`. For instance, the project's `SPX` is Yahoo symbol `^GSPC`, Massive ticker `I:SPX` and an IBKR index contract. Check the product, operation, exchange, currency, unit, frequency, timeframe and provider-specific parameters. An option also needs the selected contract, including expiry, strike and right. Then use the ID in the portfolio, review its calendar, price basis and any option mapping in cleaning, and check currency conversion. If you disable a provider, any holding or reference you retain still needs a configured request. A new asset-class label alone does not implement a pricing model. The fixed-income example uses ETF prices; it does not price an individual bond's coupons.
 
@@ -427,9 +441,9 @@ processed/<COB>/<processing-id>/statistics/<statistics-id>/
   and correlation comparison for the selected convention.
 - plots/wealth.png and plots/drawdown.png: shared investment-path charts.
 
-Statistics output schema is now 2: path metrics moved out of statistics.csv into
-path_statistics.csv (and the equivalent stress table), while return tables gained
-return_type. Older reports remain unchanged in their original run directories.
+Statistics results separate investment-path metrics from return statistics.
+`path_statistics.csv` and its stress equivalent contain CAGR and drawdown;
+return tables identify simple and log returns through `return_type`.
 aligned_observations counts common intervals once, not twice; the manifest also
 records aligned_observations_by_return_type. Plot manifest keys use relative paths
 so identically named simple/log charts each retain their own checksum.
@@ -700,6 +714,20 @@ if necessary; it cannot exceed paths.
 and optional instrument overrides. New tickers do not require Python edits.
 Stocks/ETFs, indices, option snapshots, historical option bars, corporate actions,
 reference observations and manual OIS quotes follow separate rules.
+
+**Why inputs are restricted.** A dated numerical series is not sufficient to
+treat its values as investable prices. Inputs must have a financial meaning and
+metadata compatible with the requested analysis: instrument, currency, units,
+dates, frequency and adjustment basis. Prices used for logarithmic returns must
+be finite and strictly positive. Interest rates and macroeconomic observations
+remain available as reference data under their own rules; they are not treated
+as asset prices. These restrictions prevent economically invalid comparisons,
+artificial returns from mixing adjustment bases, and misleading covariance
+estimates from mismatched return intervals. Missing prices are not interpolated
+or forward-filled; a gap can only be filled with an eligible observed quote from
+another provider under the compatibility checks below. Raw responses are
+preserved and exclusions are recorded, so accepting an input for storage does
+not automatically make it eligible for statistics or simulation.
 
 The order is:
 

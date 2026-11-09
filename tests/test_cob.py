@@ -129,7 +129,12 @@ class CobTests(unittest.TestCase):
         for name in ('yahoo','alpha_vantage','marketdata','massive','ibkr'):
             doc=json.loads((ROOT/'config'/f'{name}.json').read_text())
             prices=[r for r in doc['requests'] if r['product'] in {'index','etf','stock'}]
-            self.assertEqual({r['ticker'] for r in prices},{'SPX','IEF','SPY'})
+            # Check the supplied examples without forbidding additional tickers.
+            self.assertTrue({'SPX','IEF','SPY','AAPL'} <= {r['ticker'] for r in prices})
+            apple=[r for r in prices if r['ticker']=='AAPL']
+            self.assertEqual(len(apple),1)
+            self.assertEqual(apple[0]['product'],'stock')
+            self.assertTrue(apple[0]['enabled'])
             self.assertTrue(all(r['timeframe']=={'start':'HISTORY_START','end':'COB'} for r in prices))
             self.assertTrue(next(r for r in prices if r['ticker']=='IEF')['enabled'])
             if name!='ibkr':self.assertFalse(any(r.get('contract') for r in doc['requests']))
@@ -155,7 +160,8 @@ class CobTests(unittest.TestCase):
     def test_enabled_unsupported_indexes_save_json_and_do_not_block_etfs(self):
         from src.config import PROVIDERS
         for name in ('alpha_vantage','marketdata'):
-            doc=json.loads((ROOT/'config'/f'{name}.json').read_text())
+            # Routing behavior uses fixed fixtures, independent of user tickers.
+            doc=json.loads((FIXTURES/f'{name}.json').read_text())
             self.assertTrue(all(r['enabled'] for r in doc['requests']))
             with self.subTest(provider=name),tempfile.TemporaryDirectory() as tmp:
                 path=Path(tmp)/f'{name}.json';path.write_text(json.dumps(doc))

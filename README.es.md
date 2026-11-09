@@ -8,7 +8,7 @@ la simula y compara la evidencia disponible. Los instrumentos, la composición y
 las políticas de modelización se definen mediante JSON. La cartera de ejemplo y
 sus referencias actuales no limitan los instrumentos admitidos por la biblioteca.
 
-**Presentación del proyecto:** [Ver las diapositivas (PDF)](presentacion/BME_Taller1_propuesta_13_diapositivas.pdf) o [descargar la presentación editable en PowerPoint](presentacion/BME_Taller1_propuesta_13_diapositivas.pptx). Los [informes de ejemplo](reports/examples/) contienen los gráficos y resultados que se comentan en las diapositivas.
+**Presentación del proyecto:** [Ver las diapositivas (PDF)](presentacion/BME_Taller1_propuesta_15_diapositivas.pdf) o [descargar la presentación editable en PowerPoint](presentacion/BME_Taller1_propuesta_15_diapositivas.pptx). Los [informes de ejemplo](reports/examples/) contienen los gráficos y resultados que se comentan en las diapositivas.
 
 ## Guía de la documentación técnica
 
@@ -42,7 +42,7 @@ El [directorio de informes oficiales](reports/examples/) contiene dos ejemplos c
 
 | Fecha de cierre (COB) | Qué muestra el informe |
 |---|---|
-| **19 de octubre de 2026 · Con datos de opciones** ([Markdown](reports/examples/2026-10-19/report.md) · [HTML](reports/examples/2026-10-19/report.html)) | La cartera de 70% SPY y 30% IEF incluye comparaciones gaussianas, Student-t, de supuestos del usuario y de la crisis financiera global (GFC). La sección de volatilidad muestra las sonrisas ajustadas de SPX y las superficies de volatilidad implícita y local. La previsión bajo la medida física usa SPX como referencia de SPY y volatilidad histórica para IEF. Su estado es **diagnóstico** porque quedó pendiente una comprobación de precisión en la valoración neutral al riesgo. |
+| **19 de octubre de 2026 · Con datos de opciones** ([Markdown](reports/examples/2026-10-19/report.md) · [HTML](reports/examples/2026-10-19/report.html)) | La cartera de 70% SPY y 30% IEF incluye comparaciones gaussianas, Student-t, de supuestos del usuario y de la crisis financiera global (GFC). La sección de volatilidad muestra las sonrisas ajustadas de SPX y las superficies de volatilidad implícita y local. La previsión bajo la medida física usa SPX como referencia de SPY y volatilidad histórica para IEF. Su estado guardado es **diagnóstico**; el informe documenta los resultados de validación y los supuestos aplicables. |
 | **30 de octubre de 2026 · Solo modelos históricos** ([Markdown](reports/examples/2026-10-30/report.md) · [HTML](reports/examples/2026-10-30/report.html)) | Sin una superficie SPX admisible, no se obtiene la previsión física con volatilidad local. Los modelos históricos, de estrés y de supuestos del usuario sí generan trayectorias, distribuciones, probabilidades de pérdida e informe final. |
 
 Consulta primero la **disponibilidad** para identificar qué modelos se ejecutaron. Después compara crecimiento, distribuciones terminales y riesgo de pérdida durante el horizonte indicado. En ambos casos se utilizó USD como divisa alternativa por falta de histórico EUR/USD utilizable. La probabilidad de pérdida se refiere, por tanto, al patrimonio en USD. La simulación neutral al riesgo del subyacente valida los precios de las opciones; la simulación física genera la previsión de cartera.
@@ -115,6 +115,21 @@ Los tickers, pesos, fechas y parámetros del ejemplo **están fijados en los JSO
 ```
 
 Una clase de activo puede contener varias posiciones. Dos ETF de renta variable podrían tener pesos de 0.60 y 0.40 dentro del mismo grupo `equity`, cuyo objetivo sería 1.0. Cada posición necesita un ID de petición distinto y un histórico de precios utilizable. Los pesos se expresan como fracciones entre 0 y 1. La suma de los pesos de cada grupo debe coincidir con su objetivo, y los objetivos deben sumar 1. Un peso nulo queda pendiente de definir e impide procesar la cartera. El esquema admite posiciones largas y no limita la cartera a dos activos.
+
+**Ejemplo de acción individual.** Apple (`AAPL`, producto `stock`) está habilitada
+en `config/yahoo.json`, `config/alpha_vantage.json`, `config/marketdata.json`,
+`config/massive.json` y `config/ibkr.json` para demostrar el requisito de acciones
+individuales con los proveedores de precios aplicables. Las peticiones comparten
+el ID AAPL y las fechas de inicio/COB introducidas, con identificadores y ajustes
+propios de cada proveedor. La descarga depende del acceso y los permisos; la
+limpieza compara únicamente observaciones compatibles. FRED y ECB mantienen su
+función de referencias económicas, sin peticiones de precios de AAPL. Es un ejemplo adicional de descarga y
+limpieza, fuera de la cartera 70% SPY / 30% IEF. No entra en las estadísticas
+de cartera ni en las comparaciones Monte Carlo. Los informes de ejemplo
+guardados son anteriores a esta incorporación y no contienen resultados de
+AAPL. Para obtenerlos, realiza una nueva descarga con un COB válido que no tenga
+archivo previo; añadir una petición cambia la compatibilidad del archivo y no
+la incorpora automáticamente a uno ya completado.
 
 **Cómo añadir un instrumento.** Define primero el instrumento en al menos una petición habilitada. Usa el mismo `id` interno para la misma serie económica en distintos proveedores y rellena el `input` específico de cada uno. Por ejemplo, `SPX` corresponde a `^GSPC` en Yahoo, a `I:SPX` en Massive y a un contrato de índice en IBKR. Comprueba producto, operación, mercado, divisa, unidad, frecuencia, intervalo y parámetros del proveedor. Para una opción se necesita además el contrato elegido, con vencimiento, precio de ejercicio y tipo (call/put). Después incorpora el ID a la cartera y revisa calendario, base de precios, posible vínculo con opciones y conversión de divisa. Si deshabilitas un proveedor, cada posición o referencia que conserves debe seguir teniendo una petición definida. Añadir un nombre de clase no incorpora un nuevo modelo de valoración. El ejemplo de renta fija utiliza precios de un ETF; no valora los cupones de un bono individual.
 
@@ -448,8 +463,10 @@ Destino: `processed/<COB>/<processing-id>/statistics/<statistics-id>/`.
 | `plots/simple/`, `plots/log/` | Volatilidad, histogramas, Q-Q y dependencia |
 | `plots/wealth.png`, `plots/drawdown.png` | Figuras compartidas de patrimonio y drawdown |
 
-El esquema estadístico 2 separa las métricas de trayectoria de las tablas de
-retornos y etiqueta estas con `return_type`. `aligned_observations` cuenta cada
+Los resultados estadísticos separan las métricas de trayectoria de las estadísticas
+de retornos. `path_statistics.csv` y su equivalente de estrés contienen CAGR y
+drawdown; las tablas de retornos distinguen retornos simples y logarítmicos
+mediante `return_type`. `aligned_observations` cuenta cada
 intervalo una vez, no dos; también se informa el desglose por tipo. Los hashes de
 gráficos usan rutas relativas para distinguir archivos homónimos de simple/log.
 La identidad incluye datos limpios, pesos, políticas, código y dependencias.
@@ -695,6 +712,22 @@ define prioridades, calendarios, umbrales y overrides; añadir símbolos compati
 no requiere condiciones nuevas en Python. Acciones/ETF, índices, snapshots,
 barras históricas de opciones, corporate actions, referencias y OIS tienen reglas
 distintas.
+
+**Por qué se restringen los inputs.** Una serie numérica con fechas no basta
+para tratar sus valores como precios de activos invertibles. Los inputs deben
+tener un significado financiero y metadatos compatibles con el análisis:
+instrumento, divisa, unidades, fechas, frecuencia y base de ajuste. Los precios
+utilizados para calcular retornos logarítmicos deben ser finitos y estrictamente
+positivos. Los tipos de interés y las observaciones macroeconómicas se conservan
+como referencias, con reglas propias; no se tratan como precios de activos.
+Estas restricciones evitan comparaciones sin sentido económico, retornos
+artificiales al mezclar bases de ajuste y covarianzas engañosas entre intervalos
+de retorno distintos. Los precios ausentes no se interpolan ni se rellenan con
+el último valor; un hueco solo puede cubrirse con una cotización observada de
+otro proveedor que supere los controles de compatibilidad descritos abajo.
+Se conservan las respuestas originales y se documentan las exclusiones: admitir
+un input para almacenarlo no lo hace automáticamente apto para estadísticas o
+simulación.
 
 El orden de trabajo es:
 

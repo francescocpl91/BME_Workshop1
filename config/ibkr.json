@@ -78,6 +78,31 @@
       "parameters": {}
     },
     {
+      "id": "AAPL",
+      "enabled": true,
+      "product": "stock",
+      "operation": "price_history",
+      "ticker": "AAPL",
+      "description": "Apple Inc. common stock; additional single-stock download example, not a portfolio holding",
+      "asset_class": "equity",
+      "currency": "USD",
+      "unit": "USD per share",
+      "exchange": "NASDAQ",
+      "timeframe": {
+        "start": "HISTORY_START",
+        "end": "COB"
+      },
+      "frequency": "1d",
+      "input": {
+        "symbol": "AAPL",
+        "secType": "STK",
+        "exchange": "SMART",
+        "primaryExchange": "NASDAQ",
+        "currency": "USD"
+      },
+      "parameters": {}
+    },
+    {
       "id": "SPX261016C00200000_HISTORY",
       "enabled": false,
       "product": "index_option",
@@ -217497,7 +217522,7 @@
     "contracts": "All 4181 SPX AM calls are explicit inputs. No discovery, weekly calls, puts or options from other providers.",
     "history": "run.py asks for the history start (DD/MM/YYYY). HISTORY_START and COB are resolved into actual dates for every non-option request. Range errors trigger provider-specific maximum accessible history; fallback and limitations are recorded. Authentication/network errors do not trigger date fallbacks.",
     "limitations": "IBKR has no per-contract historical IV/Greeks in this endpoint and no expired-option history. Missing fields, permissions and empty dates are recorded, not filled.",
-    "products": "SPX index, SPY equity ETF and IEF Treasury ETF where supported; existing FRED/ECB reference series retained."
+    "products": "SPX index, SPY equity ETF, IEF Treasury ETF and AAPL single stock where supported. AAPL is an additional download example, not a portfolio holding; existing FRED/ECB reference series retained."
   },
   "product_guides": {
     "index": {
